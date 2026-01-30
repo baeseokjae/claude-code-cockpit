@@ -1,0 +1,52 @@
+{
+  "name": "claude-code-cockpit",
+  "version": "1.0.0",
+  "description": "Next-generation real-time dashboard for Claude Code with themes, skill tracking, and detail mode",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    ".claude-plugin",
+    "commands"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:update-snapshots": "UPDATE_SNAPSHOTS=1 vitest run",
+    "test:stdin": "echo '{\"model\":{\"display_name\":\"Opus\"},\"context_window\":{\"used_percentage\":45}}' | node dist/index.js",
+    "preview:themes": "npx tsx scripts/preview-themes.ts",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "hud",
+    "dashboard",
+    "statusline",
+    "plugin"
+  ],
+  "author": "baeseokjae",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/baeseokjae/claude-code-cockpit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/baeseokjae/claude-code-cockpit/issues"
+  },
+  "homepage": "https://github.com/baeseokjae/claude-code-cockpit#readme",
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^3.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

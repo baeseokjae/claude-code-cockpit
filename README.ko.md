@@ -1,29 +1,29 @@
 # Claude Code Cockpit
 
-> Next-generation real-time dashboard for Claude Code
+> Claude Code를 위한 차세대 실시간 대시보드
 
-[한국어](./README.ko.md)
+[English](./README.md)
 
-Advanced HUD system for Claude Code featuring 5 themes, skill tracking, and detail mode.
+Claude Code를 위한 고급 HUD 시스템으로, 5가지 테마, Skill 추적, 상세 보기 모드를 지원합니다.
 
-## ✨ Features
+## ✨ 기능
 
-- 🎨 **5 Themes**: Aurora, Neon, Mono, Zen, Retro
-- 🔧 **Tool Tracking**: Monitor Read, Edit, Bash, Grep, and all tool activity
-- 🤖 **Agent Tracking**: Real-time Task subagent monitoring
-- ✅ **Todo Progress**: Track TodoWrite task status
-- ⚡ **Skill Tracking**: Monitor /commit, /review-pr and other skill invocations
-- 📊 **Git Status**: Branch name and dirty indicator
-- 💰 **Cost Estimation**: Token-based cost calculation per model
-- 🚨 **Smart Alerts**: Context/cost/session warnings
-- 📱 **Responsive Layout**: Auto-adjusts to terminal width
-- 🚀 **Zero Dependencies**: Uses only Node.js built-in modules
+- 🎨 **5가지 테마**: Aurora, Neon, Mono, Zen, Retro
+- 🔧 **도구 추적**: Read, Edit, Bash, Grep 등 모든 도구 추적
+- 🤖 **에이전트 추적**: Task 서브에이전트 실시간 모니터링
+- ✅ **Todo 진행률**: TodoWrite 진행 상황 표시
+- ⚡ **Skill 추적**: /commit, /review-pr 등 Skill 호출 추적
+- 📊 **Git 상태**: 브랜치, dirty 표시
+- 💰 **비용 추정**: 모델별 토큰 비용 계산
+- 🚨 **알림 시스템**: 컨텍스트/비용/세션 경고
+- 📱 **반응형 레이아웃**: 터미널 너비에 따라 자동 조정
+- 🚀 **Zero Dependency**: Node.js 내장 모듈만 사용
 
 ## 🚀 Installation
 
-### From Marketplace (Recommended)
+### Marketplace (권장)
 
-Run inside Claude Code:
+Claude Code 내에서 실행:
 
 ```bash
 # 1. Add marketplace source
@@ -32,7 +32,7 @@ Run inside Claude Code:
 # 2. Install plugin
 /plugin install claude-code-cockpit
 
-# 3. Configure statusline
+# 3. Setup statusline
 /claude-code-cockpit:setup
 ```
 
@@ -53,24 +53,24 @@ cc --plugin-dir .
 
 ## 🎨 Themes
 
-### Aurora (Default)
-Inspired by Aurora Borealis. Polar night sky with green-teal-purple aurora gradients.
+### Aurora (기본)
+북극광(Aurora Borealis)에서 영감을 받은 색상 시스템. 극지방 밤하늘과 오로라의 초록-청록-보라 그라데이션.
 
 ### Neon
-Cyberpunk neon sign aesthetic. High-contrast fluorescent green, cyan, and hot pink.
+사이버펑크 네온사인 감성. 형광 그린, 시안, 핫핑크의 고대비 조합.
 
 ### Mono
-Pure black & white minimal. ASCII-compatible, accessibility-first design.
+순수 흑백 미니멀. ASCII 호환, 접근성 우선 설계.
 
 ### Zen
-Ultra-minimal design. Calm tones inspired by traditional paper and ink.
+초미니멀 디자인. 한지와 먹에서 영감받은 차분한 톤.
 
 ### Retro
-80s CRT phosphor monitor nostalgia. Green phosphor glow and vintage terminal vibes.
+80년대 CRT 인광 모니터 감성. 녹색 인광색과 터미널 향수.
 
 ## ⚙️ Configuration
 
-After installation, run `/claude-code-cockpit:configure` to set theme and display options, or use environment variables.
+설치 후 `/claude-code-cockpit:configure` 명령으로 테마와 표시 옵션을 설정하거나, 환경변수로 설정할 수 있습니다.
 
 ### Environment Variables
 
@@ -107,12 +107,12 @@ export COCKPIT_PATH_LEVELS=2
 
 ## 🚨 Alerts
 
-Automatic warnings when context usage is high or cost exceeds thresholds:
+컨텍스트 사용량이 높거나 비용이 임계값을 초과하면 자동으로 경고가 표시됩니다:
 
-- **Context Critical (90%+)**: Red bold `⚠ CTX 95%!`
-- **Context Warning (75%+)**: Yellow `⚠ CTX 80%`
-- **Cost Warning ($1+)**: Cost alert
-- **Session Long (30m+)**: Session duration info
+- **Context Critical (90%+)**: 빨간색 볼드 `⚠ CTX 95%!`
+- **Context Warning (75%+)**: 노란색 `⚠ CTX 80%`
+- **Cost Warning ($1+)**: 비용 경고
+- **Session Long (30m+)**: 세션 시간 정보
 
 ## 📦 Development
 
@@ -147,7 +147,7 @@ claude-code-cockpit/
 │   ├── types/           # Type definitions
 │   ├── input/           # stdin, transcript parsing
 │   ├── data/            # Git, time, cost, alerts
-│   ├── config/          # Configuration loader
+│   ├── config/          # Config loader
 │   ├── themes/          # Theme system
 │   ├── render/          # Rendering utilities
 │   ├── output/          # Output handling
@@ -158,10 +158,10 @@ claude-code-cockpit/
 
 ## 💡 Inspired By
 
-Please check out these previous works that helped inspire the creation of claude-code-cockpit. 🙏
+claude-code-cockpit 제작에 영감을 준 프로젝트들입니다. 🙏
 
-- [jarrodwatts/claude-hud](https://github.com/jarrodwatts/claude-hud) – A terminal-based HUD plugin for Claude Code.
-- Terminal powerline tools for status bar.
+- [jarrodwatts/claude-hud](https://github.com/jarrodwatts/claude-hud) – Claude Code용 터미널 기반 HUD 플러그인
+- Terminal powerline 도구들의 statusbar
 
 ## 📄 License
 
