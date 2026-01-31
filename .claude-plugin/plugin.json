@@ -4,6 +4,7 @@
   "description": "Next-generation real-time dashboard for Claude Code with 5 themes, smart alerts, and zero dependencies",
   "author": {
     "name": "baeseokjae",
+    "email": "baeseokjae@gmail.com",
     "url": "https://github.com/baeseokjae"
   },
   "homepage": "https://github.com/baeseokjae/claude-code-cockpit",
@@ -19,6 +20,8 @@
     "tools",
     "agents",
     "todos",
+    "skills",
     "alerts"
-  ]
+  ],
+  "commands": "./commands/"
 }

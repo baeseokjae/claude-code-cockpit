@@ -1,0 +1,40 @@
+{
+  "name": "claude-code-cockpit",
+  "owner": {
+    "name": "baeseokjae",
+    "email": "baeseokjae@gmail.com"
+  },
+  "metadata": {
+    "description": "Claude Code Cockpit - Next-generation statusline dashboard with 5 themes",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "claude-code-cockpit",
+      "source": ".",
+      "description": "Real-time dashboard for Claude Code with themes (Aurora, Neon, Mono, Zen, Retro), skill tracking, smart alerts, and zero dependencies",
+      "version": "1.0.0",
+      "author": {
+        "name": "baeseokjae",
+        "url": "https://github.com/baeseokjae"
+      },
+      "homepage": "https://github.com/baeseokjae/claude-code-cockpit",
+      "repository": "https://github.com/baeseokjae/claude-code-cockpit",
+      "license": "MIT",
+      "keywords": [
+        "statusline",
+        "hud",
+        "dashboard",
+        "themes",
+        "monitoring"
+      ],
+      "category": "productivity",
+      "tags": [
+        "statusline",
+        "dashboard",
+        "themes",
+        "monitoring"
+      ]
+    }
+  ]
+}
