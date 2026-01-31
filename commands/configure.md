@@ -1,17 +1,36 @@
 ---
 description: Configure claude-code-cockpit theme and display options
-allowed-tools: AskUserQuestion, Write, Bash(*)
+allowed-tools: Read, Write, AskUserQuestion
 ---
 
 # Configure Claude Code Cockpit
 
 Customize your statusline appearance and display options.
 
-## Configuration Options
+---
 
-Let me help you set up your preferences.
+## Step 1: Load Current Configuration
 
-!`AskUserQuestion`
+Try to read the existing configuration file:
+
+**macOS/Linux:**
+```
+Read ~/.claude/plugins/claude-code-cockpit/config.json
+```
+
+**Windows:**
+```
+Read $env:USERPROFILE\.claude\plugins\claude-code-cockpit\config.json
+```
+
+If the file doesn't exist, use default values. Store current settings for reference.
+
+---
+
+## Step 2: Ask User Preferences
+
+Use AskUserQuestion to gather user preferences:
+
 ```json
 {
   "questions": [
@@ -92,14 +111,11 @@ Let me help you set up your preferences.
 }
 ```
 
-## Save Configuration
+---
 
-Create configuration directory:
-```bash
-!`mkdir -p ~/.claude/plugins/claude-code-cockpit`
-```
+## Step 3: Generate Configuration
 
-Generate configuration file based on selections:
+Based on user selections, create the configuration object:
 
 ```json
 {
@@ -132,22 +148,42 @@ Generate configuration file based on selections:
 }
 ```
 
-Write to: `~/.claude/plugins/claude-code-cockpit/config.json`
+---
+
+## Step 4: Save Configuration
+
+Use the Write tool to save the configuration:
+
+**macOS/Linux:**
+```
+Write ~/.claude/plugins/claude-code-cockpit/config.json
+```
+
+**Windows:**
+```
+Write $env:USERPROFILE\.claude\plugins\claude-code-cockpit\config.json
+```
+
+The Write tool will automatically create the directory if it doesn't exist.
+
+**Note:** If no changes were made from the current configuration, skip writing and inform the user.
 
 ---
 
-## Success
+## Step 5: Confirm Success
+
+After saving, display a summary:
 
 ✓ Configuration saved!
 
-Your settings:
+**Your settings:**
 - **Theme**: <selected_theme>
 - **Detail Mode**: <enabled_or_disabled>
 - **Display**: <list_of_enabled_items>
 
 **Next steps:**
 - Settings take effect immediately (no restart needed)
-- Change theme anytime: `COCKPIT_THEME=<name>`
+- Change theme anytime: `export COCKPIT_THEME=<name>`
 - Edit config manually: `~/.claude/plugins/claude-code-cockpit/config.json`
 
 ---

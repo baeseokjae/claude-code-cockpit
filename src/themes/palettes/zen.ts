@@ -1,28 +1,34 @@
 /**
- * Zen theme color palette
+ * Zen theme color palette - "Sage"
+ * Calm sage gray with muted earth tones
+ * Independently designed for serenity and natural aesthetics
  */
 
 import type { ColorPalette } from '../../types/index.js';
 
 export const ZEN_PALETTE: ColorPalette = {
-  base: '#1c1917',
-  surface: '#292524',
-  overlay: '#3f3b37',
+  // Base colors - Sage gray
+  base: '#181b1a',
+  surface: '#242827',
+  overlay: '#383c3a',
 
-  text: '#e7e5e4',
-  subtext: '#a8a29e',
-  muted: '#78716c',
+  // Text - Neutral with sage hint
+  text: '#e4e8e6',
+  subtext: '#a2a8a5',
+  muted: '#6e7572',
 
-  blue: '#7dd3fc',
-  green: '#86efac',
-  yellow: '#fde68a',
-  red: '#fca5a5',
-  mauve: '#d8b4fe',
-  teal: '#5eead4',
-  peach: '#fed7aa',
+  // Accents - Muted earth tones
+  blue: '#6aadbd',
+  green: '#6db88e',
+  yellow: '#c9b86a',
+  red: '#bd7a7a',
+  mauve: '#a68dbd',
+  teal: '#6ab8aa',
+  peach: '#bda27a',
 
-  progressLow: '#86efac',
-  progressMid: '#5eead4',
-  progressHigh: '#fde68a',
-  progressCritical: '#fca5a5',
+  // Progress gradient
+  progressLow: '#6db88e',
+  progressMid: '#6ab8aa',
+  progressHigh: '#c9b86a',
+  progressCritical: '#bd7a7a',
 };

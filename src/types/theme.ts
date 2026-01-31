@@ -95,7 +95,26 @@ export interface ThemeConfig {
 
 export interface Theme extends ThemeConfig {
   render(ctx: RenderContext): string[];
+
+  /**
+   * Tier 1 rendering: Always Visible (displayed even at minimum width)
+   * - Model name, context%, Git branch, session duration
+   * - Terminal width < 80
+   */
   renderMinimal(ctx: RenderContext): string[];
+
+  /**
+   * Tier 2 rendering: Compact Summary
+   * - Tier 1 info + tool counts, agent status, Todo progress
+   * - Terminal width 80-120
+   */
   renderCompact(ctx: RenderContext): string[];
+
+  /**
+   * Tier 3 rendering: Full Detail
+   * - Tier 2 info + box layout, token details, cost, config counts
+   * - When detailMode is true, displays box-style detailed view
+   * - Terminal width >= 120
+   */
   renderFull(ctx: RenderContext): string[];
 }

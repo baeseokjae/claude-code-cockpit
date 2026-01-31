@@ -1,12 +1,24 @@
 /**
  * Aurora theme (default)
+ *
+ * Display Tiers:
+ * - Tier 1 (renderMinimal): Model, context%, Git, duration
+ * - Tier 2 (renderCompact): Tier 1 + tool counts, agent status, Todo summary
+ * - Tier 3 (renderFull): Tier 2 + box layout, token details, cost, config counts
+ *
+ * Width breakpoints:
+ * - < 80: Tier 1 (minimal)
+ * - 80-120: Tier 2 (compact)
+ * - >= 120: Tier 3 (full)
  */
 
-import type { Theme, RenderContext, Alert } from '../types/index.js';
+import type { Theme, RenderContext, Alert, IconSet, ColorPalette, ThemeChars } from '../types/index.js';
 import { AURORA_PALETTE } from './palettes/aurora.js';
-import { NERD_ICONS } from './icons.js';
+import { getIcons } from './icons.js';
 import { hex, bold } from '../render/colors.js';
 import { createProgressBar, formatPercent } from '../render/utils.js';
+import { formatCount } from '../render/superscript.js';
+import { formatUsageCompact, formatUsageFull, formatUsageDetailLines } from '../render/usage.js';
 import { getModelName, getContextPercent } from '../input/stdin.js';
 import { getMostSevereAlert, getAlertColorKey } from '../data/alerts.js';
 
@@ -27,7 +39,7 @@ export const auroraTheme: Theme = {
     separator: '│',
   },
 
-  icons: NERD_ICONS,
+  icons: getIcons(),
 
   layout: {
     minWidth: 60,
@@ -109,11 +121,16 @@ export const auroraTheme: Theme = {
     const duration = ctx.sessionDuration;
     const durationText = hex(this.palette.muted, duration);
 
+    // Usage
+    const usageText = ctx.config.display.showUsage && ctx.usageData
+      ? '  ' + formatUsageCompact(ctx.usageData, this.palette)
+      : '';
+
     // Alert badge
     const alertText = renderAlertBadge(ctx.alerts, this.palette);
 
     lines.push(
-      `${modelText}  ${progressText} ${percentText}  ${projectText}  ${gitText}  ${durationText}${alertText}`
+      `${modelText}  ${progressText} ${percentText}  ${projectText}  ${gitText}${usageText}  ${durationText}${alertText}`
     );
 
     // Line 2: Activity
@@ -173,11 +190,16 @@ export const auroraTheme: Theme = {
     const cost = ctx.stdin.cost?.total_cost_usd;
     const costText = cost ? hex(this.palette.peach, ` ~$${cost.toFixed(2)}`) : '';
 
+    // Usage
+    const usageText = ctx.config.display.showUsage && ctx.usageData
+      ? '  ' + formatUsageFull(ctx.usageData, this.palette)
+      : '';
+
     // Duration
     const duration = ctx.sessionDuration;
     const durationText = hex(this.palette.muted, duration);
 
-    const line1Content = `  ${modelText}   ${progressText} ${percentText}  ${tokensText}${costText}   ${durationText}`;
+    const line1Content = `  ${modelText}   ${progressText} ${percentText}  ${tokensText}${costText}${usageText}   ${durationText}`;
     lines.push(this.chars.boxVertical + line1Content + ' '.repeat(Math.max(0, width - 2 - line1Content.length)) + this.chars.boxVertical);
 
     // Middle border
@@ -212,31 +234,88 @@ export const auroraTheme: Theme = {
     lines.push(hex(this.palette.overlay, bottomBorder));
 
     // Activity lines (outside box)
-    // Tools
-    if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
-      const toolsLine = renderToolsLine(ctx, this.icons, this.palette);
-      if (toolsLine) lines.push('  ' + toolsLine);
-    }
+    if (ctx.detailMode) {
+      // detailMode: box-style detailed view
+      // Tools detail box
+      if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
+        const toolItems = ctx.transcript.tools.slice(0, 5).map(tool => {
+          const icon = tool.status === 'running' ? this.icons.running :
+                       tool.status === 'error' ? this.icons.error : this.icons.success;
+          const color = tool.status === 'running' ? this.palette.yellow :
+                        tool.status === 'error' ? this.palette.red : this.palette.green;
+          const target = tool.target ? tool.target : '';
+          return hex(color, `${icon} ${tool.name}`) +
+                 hex(this.palette.subtext, `  ${target}`);
+        });
 
-    // Agents
-    if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
-      for (const agent of ctx.transcript.agents.slice(0, 3)) {
-        const agentLine = renderAgentLine(agent, this.icons, this.palette);
-        if (agentLine) lines.push('  ' + agentLine);
+        lines.push(...renderDetailBox('TOOLS', toolItems, this.chars, this.palette, 40));
       }
-    }
 
-    // Todos
-    if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
-      const todoLine = renderTodoLine(ctx, this.palette);
-      if (todoLine) lines.push('  ' + todoLine);
+      // Agents detail box
+      if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
+        const agentItems = ctx.transcript.agents.slice(0, 3).map(agent => {
+          const icon = agent.status === 'running' ? this.icons.running :
+                       agent.status === 'error' ? this.icons.error : this.icons.success;
+          const color = agent.status === 'running' ? this.palette.yellow :
+                        agent.status === 'error' ? this.palette.red : this.palette.green;
+          const modelAbbr = agent.model ? `[${agent.model}]` : '';
+          const desc = agent.description?.substring(0, 25) || '';
+          return hex(color, `${icon} ${agent.type}`) +
+                 hex(this.palette.muted, ` ${modelAbbr} `) +
+                 hex(this.palette.subtext, desc);
+        });
+
+        lines.push(...renderDetailBox('AGENTS', agentItems, this.chars, this.palette, 40));
+      }
+
+      // Todo detail box
+      if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
+        const todoItems = ctx.transcript.todos.slice(0, 5).map(todo => {
+          const icon = todo.status === 'completed' ? '✓' :
+                       todo.status === 'in_progress' ? '▸' : '○';
+          const color = todo.status === 'completed' ? this.palette.green :
+                        todo.status === 'in_progress' ? this.palette.yellow :
+                        this.palette.muted;
+          const suffix = todo.status === 'in_progress' ? ' ← current' : '';
+          return hex(color, `${icon} ${todo.content.substring(0, 30)}${suffix}`);
+        });
+
+        lines.push(...renderDetailBox('TODO', todoItems, this.chars, this.palette, 40));
+      }
+
+      // Usage detail box
+      if (ctx.config.display.showUsage && ctx.usageData) {
+        const usageItems = formatUsageDetailLines(ctx.usageData, this.palette, this.chars);
+        lines.push(...renderDetailBox('USAGE', usageItems, this.chars, this.palette, 40));
+      }
+    } else {
+      // Default mode: compact display
+      // Tools
+      if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
+        const toolsLine = renderToolsLine(ctx, this.icons, this.palette);
+        if (toolsLine) lines.push('  ' + toolsLine);
+      }
+
+      // Agents
+      if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
+        for (const agent of ctx.transcript.agents.slice(0, 3)) {
+          const agentLine = renderAgentLine(agent, this.icons, this.palette);
+          if (agentLine) lines.push('  ' + agentLine);
+        }
+      }
+
+      // Todos
+      if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
+        const todoLine = renderTodoLine(ctx, this.palette);
+        if (todoLine) lines.push('  ' + todoLine);
+      }
     }
 
     return lines;
   },
 };
 
-function getModelIcon(model: string, icons: typeof NERD_ICONS): string {
+function getModelIcon(model: string, icons: IconSet): string {
   const lower = model.toLowerCase();
   if (lower.includes('opus')) return icons.modelOpus;
   if (lower.includes('sonnet')) return icons.modelSonnet;
@@ -244,7 +323,7 @@ function getModelIcon(model: string, icons: typeof NERD_ICONS): string {
   return icons.modelSonnet; // default
 }
 
-function getPercentColor(percent: number | null, palette: typeof AURORA_PALETTE): string {
+function getPercentColor(percent: number | null, palette: ColorPalette): string {
   if (percent === null) return palette.text;
   if (percent >= 90) return palette.progressCritical;
   if (percent >= 75) return palette.progressHigh;
@@ -252,7 +331,52 @@ function getPercentColor(percent: number | null, palette: typeof AURORA_PALETTE)
   return palette.progressLow;
 }
 
-function summarizeTools(ctx: RenderContext, icons: typeof NERD_ICONS, palette: typeof AURORA_PALETTE): string {
+/**
+ * Render box-style detailed view for detailMode
+ */
+function renderDetailBox(
+  title: string,
+  items: string[],
+  chars: ThemeChars,
+  palette: ColorPalette,
+  width: number = 40
+): string[] {
+  const lines: string[] = [];
+  const innerWidth = width - 2;
+
+  // Top border with title
+  const titleStr = ` ${title} `;
+  const leftPad = Math.floor((innerWidth - titleStr.length) / 2);
+  const rightPad = innerWidth - leftPad - titleStr.length;
+
+  lines.push(
+    hex(palette.overlay, chars.boxCornerTL) +
+    hex(palette.overlay, chars.boxHorizontal.repeat(leftPad)) +
+    hex(palette.subtext, titleStr) +
+    hex(palette.overlay, chars.boxHorizontal.repeat(rightPad)) +
+    hex(palette.overlay, chars.boxCornerTR)
+  );
+
+  // Content lines
+  for (const item of items) {
+    lines.push(
+      hex(palette.overlay, chars.boxVertical) +
+      ' ' + item + ' '.repeat(Math.max(0, innerWidth - item.length - 2)) +
+      hex(palette.overlay, chars.boxVertical)
+    );
+  }
+
+  // Bottom border
+  lines.push(
+    hex(palette.overlay, chars.boxCornerBL) +
+    hex(palette.overlay, chars.boxHorizontal.repeat(innerWidth)) +
+    hex(palette.overlay, chars.boxCornerBR)
+  );
+
+  return lines;
+}
+
+function summarizeTools(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
   const parts: string[] = [];
 
   const toolCounts = new Map<string, number>();
@@ -271,14 +395,14 @@ function summarizeTools(ctx: RenderContext, icons: typeof NERD_ICONS, palette: t
     const isRunning = runningTool === name;
     const icon = isRunning ? icons.running : icons.success;
     const color = isRunning ? palette.yellow : palette.green;
-    const countStr = count > 1 ? hex(palette.subtext, `${count}`) : '';
-    parts.push(hex(color, `${name}${icon}`) + countStr);
+    const countStr = formatCount(count);
+    parts.push(hex(color, `${name}${icon}${countStr}`));
   }
 
   return parts.join(' ');
 }
 
-function summarizeAgents(ctx: RenderContext, icons: typeof NERD_ICONS, palette: typeof AURORA_PALETTE): string {
+function summarizeAgents(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
   const parts: string[] = [];
 
   for (const agent of ctx.transcript.agents.slice(0, 2)) {
@@ -291,7 +415,7 @@ function summarizeAgents(ctx: RenderContext, icons: typeof NERD_ICONS, palette: 
   return parts.join(' ');
 }
 
-function summarizeTodos(ctx: RenderContext, palette: typeof AURORA_PALETTE): string {
+function summarizeTodos(ctx: RenderContext, palette: ColorPalette): string {
   const total = ctx.transcript.todos.length;
   const completed = ctx.transcript.todos.filter((t) => t.status === 'completed').length;
   const inProgress = ctx.transcript.todos.find((t) => t.status === 'in_progress');
@@ -304,7 +428,7 @@ function summarizeTodos(ctx: RenderContext, palette: typeof AURORA_PALETTE): str
   return hex(palette.muted, `${completed}/${total} tasks`);
 }
 
-function renderToolsLine(ctx: RenderContext, icons: typeof NERD_ICONS, palette: typeof AURORA_PALETTE): string {
+function renderToolsLine(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
   const parts: string[] = [];
 
   for (const tool of ctx.transcript.tools.slice(0, 5)) {
@@ -317,7 +441,7 @@ function renderToolsLine(ctx: RenderContext, icons: typeof NERD_ICONS, palette: 
   return parts.join('   ');
 }
 
-function renderAgentLine(agent: any, icons: typeof NERD_ICONS, palette: typeof AURORA_PALETTE): string {
+function renderAgentLine(agent: any, icons: IconSet, palette: ColorPalette): string {
   const icon = agent.status === 'running' ? icons.running : agent.status === 'error' ? icons.error : icons.success;
   const color = agent.status === 'running' ? palette.yellow : agent.status === 'error' ? palette.red : palette.green;
   const modelAbbr = agent.model ? `[${agent.model}]` : '';
@@ -325,7 +449,7 @@ function renderAgentLine(agent: any, icons: typeof NERD_ICONS, palette: typeof A
   return hex(color, `${agent.type}${icon}`) + hex(palette.muted, ` ${modelAbbr}`) + hex(palette.subtext, desc);
 }
 
-function renderTodoLine(ctx: RenderContext, palette: typeof AURORA_PALETTE): string {
+function renderTodoLine(ctx: RenderContext, palette: ColorPalette): string {
   const total = ctx.transcript.todos.length;
   const completed = ctx.transcript.todos.filter((t) => t.status === 'completed').length;
   const inProgress = ctx.transcript.todos.find((t) => t.status === 'in_progress');
@@ -338,7 +462,7 @@ function renderTodoLine(ctx: RenderContext, palette: typeof AURORA_PALETTE): str
   return hex(palette.green, `✓ All tasks completed`) + hex(palette.muted, ` (${total}/${total})`);
 }
 
-function renderAlertBadge(alerts: Alert[], palette: typeof AURORA_PALETTE): string {
+function renderAlertBadge(alerts: Alert[], palette: ColorPalette): string {
   if (!alerts || alerts.length === 0) return '';
 
   const alert = getMostSevereAlert(alerts);
@@ -358,7 +482,7 @@ function renderAlertBadge(alerts: Alert[], palette: typeof AURORA_PALETTE): stri
   return '';
 }
 
-function getAlertColor(colorKey: string, palette: typeof AURORA_PALETTE): string {
+function getAlertColor(colorKey: string, palette: ColorPalette): string {
   switch (colorKey) {
     case 'progressCritical':
       return palette.progressCritical;

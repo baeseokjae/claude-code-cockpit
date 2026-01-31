@@ -3,6 +3,7 @@
  */
 
 import type { IconSet } from '../types/index.js';
+import { hasNerdFont } from '../utils/font-detect.js';
 
 export const NERD_ICONS: IconSet = {
   modelOpus: '◆',
@@ -65,3 +66,10 @@ export const FALLBACK_ICONS: IconSet = {
   warning: '!',
   cost: '$',
 };
+
+/**
+ * Get icon set based on current environment
+ */
+export function getIcons(): IconSet {
+  return hasNerdFont() ? NERD_ICONS : FALLBACK_ICONS;
+}

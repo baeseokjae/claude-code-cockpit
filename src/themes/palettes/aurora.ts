@@ -1,28 +1,34 @@
 /**
- * Aurora theme color palette
+ * Aurora theme color palette - "Twilight"
+ * Deep twilight blue with muted jewel tones
+ * Independently designed with inspiration from pastel dark themes
  */
 
 import type { ColorPalette } from '../../types/index.js';
 
 export const AURORA_PALETTE: ColorPalette = {
-  base: '#0a0e1a',
-  surface: '#141b2d',
-  overlay: '#1e2740',
+  // Base colors - Deep twilight blue
+  base: '#181c24',       // background
+  surface: '#242936',    // surface
+  overlay: '#363d4d',    // overlay
 
-  text: '#e8eef7',
-  subtext: '#a8b5c9',
-  muted: '#5a6a80',
+  // Text - Cool gray with subtle blue
+  text: '#d4dae6',       // primary text
+  subtext: '#a8b1c4',    // secondary text
+  muted: '#6b7488',      // muted text
 
-  blue: '#4a9eff',
-  green: '#3de8a0',
-  yellow: '#ffd866',
-  red: '#ff6b9d',
-  mauve: '#b580ff',
-  teal: '#2dd4bf',
-  peach: '#ffab70',
+  // Accents - Muted jewel tones
+  blue: '#6aa3d9',       // info, model name
+  green: '#7bc98f',      // success, complete
+  yellow: '#e0c878',     // warning, in progress
+  red: '#d97082',        // error
+  mauve: '#a98dd4',      // special (skills, agents)
+  teal: '#6bc4b8',       // project, Git
+  peach: '#d9946a',      // numbers, emphasis
 
-  progressLow: '#3de8a0',
-  progressMid: '#2dd4bf',
-  progressHigh: '#b580ff',
-  progressCritical: '#ff6b9d',
+  // Progress bar gradient
+  progressLow: '#7bc98f',    // 0-50%
+  progressMid: '#e0c878',    // 50-75%
+  progressHigh: '#d9946a',   // 75-90%
+  progressCritical: '#d97082', // 90%+
 };

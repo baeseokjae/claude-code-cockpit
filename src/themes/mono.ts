@@ -10,7 +10,7 @@ import { createProgressBar, formatPercent } from '../render/utils.js';
 import { getModelName, getContextPercent } from '../input/stdin.js';
 
 /**
- * Mono 테마 - 색상 없음, ASCII만 사용
+ * Mono theme - No colors, ASCII only
  */
 export const monoTheme: Theme = {
   name: 'mono',
@@ -64,7 +64,7 @@ export const monoTheme: Theme = {
     const dirty = ctx.gitStatus?.isDirty ? '*' : '';
     const duration = ctx.sessionDuration;
 
-    // 색상 없이 텍스트만
+    // Text only, no colors
     return [`[${model}] ${percentStr} | ${git}${dirty} | ${duration}`];
   },
 
@@ -82,10 +82,15 @@ export const monoTheme: Theme = {
     const dirty = ctx.gitStatus?.isDirty ? '*' : '';
     const duration = ctx.sessionDuration;
 
+    // Usage (Mono style: no color)
+    const usage = ctx.config.display.showUsage && ctx.usageData
+      ? ` | 5h:${Math.round(ctx.usageData.fiveHour)}%`
+      : '';
+
     // Warning marker
     const warning = percent !== null && percent >= 75 ? ' !' : '';
 
-    lines.push(`[${model}] [${progressBar}] ${percentStr}${warning} | ${project} | ${git}${dirty} | ${duration}`);
+    lines.push(`[${model}] [${progressBar}] ${percentStr}${warning} | ${project} | ${git}${dirty}${usage} | ${duration}`);
 
     // Activity line
     const activityParts: string[] = [];
@@ -132,6 +137,11 @@ export const monoTheme: Theme = {
     const cost = ctx.stdin.cost?.total_cost_usd;
     const costStr = cost ? `$${cost.toFixed(2)}` : '';
 
+    // Usage (Mono style: no color)
+    const usageStr = ctx.config.display.showUsage && ctx.usageData
+      ? `5h:${Math.round(ctx.usageData.fiveHour)}%`
+      : '';
+
     const duration = ctx.sessionDuration;
 
     // Warning
@@ -142,7 +152,8 @@ export const monoTheme: Theme = {
       warningStr = ' [WARNING]';
     }
 
-    lines.push(`  ${bold(model)}  [${progressBar}] ${percentStr}${warningStr}  (${tokensStr})  ${costStr}  ${duration}`);
+    const parts = [`${bold(model)}`, `[${progressBar}]`, `${percentStr}${warningStr}`, `(${tokensStr})`, costStr, usageStr, duration].filter(Boolean);
+    lines.push(`  ${parts.join('  ')}`);
 
     // Line 2
     const project = ctx.stdin.cwd ? ctx.stdin.cwd.split('/').pop() : '';

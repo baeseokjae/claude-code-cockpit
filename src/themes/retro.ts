@@ -10,7 +10,7 @@ import { createProgressBar, formatPercent } from '../render/utils.js';
 import { getModelName, getContextPercent } from '../input/stdin.js';
 
 /**
- * Retro 테마 - CRT 인광 모니터
+ * Retro theme - CRT phosphor monitor
  */
 export const retroTheme: Theme = {
   name: 'retro',

@@ -1,16 +1,21 @@
 /**
  * Zen theme - Ultra minimal, calm
+ *
+ * Display Tiers:
+ * - Tier 1 (renderMinimal): Model, context%, duration
+ * - Tier 2 (renderCompact): Tier 1 + project, Git
+ * - Tier 3 (renderFull): Tier 2 + activity summary
  */
 
 import type { Theme, RenderContext } from '../types/index.js';
 import { ZEN_PALETTE } from './palettes/zen.js';
-import { NERD_ICONS } from './icons.js';
+import { getIcons } from './icons.js';
 import { hex } from '../render/colors.js';
 import { formatPercent } from '../render/utils.js';
 import { getModelName, getContextPercent } from '../input/stdin.js';
 
 /**
- * Zen 테마 - 최소한의 정보, 최대한의 평온
+ * Zen theme - Minimal information, maximum serenity
  */
 export const zenTheme: Theme = {
   name: 'zen',
@@ -29,7 +34,7 @@ export const zenTheme: Theme = {
     separator: '·',
   },
 
-  icons: NERD_ICONS,
+  icons: getIcons(),
 
   layout: {
     minWidth: 30,
@@ -62,7 +67,7 @@ export const zenTheme: Theme = {
     const percentStr = percent !== null ? formatPercent(percent) : '?';
     const duration = ctx.sessionDuration;
 
-    // 극도로 심플하게
+    // Ultra simple
     return [hex(this.palette.subtext, `${model} ${percentStr} · ${duration}`)];
   },
 
@@ -83,7 +88,7 @@ export const zenTheme: Theme = {
   renderFull(ctx: RenderContext): string[] {
     const lines: string[] = [];
 
-    // Line 1: 기본 정보
+    // Line 1: Basic info
     const model = getModelName(ctx.stdin).toLowerCase();
     const percent = getContextPercent(ctx.stdin);
     const percentStr = percent !== null ? formatPercent(percent) : '?';
@@ -93,10 +98,15 @@ export const zenTheme: Theme = {
     const dirty = ctx.gitStatus?.isDirty ? '*' : '';
     const duration = ctx.sessionDuration;
 
-    const line1Parts = [model, percentStr, project, `${git}${dirty}`, duration].filter(Boolean);
+    // Usage (Zen style: minimal)
+    const usage = ctx.config.display.showUsage && ctx.usageData
+      ? `5h:${Math.round(ctx.usageData.fiveHour)}%`
+      : null;
+
+    const line1Parts = [model, percentStr, project, `${git}${dirty}`, usage, duration].filter(Boolean);
     lines.push(hex(this.palette.subtext, line1Parts.join(' · ')));
 
-    // Line 2: 활동 (있을 때만)
+    // Line 2: Activity (when present)
     const activityParts: string[] = [];
 
     if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {

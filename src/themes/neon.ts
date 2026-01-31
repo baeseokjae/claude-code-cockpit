@@ -1,16 +1,24 @@
 /**
  * Neon theme - Cyberpunk high contrast
+ *
+ * Display Tiers:
+ * - Tier 1 (renderMinimal): Model, context%, Git, duration
+ * - Tier 2 (renderCompact): Tier 1 + tool counts, agent status, Todo summary
+ * - Tier 3 (renderFull): Tier 2 + box layout, token details, cost, config counts
  */
 
-import type { Theme, RenderContext } from '../types/index.js';
+import type { Theme, RenderContext, IconSet, ColorPalette } from '../types/index.js';
 import { NEON_PALETTE } from './palettes/neon.js';
-import { NERD_ICONS } from './icons.js';
+import { getIcons } from './icons.js';
 import { hex, bold } from '../render/colors.js';
 import { createProgressBar, formatPercent } from '../render/utils.js';
+import { formatCount } from '../render/superscript.js';
+import { getUsageColor } from '../render/usage.js';
+import { formatResetTime } from '../data/usage-api.js';
 import { getModelName, getContextPercent } from '../input/stdin.js';
 
 /**
- * Neon 테마
+ * Neon theme
  */
 export const neonTheme: Theme = {
   name: 'neon',
@@ -29,7 +37,7 @@ export const neonTheme: Theme = {
     separator: '│',
   },
 
-  icons: NERD_ICONS,
+  icons: getIcons(),
 
   layout: {
     minWidth: 60,
@@ -101,8 +109,13 @@ export const neonTheme: Theme = {
     const duration = ctx.sessionDuration;
     const durationText = hex(this.palette.muted, duration);
 
+    // Usage (Neon style: uppercase)
+    const usageText = ctx.config.display.showUsage && ctx.usageData
+      ? '  ' + hex(getUsageColor(ctx.usageData.fiveHour, this.palette), bold(`5H:${Math.round(ctx.usageData.fiveHour)}%`))
+      : '';
+
     lines.push(
-      `${modelText}  ${progressText} ${percentText}  ${projectText}  ${gitText}  ${durationText}`
+      `${modelText}  ${progressText} ${percentText}  ${projectText}  ${gitText}${usageText}  ${durationText}`
     );
 
     // Line 2: Activity
@@ -163,10 +176,20 @@ export const neonTheme: Theme = {
     const cost = ctx.stdin.cost?.total_cost_usd;
     const costText = cost ? hex(this.palette.peach, `$${cost.toFixed(2)}`) : '';
 
+    // Usage (Neon style: uppercase + bold + reset time)
+    const usageText = ctx.config.display.showUsage && ctx.usageData
+      ? (() => {
+          const resetStr = formatResetTime(ctx.usageData.fiveHourResetAt);
+          const usageColor = getUsageColor(ctx.usageData.fiveHour, this.palette);
+          return '  ' + hex(usageColor, bold(`5H:${Math.round(ctx.usageData.fiveHour)}%`)) +
+                 (resetStr ? hex(this.palette.muted, ` ↻${resetStr}`) : '');
+        })()
+      : '';
+
     const duration = ctx.sessionDuration;
     const durationText = hex(this.palette.muted, duration);
 
-    const line1 = `  ${modelText}   ${progressText} ${percentText}${warningText}   ${costText}   ${durationText}`;
+    const line1 = `  ${modelText}   ${progressText} ${percentText}${warningText}   ${costText}${usageText}   ${durationText}`;
     lines.push(hex(this.palette.blue, this.chars.boxVertical) + line1 + ' '.repeat(Math.max(0, innerWidth - line1.length + 10)) + hex(this.palette.blue, this.chars.boxVertical));
 
     // Middle border
@@ -216,7 +239,7 @@ export const neonTheme: Theme = {
   },
 };
 
-function getModelIcon(model: string, icons: typeof NERD_ICONS): string {
+function getModelIcon(model: string, icons: IconSet): string {
   const lower = model.toLowerCase();
   if (lower.includes('opus')) return icons.modelOpus;
   if (lower.includes('sonnet')) return icons.modelSonnet;
@@ -224,7 +247,7 @@ function getModelIcon(model: string, icons: typeof NERD_ICONS): string {
   return icons.modelSonnet;
 }
 
-function getPercentColor(percent: number | null, palette: typeof NEON_PALETTE): string {
+function getPercentColor(percent: number | null, palette: ColorPalette): string {
   if (percent === null) return palette.text;
   if (percent >= 90) return palette.progressCritical;
   if (percent >= 75) return palette.progressHigh;
@@ -232,7 +255,7 @@ function getPercentColor(percent: number | null, palette: typeof NEON_PALETTE): 
   return palette.progressLow;
 }
 
-function summarizeTools(ctx: RenderContext, icons: typeof NERD_ICONS, palette: typeof NEON_PALETTE): string {
+function summarizeTools(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
   const parts: string[] = [];
   const toolCounts = new Map<string, number>();
   let runningTool: string | null = null;
@@ -246,14 +269,14 @@ function summarizeTools(ctx: RenderContext, icons: typeof NERD_ICONS, palette: t
     const isRunning = runningTool === name;
     const icon = isRunning ? icons.running : icons.success;
     const color = isRunning ? palette.yellow : palette.green;
-    const countStr = count > 1 ? hex(palette.subtext, `${count}`) : '';
-    parts.push(hex(color, `${name}${icon}`) + countStr);
+    const countStr = formatCount(count);
+    parts.push(hex(color, `${name}${icon}${countStr}`));
   }
 
   return parts.join(' ');
 }
 
-function summarizeAgents(ctx: RenderContext, icons: typeof NERD_ICONS, palette: typeof NEON_PALETTE): string {
+function summarizeAgents(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
   const parts: string[] = [];
 
   for (const agent of ctx.transcript.agents.slice(0, 2)) {
@@ -266,7 +289,7 @@ function summarizeAgents(ctx: RenderContext, icons: typeof NERD_ICONS, palette: 
   return parts.join(' ');
 }
 
-function summarizeTodos(ctx: RenderContext, palette: typeof NEON_PALETTE): string {
+function summarizeTodos(ctx: RenderContext, palette: ColorPalette): string {
   const total = ctx.transcript.todos.length;
   const completed = ctx.transcript.todos.filter((t) => t.status === 'completed').length;
   const inProgress = ctx.transcript.todos.find((t) => t.status === 'in_progress');
@@ -279,7 +302,7 @@ function summarizeTodos(ctx: RenderContext, palette: typeof NEON_PALETTE): strin
   return hex(palette.muted, `${completed}/${total} TASKS`);
 }
 
-function renderToolsLine(ctx: RenderContext, icons: typeof NERD_ICONS, palette: typeof NEON_PALETTE): string {
+function renderToolsLine(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
   const parts: string[] = [];
 
   for (const tool of ctx.transcript.tools.slice(0, 5)) {
@@ -292,7 +315,7 @@ function renderToolsLine(ctx: RenderContext, icons: typeof NERD_ICONS, palette: 
   return parts.join('   ');
 }
 
-function renderAgentLine(agent: any, icons: typeof NERD_ICONS, palette: typeof NEON_PALETTE): string {
+function renderAgentLine(agent: any, icons: IconSet, palette: ColorPalette): string {
   const icon = agent.status === 'running' ? icons.running : agent.status === 'error' ? icons.error : icons.success;
   const color = agent.status === 'running' ? palette.yellow : agent.status === 'error' ? palette.red : palette.green;
   const modelAbbr = agent.model ? `[${agent.model.toUpperCase()}]` : '';
@@ -300,7 +323,7 @@ function renderAgentLine(agent: any, icons: typeof NERD_ICONS, palette: typeof N
   return hex(color, `${agent.type.toUpperCase()}${icon}`) + hex(palette.muted, ` ${modelAbbr}`) + hex(palette.subtext, desc);
 }
 
-function renderTodoLine(ctx: RenderContext, palette: typeof NEON_PALETTE): string {
+function renderTodoLine(ctx: RenderContext, palette: ColorPalette): string {
   const total = ctx.transcript.todos.length;
   const completed = ctx.transcript.todos.filter((t) => t.status === 'completed').length;
   const inProgress = ctx.transcript.todos.find((t) => t.status === 'in_progress');
