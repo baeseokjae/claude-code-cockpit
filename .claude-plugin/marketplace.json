@@ -11,7 +11,7 @@
   "plugins": [
     {
       "name": "claude-code-cockpit",
-      "source": ".",
+      "source": "./",
       "description": "Real-time dashboard for Claude Code with themes (Aurora, Neon, Mono, Zen, Retro), skill tracking, smart alerts, and zero dependencies",
       "version": "1.0.0",
       "author": {
