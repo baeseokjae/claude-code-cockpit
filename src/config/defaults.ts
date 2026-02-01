@@ -13,7 +13,7 @@ export const DEFAULT_CONFIG: CockpitConfig = {
     showAgents: true,
     showTodos: true,
     showSkills: true,
-    showUsage: false,
+    showUsage: true,
     showConfigCounts: true,
     showCost: true,
   },
@@ -23,7 +23,7 @@ export const DEFAULT_CONFIG: CockpitConfig = {
   pathLevels: 1,
 
   usage: {
-    enabled: false,
+    enabled: true,
     cacheMinutes: 10,
   },
 

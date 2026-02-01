@@ -25,4 +25,8 @@ export const MONO_PALETTE: ColorPalette = {
   progressMid: '#cccccc',
   progressHigh: '#999999',
   progressCritical: '#ffffff',
+
+  categoryTools: '#ffffff',
+  categoryAgents: '#cccccc',
+  categoryTodos: '#cccccc',
 };

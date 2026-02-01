@@ -25,4 +25,8 @@ export const RETRO_PALETTE: ColorPalette = {
   progressMid: '#33ff33',
   progressHigh: '#55ff55',
   progressCritical: '#ff3333',
+
+  categoryTools: '#33ff33',
+  categoryAgents: '#44dd44',
+  categoryTodos: '#22ee66',
 };

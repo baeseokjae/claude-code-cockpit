@@ -26,13 +26,13 @@ export interface ColorPalette {
   progressMid: string;
   progressHigh: string;
   progressCritical: string;
+
+  categoryTools: string;
+  categoryAgents: string;
+  categoryTodos: string;
 }
 
 export interface IconSet {
-  modelOpus: string;
-  modelSonnet: string;
-  modelHaiku: string;
-
   branch: string;
   dirty: string;
   ahead: string;
@@ -57,6 +57,10 @@ export interface IconSet {
   config: string;
   warning: string;
   cost: string;
+
+  categoryTools: string;
+  categoryAgents: string;
+  categoryTodos: string;
 }
 
 export interface ThemeChars {

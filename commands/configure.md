@@ -127,13 +127,13 @@ Based on user selections, create the configuration object:
     "showAgents": <true_if_selected>,
     "showTodos": <true_if_selected>,
     "showSkills": <true_if_selected>,
-    "showUsage": false,
+    "showUsage": true,
     "showConfigCounts": true,
     "showCost": <true_if_selected>
   },
   "pathLevels": 1,
   "usage": {
-    "enabled": false,
+    "enabled": true,
     "cacheMinutes": 10
   },
   "extraCmd": null,

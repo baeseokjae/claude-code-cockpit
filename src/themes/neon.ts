@@ -72,8 +72,7 @@ export const neonTheme: Theme = {
     const dirty = ctx.gitStatus?.isDirty ? '*' : '';
     const duration = ctx.sessionDuration;
 
-    const modelIcon = getModelIcon(model, this.icons);
-    const modelText = hex(this.palette.blue, bold(`${modelIcon} ${model}`));
+    const modelText = hex(this.palette.blue, bold(model));
 
     const percentColor = getPercentColor(percent, this.palette);
     const percentText = hex(percentColor, bold(percentStr));
@@ -91,8 +90,7 @@ export const neonTheme: Theme = {
     const percent = getContextPercent(ctx.stdin);
     const percentStr = percent !== null ? formatPercent(percent) : '??%';
 
-    const modelIcon = getModelIcon(model, this.icons);
-    const modelText = hex(this.palette.blue, bold(`${modelIcon} ${model}`));
+    const modelText = hex(this.palette.blue, bold(model));
 
     const progressBar = createProgressBar(percent || 0, 10, this.chars.progressFilled, this.chars.progressEmpty);
     const progressColor = getPercentColor(percent, this.palette);
@@ -132,7 +130,7 @@ export const neonTheme: Theme = {
     }
 
     if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
-      const todosSummary = summarizeTodos(ctx, this.palette);
+      const todosSummary = summarizeTodos(ctx, this.icons, this.palette);
       if (todosSummary) activityParts.push(todosSummary);
     }
 
@@ -157,8 +155,7 @@ export const neonTheme: Theme = {
     const percent = getContextPercent(ctx.stdin);
     const percentStr = percent !== null ? formatPercent(percent) : '??%';
 
-    const modelIcon = getModelIcon(model, this.icons);
-    const modelText = hex(this.palette.blue, bold(`${modelIcon} ${model}`));
+    const modelText = hex(this.palette.blue, bold(model));
 
     const progressBar = createProgressBar(percent || 0, 10, this.chars.progressFilled, this.chars.progressEmpty);
     const progressColor = getPercentColor(percent, this.palette);
@@ -224,28 +221,18 @@ export const neonTheme: Theme = {
     }
 
     if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
-      for (const agent of ctx.transcript.agents.slice(0, 3)) {
-        const agentLine = renderAgentLine(agent, this.icons, this.palette);
-        if (agentLine) lines.push('  ' + agentLine);
-      }
+      const agentsLine = renderAgentsLine(ctx, this.icons, this.palette);
+      if (agentsLine) lines.push('  ' + agentsLine);
     }
 
     if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
-      const todoLine = renderTodoLine(ctx, this.palette);
+      const todoLine = renderTodoLine(ctx, this.icons, this.palette);
       if (todoLine) lines.push('  ' + todoLine);
     }
 
     return lines;
   },
 };
-
-function getModelIcon(model: string, icons: IconSet): string {
-  const lower = model.toLowerCase();
-  if (lower.includes('opus')) return icons.modelOpus;
-  if (lower.includes('sonnet')) return icons.modelSonnet;
-  if (lower.includes('haiku')) return icons.modelHaiku;
-  return icons.modelSonnet;
-}
 
 function getPercentColor(percent: number | null, palette: ColorPalette): string {
   if (percent === null) return palette.text;
@@ -256,7 +243,7 @@ function getPercentColor(percent: number | null, palette: ColorPalette): string 
 }
 
 function summarizeTools(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
-  const parts: string[] = [];
+  const toolItems: string[] = [];
   const toolCounts = new Map<string, number>();
   let runningTool: string | null = null;
 
@@ -270,36 +257,38 @@ function summarizeTools(ctx: RenderContext, icons: IconSet, palette: ColorPalett
     const icon = isRunning ? icons.running : icons.success;
     const color = isRunning ? palette.yellow : palette.green;
     const countStr = formatCount(count);
-    parts.push(hex(color, `${name}${icon}${countStr}`));
+    toolItems.push(hex(color, `${name}${icon}${countStr}`));
   }
 
-  return parts.join(' ');
+  return hex(palette.categoryTools, icons.categoryTools) + ' ' + toolItems.join(' ');
 }
 
 function summarizeAgents(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
-  const parts: string[] = [];
+  const agentItems: string[] = [];
 
   for (const agent of ctx.transcript.agents.slice(0, 2)) {
     const icon = agent.status === 'running' ? icons.running : icons.success;
     const color = agent.status === 'running' ? palette.yellow : palette.green;
     const modelAbbr = agent.model ? `[${agent.model[0].toUpperCase()}]` : '';
-    parts.push(hex(color, `${agent.type.toUpperCase()}${icon}`) + hex(palette.muted, modelAbbr));
+    agentItems.push(hex(color, `${agent.type.toUpperCase()}${icon}`) + hex(palette.muted, modelAbbr));
   }
 
-  return parts.join(' ');
+  return hex(palette.categoryAgents, icons.categoryAgents) + ' ' + agentItems.join(' ');
 }
 
-function summarizeTodos(ctx: RenderContext, palette: ColorPalette): string {
+function summarizeTodos(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
   const total = ctx.transcript.todos.length;
   const completed = ctx.transcript.todos.filter((t) => t.status === 'completed').length;
   const inProgress = ctx.transcript.todos.find((t) => t.status === 'in_progress');
 
+  const label = hex(palette.categoryTodos, icons.categoryTodos);
+
   if (inProgress) {
     const shortContent = inProgress.content.substring(0, 20).toUpperCase();
-    return hex(palette.yellow, `▸ ${shortContent}`) + hex(palette.muted, ` ${completed}/${total}`);
+    return label + ' ' + hex(palette.yellow, `▸ ${shortContent}`) + hex(palette.muted, ` ${completed}/${total}`);
   }
 
-  return hex(palette.muted, `${completed}/${total} TASKS`);
+  return label + ' ' + hex(palette.muted, `${completed}/${total}`);
 }
 
 function renderToolsLine(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
@@ -312,26 +301,34 @@ function renderToolsLine(ctx: RenderContext, icons: IconSet, palette: ColorPalet
     parts.push(hex(color, `${tool.name}${icon}`) + hex(palette.subtext, target));
   }
 
-  return parts.join('   ');
+  return hex(palette.categoryTools, icons.categoryTools + ' TOOLS: ') + parts.join('   ');
 }
 
-function renderAgentLine(agent: any, icons: IconSet, palette: ColorPalette): string {
-  const icon = agent.status === 'running' ? icons.running : agent.status === 'error' ? icons.error : icons.success;
-  const color = agent.status === 'running' ? palette.yellow : agent.status === 'error' ? palette.red : palette.green;
-  const modelAbbr = agent.model ? `[${agent.model.toUpperCase()}]` : '';
-  const desc = agent.description ? ` ${agent.description.substring(0, 40).toUpperCase()}` : '';
-  return hex(color, `${agent.type.toUpperCase()}${icon}`) + hex(palette.muted, ` ${modelAbbr}`) + hex(palette.subtext, desc);
+function renderAgentsLine(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
+  const agentParts: string[] = [];
+
+  for (const agent of ctx.transcript.agents.slice(0, 3)) {
+    const icon = agent.status === 'running' ? icons.running : agent.status === 'error' ? icons.error : icons.success;
+    const color = agent.status === 'running' ? palette.yellow : agent.status === 'error' ? palette.red : palette.green;
+    const modelAbbr = agent.model ? `[${agent.model.toUpperCase()}]` : '';
+    const desc = agent.description ? ` ${agent.description.substring(0, 40).toUpperCase()}` : '';
+    agentParts.push(hex(color, `${agent.type.toUpperCase()}${icon}`) + hex(palette.muted, ` ${modelAbbr}`) + hex(palette.subtext, desc));
+  }
+
+  return hex(palette.categoryAgents, icons.categoryAgents + ' AGENTS: ') + agentParts.join('   ');
 }
 
-function renderTodoLine(ctx: RenderContext, palette: ColorPalette): string {
+function renderTodoLine(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
   const total = ctx.transcript.todos.length;
   const completed = ctx.transcript.todos.filter((t) => t.status === 'completed').length;
   const inProgress = ctx.transcript.todos.find((t) => t.status === 'in_progress');
 
+  const label = hex(palette.categoryTodos, icons.categoryTodos + ' TODOS: ');
+
   if (inProgress) {
     const progressBar = '█'.repeat(completed) + '░'.repeat(total - completed);
-    return hex(palette.yellow, `▸ ${inProgress.content.toUpperCase()}`) + hex(palette.muted, ` (${completed}/${total}) ${progressBar}`);
+    return label + hex(palette.yellow, `▸ ${inProgress.content.toUpperCase()}`) + hex(palette.muted, ` (${completed}/${total}) ${progressBar}`);
   }
 
-  return hex(palette.green, `✓ ALL TASKS COMPLETED`) + hex(palette.muted, ` (${total}/${total})`);
+  return label + hex(palette.green, `✓ ALL TASKS COMPLETED`) + hex(palette.muted, ` (${total}/${total})`);
 }

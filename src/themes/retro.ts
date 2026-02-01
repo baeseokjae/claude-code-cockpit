@@ -203,11 +203,11 @@ function summarizeTools(ctx: RenderContext, _palette: typeof RETRO_PALETTE): str
     parts.push(`${name.toUpperCase()}${marker}${count > 1 ? count : ''}`);
   }
 
-  return parts.join(' ');
+  return '[T] ' + parts.join(' ');
 }
 
 function summarizeAgents(ctx: RenderContext, _palette: typeof RETRO_PALETTE): string {
-  return ctx.transcript.agents
+  const agentItems = ctx.transcript.agents
     .slice(0, 3)
     .map((a) => {
       const marker = a.status === 'running' ? '~' : '+';
@@ -215,6 +215,8 @@ function summarizeAgents(ctx: RenderContext, _palette: typeof RETRO_PALETTE): st
       return `${a.type.toUpperCase()}${marker}${model}`;
     })
     .join(' ');
+
+  return '[A] ' + agentItems;
 }
 
 function summarizeTodos(ctx: RenderContext, _palette: typeof RETRO_PALETTE): string {
@@ -223,7 +225,7 @@ function summarizeTodos(ctx: RenderContext, _palette: typeof RETRO_PALETTE): str
   const current = ctx.transcript.todos.find((t) => t.status === 'in_progress');
 
   if (current) {
-    return `>${current.content.substring(0, 25).toUpperCase()}... (${completed}/${total})`;
+    return `[D] >${current.content.substring(0, 25).toUpperCase()}... (${completed}/${total})`;
   }
-  return `COMPLETE (${completed}/${total})`;
+  return `[D] ${completed}/${total}`;
 }

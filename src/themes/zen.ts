@@ -112,19 +112,19 @@ export const zenTheme: Theme = {
     if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
       const running = ctx.transcript.tools.find((t) => t.status === 'running');
       if (running) {
-        activityParts.push(hex(this.palette.text, `${running.name.toLowerCase()}~`));
-      }
-
-      const completed = ctx.transcript.tools.filter((t) => t.status === 'completed').length;
-      if (completed > 0) {
-        activityParts.push(hex(this.palette.muted, `${completed} done`));
+        activityParts.push(hex(this.palette.categoryTools, 'tools ') + hex(this.palette.text, `${running.name.toLowerCase()}~`));
+      } else {
+        const completed = ctx.transcript.tools.filter((t) => t.status === 'completed').length;
+        if (completed > 0) {
+          activityParts.push(hex(this.palette.categoryTools, 'tools ') + hex(this.palette.muted, `${completed} done`));
+        }
       }
     }
 
     if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
       const running = ctx.transcript.agents.find((a) => a.status === 'running');
       if (running) {
-        activityParts.push(hex(this.palette.teal, `${running.type.toLowerCase()}~`));
+        activityParts.push(hex(this.palette.categoryAgents, 'agents ') + hex(this.palette.teal, `${running.type.toLowerCase()}~`));
       }
     }
 
@@ -134,9 +134,9 @@ export const zenTheme: Theme = {
       const current = ctx.transcript.todos.find((t) => t.status === 'in_progress');
 
       if (current) {
-        activityParts.push(hex(this.palette.yellow, `${current.content.substring(0, 20).toLowerCase()}`));
+        activityParts.push(hex(this.palette.categoryTodos, 'todos ') + hex(this.palette.yellow, `${current.content.substring(0, 20).toLowerCase()}`));
       }
-      activityParts.push(hex(this.palette.muted, `${completed}/${total}`));
+      activityParts.push(hex(this.palette.categoryTodos, 'todos ') + hex(this.palette.muted, `${completed}/${total}`));
     }
 
     if (activityParts.length > 0) {

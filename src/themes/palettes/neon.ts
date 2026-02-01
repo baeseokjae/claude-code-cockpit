@@ -25,4 +25,8 @@ export const NEON_PALETTE: ColorPalette = {
   progressMid: '#00ffcc',
   progressHigh: '#ffff00',
   progressCritical: '#ff0055',
+
+  categoryTools: '#00d4ff',
+  categoryAgents: '#bf00ff',
+  categoryTodos: '#00ffcc',
 };

@@ -41,7 +41,7 @@ export function formatUsageFull(
 
   if (resetStr) {
     return hex(color, `5h:${Math.round(percent)}%`) +
-           hex(palette.muted, ` ↻${resetStr}`);
+      hex(palette.muted, ` ↻${resetStr}`);
   }
   return hex(color, `5h:${Math.round(percent)}%`);
 }

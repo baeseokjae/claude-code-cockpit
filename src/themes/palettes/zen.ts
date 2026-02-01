@@ -31,4 +31,9 @@ export const ZEN_PALETTE: ColorPalette = {
   progressMid: '#6ab8aa',
   progressHigh: '#c9b86a',
   progressCritical: '#bd7a7a',
+
+  // Category colors
+  categoryTools: '#6aadbd',
+  categoryAgents: '#a68dbd',
+  categoryTodos: '#6ab8aa',
 };

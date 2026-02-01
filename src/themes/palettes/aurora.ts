@@ -31,4 +31,9 @@ export const AURORA_PALETTE: ColorPalette = {
   progressMid: '#e0c878',    // 50-75%
   progressHigh: '#d9946a',   // 75-90%
   progressCritical: '#d97082', // 90%+
+
+  // Category colors
+  categoryTools: '#6aa3d9',   // Tools - blue
+  categoryAgents: '#a98dd4',  // Agents - mauve
+  categoryTodos: '#6bc4b8',   // Todos - teal
 };

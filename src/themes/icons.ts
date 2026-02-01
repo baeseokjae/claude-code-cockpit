@@ -6,10 +6,6 @@ import type { IconSet } from '../types/index.js';
 import { hasNerdFont } from '../utils/font-detect.js';
 
 export const NERD_ICONS: IconSet = {
-  modelOpus: '◆',
-  modelSonnet: '◇',
-  modelHaiku: '○',
-
   branch: '',
   dirty: '*',
   ahead: '↑',
@@ -34,13 +30,13 @@ export const NERD_ICONS: IconSet = {
   config: '',
   warning: '',
   cost: '$',
+
+  categoryTools: '◆',
+  categoryAgents: '●',
+  categoryTodos: '▸',
 };
 
 export const FALLBACK_ICONS: IconSet = {
-  modelOpus: '[O]',
-  modelSonnet: '[S]',
-  modelHaiku: '[H]',
-
   branch: '#',
   dirty: '*',
   ahead: '^',
@@ -65,6 +61,10 @@ export const FALLBACK_ICONS: IconSet = {
   config: '*',
   warning: '!',
   cost: '$',
+
+  categoryTools: '[T]',
+  categoryAgents: '[A]',
+  categoryTodos: '[D]',
 };
 
 /**

@@ -177,9 +177,7 @@ export const monoTheme: Theme = {
 
     // Agents
     if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
-      for (const agent of ctx.transcript.agents.slice(0, 3)) {
-        lines.push('  ' + renderAgentLine(agent));
-      }
+      lines.push('  ' + renderAgentsLine(ctx));
     }
 
     // Todos
@@ -206,11 +204,11 @@ function summarizeTools(ctx: RenderContext): string {
     parts.push(`${name}${marker}${count > 1 ? count : ''}`);
   }
 
-  return parts.join(' ');
+  return '[T] ' + parts.join(' ');
 }
 
 function summarizeAgents(ctx: RenderContext): string {
-  return ctx.transcript.agents
+  const agentItems = ctx.transcript.agents
     .slice(0, 2)
     .map((a) => {
       const marker = a.status === 'running' ? '~' : '+';
@@ -218,6 +216,8 @@ function summarizeAgents(ctx: RenderContext): string {
       return `${a.type}${marker}${model}`;
     })
     .join(' ');
+
+  return '[A] ' + agentItems;
 }
 
 function summarizeTodos(ctx: RenderContext): string {
@@ -226,13 +226,13 @@ function summarizeTodos(ctx: RenderContext): string {
   const current = ctx.transcript.todos.find((t) => t.status === 'in_progress');
 
   if (current) {
-    return `>${current.content.substring(0, 15)}... ${completed}/${total}`;
+    return `[D] >${current.content.substring(0, 15)}... ${completed}/${total}`;
   }
-  return `${completed}/${total} done`;
+  return `[D] ${completed}/${total}`;
 }
 
 function renderToolsLine(ctx: RenderContext): string {
-  return ctx.transcript.tools
+  const tools = ctx.transcript.tools
     .slice(0, 6)
     .map((t) => {
       const marker = t.status === 'running' ? '~' : t.status === 'error' ? 'x' : '+';
@@ -240,13 +240,22 @@ function renderToolsLine(ctx: RenderContext): string {
       return `${t.name}${marker}${target}`;
     })
     .join('  ');
+
+  return '[T] Tools: ' + tools;
 }
 
-function renderAgentLine(agent: any): string {
-  const marker = agent.status === 'running' ? '~' : agent.status === 'error' ? 'x' : '+';
-  const model = agent.model ? `[${agent.model}]` : '';
-  const desc = agent.description ? ` ${agent.description.substring(0, 30)}` : '';
-  return `${agent.type}${marker} ${model}${desc}`;
+function renderAgentsLine(ctx: RenderContext): string {
+  const agents = ctx.transcript.agents
+    .slice(0, 3)
+    .map((agent) => {
+      const marker = agent.status === 'running' ? '~' : agent.status === 'error' ? 'x' : '+';
+      const model = agent.model ? `[${agent.model}]` : '';
+      const desc = agent.description ? ` ${agent.description.substring(0, 30)}` : '';
+      return `${agent.type}${marker} ${model}${desc}`;
+    })
+    .join('  ');
+
+  return '[A] Agents: ' + agents;
 }
 
 function renderTodoLine(ctx: RenderContext): string {
@@ -256,7 +265,7 @@ function renderTodoLine(ctx: RenderContext): string {
 
   if (current) {
     const bar = '#'.repeat(completed) + '-'.repeat(total - completed);
-    return `> ${current.content} [${bar}] ${completed}/${total}`;
+    return `[D] Todos: > ${current.content} [${bar}] ${completed}/${total}`;
   }
-  return `+ All done (${total}/${total})`;
+  return `[D] Todos: + All done (${total}/${total})`;
 }
