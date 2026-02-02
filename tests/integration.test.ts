@@ -6,6 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { main, type MainDeps } from '../src/index.js';
 import type { StdinData, CockpitConfig, TranscriptData, GitStatus } from '../src/types/index.js';
+import { calculateTokenSpeed, formatTokenSpeed, type TokenSpeed } from '../src/data/speed-tracker.js';
 import { DEFAULT_CONFIG } from '../src/config/defaults.js';
 import { auroraTheme } from '../src/themes/aurora.js';
 
@@ -202,5 +203,145 @@ describe('theme rendering', () => {
     expect(lines.length).toBeGreaterThan(0);
     // Should contain ANSI escape codes
     expect(lines[0]).toMatch(/\x1b\[/);
+  });
+});
+
+describe('speed-tracker', () => {
+  describe('calculateTokenSpeed', () => {
+    it('should calculate token speed correctly', () => {
+      const stdin: StdinData = {
+        model: { display_name: 'Sonnet' },
+        context_window: {
+          context_window_size: 200000,
+          current_usage: {
+            input_tokens: 50000,
+            output_tokens: 10000,
+          },
+        },
+        cost: {
+          total_duration_ms: 60000, // 60 seconds
+        },
+      };
+
+      const speed = calculateTokenSpeed(stdin);
+
+      expect(speed).not.toBeNull();
+      expect(speed!.outputTokensPerSecond).toBeCloseTo(166.67, 1); // 10000 / 60
+      expect(speed!.inputTokensPerSecond).toBeCloseTo(833.33, 1); // 50000 / 60
+      expect(speed!.totalTokensPerSecond).toBeCloseTo(1000, 1); // 60000 / 60
+    });
+
+    it('should include cache tokens in input calculation', () => {
+      const stdin: StdinData = {
+        model: { display_name: 'Sonnet' },
+        context_window: {
+          context_window_size: 200000,
+          current_usage: {
+            input_tokens: 10000,
+            output_tokens: 5000,
+            cache_creation_input_tokens: 20000,
+            cache_read_input_tokens: 30000,
+          },
+        },
+        cost: {
+          total_duration_ms: 60000,
+        },
+      };
+
+      const speed = calculateTokenSpeed(stdin);
+
+      expect(speed).not.toBeNull();
+      // Input = 10000 + 20000 + 30000 = 60000
+      expect(speed!.inputTokensPerSecond).toBeCloseTo(1000, 1); // 60000 / 60
+    });
+
+    it('should return null when missing usage data', () => {
+      const stdin: StdinData = {
+        model: { display_name: 'Sonnet' },
+        cost: { total_duration_ms: 60000 },
+      };
+
+      const speed = calculateTokenSpeed(stdin);
+
+      expect(speed).toBeNull();
+    });
+
+    it('should return null when missing duration', () => {
+      const stdin: StdinData = {
+        model: { display_name: 'Sonnet' },
+        context_window: {
+          context_window_size: 200000,
+          current_usage: { input_tokens: 50000, output_tokens: 10000 },
+        },
+      };
+
+      const speed = calculateTokenSpeed(stdin);
+
+      expect(speed).toBeNull();
+    });
+
+    it('should return null when duration is zero', () => {
+      const stdin: StdinData = {
+        model: { display_name: 'Sonnet' },
+        context_window: {
+          context_window_size: 200000,
+          current_usage: { input_tokens: 50000, output_tokens: 10000 },
+        },
+        cost: { total_duration_ms: 0 },
+      };
+
+      const speed = calculateTokenSpeed(stdin);
+
+      expect(speed).toBeNull();
+    });
+  });
+
+  describe('formatTokenSpeed', () => {
+    it('should format output speed correctly', () => {
+      const speed: TokenSpeed = {
+        outputTokensPerSecond: 166.67,
+        inputTokensPerSecond: 833.33,
+        totalTokensPerSecond: 1000,
+      };
+
+      expect(formatTokenSpeed(speed, 'output')).toBe('167 tok/s');
+      expect(formatTokenSpeed(speed, 'input')).toBe('833 tok/s');
+      expect(formatTokenSpeed(speed, 'total')).toBe('1000 tok/s');
+    });
+
+    it('should format low speeds with decimal', () => {
+      const speed: TokenSpeed = {
+        outputTokensPerSecond: 5.5,
+        inputTokensPerSecond: 8.2,
+        totalTokensPerSecond: 13.7,
+      };
+
+      expect(formatTokenSpeed(speed, 'output')).toBe('5.5 tok/s');
+      expect(formatTokenSpeed(speed, 'input')).toBe('8.2 tok/s');
+    });
+
+    it('should return empty string for null speed', () => {
+      expect(formatTokenSpeed(null)).toBe('');
+    });
+
+    it('should return 0 tok/s for very low speeds', () => {
+      const speed: TokenSpeed = {
+        outputTokensPerSecond: 0.5,
+        inputTokensPerSecond: 0.3,
+        totalTokensPerSecond: 0.8,
+      };
+
+      expect(formatTokenSpeed(speed, 'output')).toBe('0 tok/s');
+    });
+
+    it('should default to output mode', () => {
+      const speed: TokenSpeed = {
+        outputTokensPerSecond: 100,
+        inputTokensPerSecond: 200,
+        totalTokensPerSecond: 300,
+      };
+
+      expect(formatTokenSpeed(speed)).toBe('100 tok/s');
+    });
   });
 });

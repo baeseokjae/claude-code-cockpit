@@ -140,7 +140,9 @@ export const monoTheme: Theme = {
     const percentStr = percent !== null ? formatPercent(percent) : '??%';
     const progressBar = createProgressBar(percent || 0, 15, this.chars.progressFilled, this.chars.progressEmpty);
 
-    const sessionName = ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8);
+    const sessionName = ctx.config.display.showSessionName
+      ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
+      : null;
     const sessionStr = sessionName ? ` [${sessionName}]` : '';
 
     const absoluteTokens = getAbsoluteTokens(ctx.stdin);
