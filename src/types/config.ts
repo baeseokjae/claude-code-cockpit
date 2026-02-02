@@ -16,6 +16,12 @@ export interface CockpitConfig {
     showUsage: boolean;
     showConfigCounts: boolean;
     showCost: boolean;
+    showAbsoluteTokens: boolean;
+    showSessionName: boolean;
+    sevenDayThreshold: number;
+    showGitFileStats: boolean;
+    showAllBranches: boolean;
+    showAllBranchesDepth: number;
   };
 
   detailMode: boolean;

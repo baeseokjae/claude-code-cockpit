@@ -21,7 +21,6 @@ describe('main integration', () => {
       countConfigs: vi.fn(),
       getGitStatus: vi.fn(),
       fetchUsage: vi.fn(),
-      checkAlerts: vi.fn(),
       loadConfig: vi.fn(),
       loadTheme: vi.fn(),
       parseExtraCmdArg: vi.fn(),
@@ -65,7 +64,6 @@ describe('main integration', () => {
     });
     (mockDeps.getGitStatus as any).mockResolvedValue(gitStatus);
     (mockDeps.fetchUsage as any).mockResolvedValue(null);
-    (mockDeps.checkAlerts as any).mockReturnValue([]);
     (mockDeps.loadConfig as any).mockReturnValue(DEFAULT_CONFIG);
     (mockDeps.loadTheme as any).mockReturnValue(auroraTheme);
 
@@ -86,7 +84,7 @@ describe('main integration', () => {
     expect(mockDeps.writeOutput).not.toHaveBeenCalled();
   });
 
-  it('should include alerts in output when present', async () => {
+  it('should handle high context usage', async () => {
     const stdin: StdinData = {
       model: { display_name: 'Opus' },
       cwd: '/test',
@@ -113,14 +111,6 @@ describe('main integration', () => {
     });
     (mockDeps.getGitStatus as any).mockResolvedValue(null);
     (mockDeps.fetchUsage as any).mockResolvedValue(null);
-    (mockDeps.checkAlerts as any).mockReturnValue([
-      {
-        type: 'context_critical',
-        severity: 'critical',
-        message: 'Context at 95%',
-        shortMessage: 'CTX 95%!',
-      },
-    ]);
     (mockDeps.loadConfig as any).mockReturnValue(DEFAULT_CONFIG);
     (mockDeps.loadTheme as any).mockReturnValue(auroraTheme);
 
@@ -128,8 +118,8 @@ describe('main integration', () => {
 
     expect(capturedOutput.length).toBeGreaterThan(0);
     const fullOutput = capturedOutput.join('\n');
-    // Should contain the alert badge
-    expect(fullOutput).toContain('CTX 95%!');
+    // Should contain high percentage
+    expect(fullOutput).toMatch(/95%/);
   });
 
   it('should render tool activity', async () => {
@@ -159,7 +149,6 @@ describe('main integration', () => {
     });
     (mockDeps.getGitStatus as any).mockResolvedValue(null);
     (mockDeps.fetchUsage as any).mockResolvedValue(null);
-    (mockDeps.checkAlerts as any).mockReturnValue([]);
     (mockDeps.loadConfig as any).mockReturnValue(DEFAULT_CONFIG);
     (mockDeps.loadTheme as any).mockReturnValue(auroraTheme);
 
@@ -201,11 +190,11 @@ describe('theme rendering', () => {
       configCounts: { claudeMdCount: 0, rulesCount: 0, mcpCount: 0, hooksCount: 0 },
       gitStatus: { branch: 'main', isDirty: true } as GitStatus,
       usageData: null,
+      tokenSpeed: null,
       extraLabel: null,
       sessionDuration: '1m',
       theme: auroraTheme,
       detailMode: false,
-      alerts: [],
     };
 
     const lines = auroraTheme.render(ctx);

@@ -62,9 +62,9 @@ export const FALLBACK_ICONS: IconSet = {
   warning: '!',
   cost: '$',
 
-  categoryTools: '[T]',
-  categoryAgents: '[A]',
-  categoryTodos: '[D]',
+  categoryTools: '●',
+  categoryAgents: '●',
+  categoryTodos: '●',
 };
 
 /**

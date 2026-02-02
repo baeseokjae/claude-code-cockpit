@@ -13,6 +13,7 @@ import type {
   TranscriptEntry,
   ToolUseBlock,
   ToolResultBlock,
+  TodoStatus,
 } from '../types/index.js';
 import { createDebug } from '../utils/debug.js';
 import {
@@ -141,12 +142,55 @@ function handleToolUse(
     return;
   }
 
+  // Handle TaskCreate (new Task API)
+  if (name === 'TaskCreate') {
+    const tool: ToolEntry = {
+      id,
+      name,
+      target: (input.subject as string) || undefined,
+      status: 'running',
+      startTime,
+      details: input,
+    };
+    toolsMap.set(id, tool);
+    return;
+  }
+
+  // Handle TaskUpdate (new Task API)
+  if (name === 'TaskUpdate') {
+    const tool: ToolEntry = {
+      id,
+      name,
+      target: (input.taskId as string) || undefined,
+      status: 'running',
+      startTime,
+      details: input,
+    };
+    toolsMap.set(id, tool);
+    return;
+  }
+
+  // Handle TodoWrite (legacy API)
+  if (name === 'TodoWrite') {
+    const tool: ToolEntry = {
+      id,
+      name,
+      target: undefined,
+      status: 'running',
+      startTime,
+      details: input,
+    };
+    toolsMap.set(id, tool);
+    return;
+  }
+
   const tool: ToolEntry = {
     id,
     name,
     target: extractTarget(name, input),
     status: 'running',
     startTime,
+    details: input,
   };
   toolsMap.set(id, tool);
 }
@@ -188,12 +232,73 @@ function handleToolResult(
       tool.error = content;
     }
 
-    if (tool.name === 'TodoWrite' && !is_error && typeof content === 'string') {
+    // Handle TodoWrite (legacy API)
+    if (tool.name === 'TodoWrite' && !is_error) {
       try {
-        const todos = parseTodosFromResult(content);
-        if (todos.length > 0) {
+        const input = tool.details as Record<string, unknown>;
+        const todos = input?.todos as Array<{ content: string; status: TodoStatus; id?: string; activeForm?: string }> | undefined;
+        
+        if (todos && Array.isArray(todos) && todos.length > 0) {
           currentTodos.length = 0;
-          currentTodos.push(...todos);
+          currentTodos.push(...todos.map(t => ({
+            id: t.id,
+            content: t.content,
+            status: t.status,
+            activeForm: t.activeForm,
+          })));
+        }
+      } catch {
+        // Ignore parsing errors
+      }
+    }
+
+    // Handle TaskCreate (new Task API)
+    if (tool.name === 'TaskCreate' && !is_error) {
+      try {
+        const input = tool.details as Record<string, unknown>;
+        
+        // Extract task ID from the result content
+        let taskId = tool_use_id; // fallback to tool_use_id
+        if (typeof content === 'string') {
+          try {
+            const result = JSON.parse(content);
+            if (result.taskId) {
+              taskId = result.taskId;
+            }
+          } catch {
+            // If parsing fails, use tool_use_id as fallback
+          }
+        }
+        
+        const todoItem: TodoItem = {
+          id: taskId,
+          content: (input?.subject as string) ?? '',
+          status: 'pending',
+        };
+        currentTodos.push(todoItem);
+      } catch {
+        // Ignore parsing errors
+      }
+    }
+
+    // Handle TaskUpdate (new Task API)
+    if (tool.name === 'TaskUpdate' && !is_error) {
+      try {
+        const input = tool.details as Record<string, unknown>;
+        const taskId = input?.taskId as string;
+        const newStatus = input?.status as TodoStatus | undefined;
+        const newContent = input?.subject as string | undefined;
+        
+        if (taskId) {
+          const todo = currentTodos.find(t => t.id === taskId);
+          if (todo) {
+            if (newStatus) {
+              todo.status = newStatus;
+            }
+            if (newContent) {
+              todo.content = newContent;
+            }
+          }
         }
       } catch {
         // Ignore parsing errors
@@ -224,12 +329,4 @@ function extractModelFromPrompt(prompt: string): string | undefined {
   if (lower.includes('haiku')) return 'haiku';
 
   return undefined;
-}
-
-function parseTodosFromResult(_content: string): TodoItem[] {
-  try {
-    return [];
-  } catch {
-    return [];
-  }
 }

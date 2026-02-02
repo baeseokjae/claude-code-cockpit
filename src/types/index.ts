@@ -20,7 +20,7 @@ export type {
   TextBlock,
 } from './transcript.js';
 
-export type { GitStatus, FileStats } from './git.js';
+export type { GitStatus, FileStats, SubRepoStatus } from './git.js';
 
 export type { UsageData } from './usage.js';
 
@@ -41,5 +41,3 @@ export type {
 } from './theme.js';
 
 export type { RenderContext } from './context.js';
-
-export type { Alert, AlertSeverity, AlertType } from '../data/alerts.js';

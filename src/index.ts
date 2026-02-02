@@ -12,10 +12,11 @@ import { parseExtraCmdArg } from './input/cli.js';
 import { getGitStatus } from './data/git.js';
 import { formatSessionDuration } from './data/time.js';
 import { fetchUsage } from './data/usage-api.js';
-import { checkAlerts } from './data/alerts.js';
+import { calculateTokenSpeed } from './data/speed-tracker.js';
 import { loadConfig } from './config/loader.js';
 import { loadTheme } from './themes/index.js';
 import { writeOutput } from './output/writer.js';
+import { writeSessionFile } from './output/session-file.js';
 import { createDebug } from './utils/debug.js';
 
 const debug = createDebug('main');
@@ -26,7 +27,6 @@ export interface MainDeps {
   countConfigs: typeof countConfigs;
   getGitStatus: typeof getGitStatus;
   fetchUsage: typeof fetchUsage;
-  checkAlerts: typeof checkAlerts;
   loadConfig: typeof loadConfig;
   loadTheme: typeof loadTheme;
   parseExtraCmdArg: typeof parseExtraCmdArg;
@@ -40,7 +40,6 @@ const defaultDeps: MainDeps = {
   countConfigs,
   getGitStatus,
   fetchUsage,
-  checkAlerts,
   loadConfig,
   loadTheme,
   parseExtraCmdArg,
@@ -68,7 +67,10 @@ export async function main(deps: MainDeps = defaultDeps): Promise<void> {
     const cwd = getCwd(stdin);
     const configCounts = deps.countConfigs(cwd);
 
-    const gitStatus = await deps.getGitStatus(cwd || undefined);
+    const gitStatus = await deps.getGitStatus(cwd || undefined, {
+      showAllBranches: config.display.showAllBranches,
+      showAllBranchesDepth: config.display.showAllBranchesDepth,
+    });
 
     const durationMs = stdin.cost?.total_duration_ms || 0;
     const sessionDuration = formatSessionDuration(durationMs);
@@ -77,7 +79,7 @@ export async function main(deps: MainDeps = defaultDeps): Promise<void> {
 
     const usageData = config.display.showUsage ? await deps.fetchUsage() : null;
 
-    const alerts = deps.checkAlerts(stdin, usageData);
+    const tokenSpeed = calculateTokenSpeed(stdin);
 
     const ctx: RenderContext = {
       stdin,
@@ -86,14 +88,17 @@ export async function main(deps: MainDeps = defaultDeps): Promise<void> {
       configCounts,
       gitStatus,
       usageData,
+      tokenSpeed,
       extraLabel,
       sessionDuration,
       theme,
       detailMode: config.detailMode,
-      alerts,
     };
 
     const lines = theme.render(ctx);
+
+    // Write session file
+    writeSessionFile(ctx);
 
     deps.writeOutput(lines);
 

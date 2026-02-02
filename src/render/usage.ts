@@ -29,21 +29,36 @@ export function formatUsageCompact(
 }
 
 /**
- * Full format: "5h:25% ↻1h30m"
+ * Full format: "5h:25% ↻1h30m" + optional 7d if above threshold
  */
 export function formatUsageFull(
   usageData: UsageData,
-  palette: ColorPalette
+  palette: ColorPalette,
+  sevenDayThreshold: number = 80
 ): string {
   const percent = usageData.fiveHour;
   const color = getUsageColor(percent, palette);
   const resetStr = formatResetTime(usageData.fiveHourResetAt);
 
+  let result = '';
   if (resetStr) {
-    return hex(color, `5h:${Math.round(percent)}%`) +
-      hex(palette.muted, ` ↻${resetStr}`);
+    result = hex(color, `5h:${Math.round(percent)}%`) +
+      hex(palette.muted, ` ↻ ${resetStr}`);
+  } else {
+    result = hex(color, `5h:${Math.round(percent)}%`);
   }
-  return hex(color, `5h:${Math.round(percent)}%`);
+
+  // Add 7-day usage if above threshold
+  if (usageData.sevenDay >= sevenDayThreshold) {
+    const sevenColor = getUsageColor(usageData.sevenDay, palette);
+    const sevenResetStr = formatResetTime(usageData.sevenDayResetAt);
+    result += ' | ' + hex(sevenColor, `7d:${Math.round(usageData.sevenDay)}%`);
+    if (sevenResetStr) {
+      result += hex(palette.muted, ` ↻ ${sevenResetStr}`);
+    }
+  }
+
+  return result;
 }
 
 /**
@@ -65,7 +80,8 @@ export function createUsageProgressBar(
 export function formatUsageDetailLines(
   usageData: UsageData,
   palette: ColorPalette,
-  chars: ThemeChars
+  chars: ThemeChars,
+  sevenDayThreshold: number = 80
 ): string[] {
   const lines: string[] = [];
 
@@ -82,18 +98,20 @@ export function formatUsageDetailLines(
     (fiveReset ? hex(palette.muted, `  ↻ ${fiveReset}`) : '')
   );
 
-  // 7-day usage
-  const sevenColor = getUsageColor(usageData.sevenDay, palette);
-  const sevenBar = createUsageProgressBar(
-    usageData.sevenDay, 10, chars.progressFilled, chars.progressEmpty
-  );
-  const sevenReset = formatResetTime(usageData.sevenDayResetAt);
-  lines.push(
-    hex(palette.subtext, '7d: ') +
-    hex(sevenColor, sevenBar) +
-    hex(sevenColor, ` ${Math.round(usageData.sevenDay)}%`) +
-    (sevenReset ? hex(palette.muted, `  ↻ ${sevenReset}`) : '')
-  );
+  // 7-day usage (only show if above threshold)
+  if (usageData.sevenDay >= sevenDayThreshold) {
+    const sevenColor = getUsageColor(usageData.sevenDay, palette);
+    const sevenBar = createUsageProgressBar(
+      usageData.sevenDay, 10, chars.progressFilled, chars.progressEmpty
+    );
+    const sevenReset = formatResetTime(usageData.sevenDayResetAt);
+    lines.push(
+      hex(palette.subtext, '7d: ') +
+      hex(sevenColor, sevenBar) +
+      hex(sevenColor, ` ${Math.round(usageData.sevenDay)}%`) +
+      (sevenReset ? hex(palette.muted, `  ↻ ${sevenReset}`) : '')
+    );
+  }
 
   return lines;
 }

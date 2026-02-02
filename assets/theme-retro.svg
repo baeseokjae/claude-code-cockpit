@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="160" viewBox="0 0 520 160">
+  <defs>
+    <style>
+      .bg { fill: #0a0a0a; }
+      .text { fill: #33ff33; font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace; font-size: 13px; }
+      .bright { fill: #55ff55; }
+      .dark { fill: #117711; }
+      .red { fill: #ff3333; }
+      .bold { font-weight: bold; }
+    </style>
+  </defs>
+  <rect class="bg" width="520" height="160" rx="8"/>
+
+  <!-- Box top -->
+  <text y="24" class="text">
+    <tspan x="16">╔════════════════════════════════════════════════╗</tspan>
+  </text>
+
+  <!-- Title -->
+  <text y="44" class="text">
+    <tspan x="16">║</tspan>
+    <tspan dx="4" class="bright bold">CLAUDE CODE COCKPIT v1.0</tspan>
+    <tspan x="408">║</tspan>
+  </text>
+
+  <!-- Divider -->
+  <text y="64" class="text">
+    <tspan x="16">╠════════════════════════════════════════════════╣</tspan>
+  </text>
+
+  <!-- Model line -->
+  <text y="84" class="text">
+    <tspan x="16">║</tspan>
+    <tspan dx="4">MODEL:</tspan>
+    <tspan dx="4" class="bright bold">OPUS 4.5</tspan>
+    <tspan dx="8">MEM:</tspan>
+    <tspan dx="4" class="bright">[████████</tspan><tspan class="dark">░░</tspan><tspan class="bright">]</tspan>
+    <tspan dx="4" class="bright bold">39%</tspan>
+    <tspan x="408">║</tspan>
+  </text>
+
+  <!-- Project line -->
+  <text y="104" class="text">
+    <tspan x="16">║</tspan>
+    <tspan dx="4">DIR:</tspan>
+    <tspan dx="4" class="bright">MY-PROJECT</tspan>
+    <tspan dx="8">BRANCH:</tspan>
+    <tspan dx="4" class="bright">(MAIN*)</tspan>
+    <tspan dx="8">TIME:</tspan>
+    <tspan dx="4" class="bright bold">29M</tspan>
+    <tspan x="408">║</tspan>
+  </text>
+
+  <!-- Box bottom -->
+  <text y="124" class="text">
+    <tspan x="16">╚════════════════════════════════════════════════╝</tspan>
+  </text>
+
+  <!-- Tools line -->
+  <text y="148" class="text">
+    <tspan x="24">● TOOLS:</tspan>
+    <tspan dx="4" class="bright">BASH</tspan><tspan class="dark">+6</tspan>
+    <tspan dx="8" class="bright">READ</tspan><tspan class="dark">+4</tspan>
+    <tspan dx="8" class="bright">EDIT</tspan><tspan class="dark">+2</tspan>
+  </text>
+</svg>

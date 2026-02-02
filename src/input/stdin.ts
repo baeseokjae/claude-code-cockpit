@@ -38,7 +38,21 @@ export async function readStdin(): Promise<StdinData | null> {
 }
 
 export function getModelName(stdin: StdinData): string {
+  const modelId = stdin.model?.id;
+  
+  // Detect AWS Bedrock models
+  if (modelId && isBedrockModel(modelId)) {
+    return 'Bedrock';
+  }
+  
   return stdin.model?.display_name || 'Unknown';
+}
+
+export function isBedrockModel(modelId: string): boolean {
+  // Bedrock model IDs follow the pattern: {region}.anthropic.{model}:{version}
+  // Examples: eu.anthropic.claude-opus-4-5-20251101-v1:0, us.anthropic.claude-3-5-sonnet-20241022-v2:0
+  const bedrockPattern = /^(eu|us|ap|ca)\.anthropic\./;
+  return bedrockPattern.test(modelId);
 }
 
 export function getContextPercent(stdin: StdinData): number | null {
@@ -76,4 +90,19 @@ export function getSessionId(stdin: StdinData): string | null {
 
 export function getPlanName(stdin: StdinData): string | null {
   return stdin.plan_name || null;
+}
+
+export function getAbsoluteTokens(stdin: StdinData): { used: number; total: number } | null {
+  const size = stdin.context_window?.context_window_size;
+  const usage = stdin.context_window?.current_usage;
+
+  if (!size || !usage) return null;
+
+  const total =
+    (usage.input_tokens || 0) +
+    (usage.cache_creation_input_tokens || 0) +
+    (usage.cache_read_input_tokens || 0) +
+    (usage.output_tokens || 0);
+
+  return { used: total, total: size };
 }

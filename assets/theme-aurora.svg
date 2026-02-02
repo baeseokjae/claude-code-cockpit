@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="140" viewBox="0 0 680 140">
+  <defs>
+    <style>
+      .bg { fill: #181c24; }
+      .text { fill: #d4dae6; font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace; font-size: 13px; }
+      .blue { fill: #6aa3d9; }
+      .green { fill: #7bc98f; }
+      .yellow { fill: #e0c878; }
+      .red { fill: #d97082; }
+      .mauve { fill: #a98dd4; }
+      .teal { fill: #6bc4b8; }
+      .muted { fill: #6b7488; }
+      .bold { font-weight: bold; }
+    </style>
+  </defs>
+  <rect class="bg" width="680" height="140" rx="8"/>
+
+  <!-- Line 1: Model, Progress, Git, Usage, Duration -->
+  <text y="28" class="text">
+    <tspan x="16" class="blue bold">Opus 4.5</tspan>
+    <tspan dx="8" class="green">▰▰▰▰</tspan><tspan class="muted">▱▱▱▱▱▱</tspan>
+    <tspan dx="4" class="green bold">39%</tspan>
+    <tspan dx="12" class="teal">my-project</tspan>
+    <tspan class="mauve"> (main*)</tspan>
+    <tspan dx="12" class="yellow bold">5h:30%</tspan>
+    <tspan dx="12" class="muted">29m</tspan>
+  </text>
+
+  <!-- Line 2: Tools -->
+  <text y="54" class="text">
+    <tspan x="24" class="blue">●</tspan>
+    <tspan dx="4" class="blue">Tools:</tspan>
+    <tspan dx="8">Bash</tspan><tspan class="green">✓</tspan><tspan class="muted">⁶</tspan>
+    <tspan dx="8">Read</tspan><tspan class="green">✓</tspan><tspan class="muted">⁴</tspan>
+    <tspan dx="8">Edit</tspan><tspan class="green">✓</tspan><tspan class="muted">²</tspan>
+    <tspan dx="8" class="muted">(12)</tspan>
+  </text>
+
+  <!-- Line 3: Agents -->
+  <text y="80" class="text">
+    <tspan x="24" class="mauve">●</tspan>
+    <tspan dx="4" class="mauve">Agents:</tspan>
+    <tspan dx="8">Explore</tspan><tspan class="green">✓</tspan>
+    <tspan dx="8">Plan</tspan><tspan class="yellow">~</tspan>
+  </text>
+
+  <!-- Line 4: Todos -->
+  <text y="106" class="text">
+    <tspan x="24" class="teal">●</tspan>
+    <tspan dx="4" class="teal">Todos:</tspan>
+    <tspan dx="8" class="yellow">▸</tspan>
+    <tspan dx="4">Fix authentication bug</tspan>
+    <tspan dx="8" class="muted">(2/5)</tspan>
+  </text>
+
+  <!-- Line 5: Usage -->
+  <text y="132" class="text">
+    <tspan x="24" class="blue">●</tspan>
+    <tspan dx="4" class="blue">Usage:</tspan>
+    <tspan dx="8" class="yellow bold">5h: 30%</tspan>
+    <tspan dx="4" class="muted">↻ 4h21m</tspan>
+    <tspan dx="12" class="green bold">7d: 75%</tspan>
+    <tspan dx="4" class="muted">↻ 42h21m</tspan>
+  </text>
+</svg>

@@ -16,6 +16,7 @@ import { formatCount } from '../render/superscript.js';
 import { getUsageColor } from '../render/usage.js';
 import { formatResetTime } from '../data/usage-api.js';
 import { getModelName, getContextPercent } from '../input/stdin.js';
+import { hyperlink, fileUrl, githubBranchUrl } from '../render/links.js';
 
 /**
  * Neon theme
@@ -68,19 +69,22 @@ export const neonTheme: Theme = {
     const model = getModelName(ctx.stdin).toUpperCase();
     const percent = getContextPercent(ctx.stdin);
     const percentStr = percent !== null ? formatPercent(percent) : '??%';
-    const git = ctx.gitStatus?.branch || '';
-    const dirty = ctx.gitStatus?.isDirty ? '*' : '';
     const duration = ctx.sessionDuration;
 
     const modelText = hex(this.palette.blue, bold(model));
 
+    const sessionName = ctx.config.display.showSessionName
+      ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
+      : null;
+    const sessionText = sessionName ? hex(this.palette.muted, ` [${sessionName}]`) : '';
+
     const percentColor = getPercentColor(percent, this.palette);
     const percentText = hex(percentColor, bold(percentStr));
 
-    const gitText = git ? hex(this.palette.teal, ` ${git}${dirty}`) : '';
+    const projectGit = formatProjectGit(ctx, this.palette, this.icons);
     const durationText = hex(this.palette.muted, ` ${duration}`);
 
-    return [`${modelText} ${percentText}${gitText}${durationText}`];
+    return [`${modelText}${sessionText} ${percentText}${projectGit}${durationText}`];
   },
 
   renderCompact(ctx: RenderContext): string[] {
@@ -92,17 +96,17 @@ export const neonTheme: Theme = {
 
     const modelText = hex(this.palette.blue, bold(model));
 
+    const sessionName = ctx.config.display.showSessionName
+      ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
+      : null;
+    const sessionText = sessionName ? hex(this.palette.muted, ` [${sessionName}]`) : '';
+
     const progressBar = createProgressBar(percent || 0, 10, this.chars.progressFilled, this.chars.progressEmpty);
     const progressColor = getPercentColor(percent, this.palette);
     const progressText = hex(progressColor, progressBar);
     const percentText = hex(progressColor, bold(percentStr));
 
-    const project = ctx.stdin.cwd ? ctx.stdin.cwd.split('/').pop()?.toUpperCase() : null;
-    const projectText = project ? hex(this.palette.teal, project) : '';
-
-    const git = ctx.gitStatus?.branch || '';
-    const dirty = ctx.gitStatus?.isDirty ? '*' : '';
-    const gitText = git ? hex(this.palette.mauve, `${git}${dirty}`) : '';
+    const projectGit = formatProjectGit(ctx, this.palette, this.icons);
 
     const duration = ctx.sessionDuration;
     const durationText = hex(this.palette.muted, duration);
@@ -113,7 +117,7 @@ export const neonTheme: Theme = {
       : '';
 
     lines.push(
-      `${modelText}  ${progressText} ${percentText}  ${projectText}  ${gitText}${usageText}  ${durationText}`
+      `${modelText}${sessionText}  ${progressText} ${percentText}  ${projectGit}${usageText}  ${durationText}`
     );
 
     // Line 2: Activity
@@ -157,6 +161,11 @@ export const neonTheme: Theme = {
 
     const modelText = hex(this.palette.blue, bold(model));
 
+    const sessionName = ctx.config.display.showSessionName
+      ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
+      : null;
+    const sessionText = sessionName ? hex(this.palette.muted, ` [${sessionName}]`) : '';
+
     const progressBar = createProgressBar(percent || 0, 10, this.chars.progressFilled, this.chars.progressEmpty);
     const progressColor = getPercentColor(percent, this.palette);
     const progressText = hex(progressColor, progressBar);
@@ -176,30 +185,25 @@ export const neonTheme: Theme = {
     // Usage (Neon style: uppercase + bold + reset time)
     const usageText = ctx.config.display.showUsage && ctx.usageData
       ? (() => {
-          const resetStr = formatResetTime(ctx.usageData.fiveHourResetAt);
-          const usageColor = getUsageColor(ctx.usageData.fiveHour, this.palette);
-          return '  ' + hex(usageColor, bold(`5H:${Math.round(ctx.usageData.fiveHour)}%`)) +
-                 (resetStr ? hex(this.palette.muted, ` ↻${resetStr}`) : '');
-        })()
+        const resetStr = formatResetTime(ctx.usageData.fiveHourResetAt);
+        const usageColor = getUsageColor(ctx.usageData.fiveHour, this.palette);
+        return '  ' + hex(usageColor, bold(`5H: ${Math.round(ctx.usageData.fiveHour)}%`)) +
+          (resetStr ? hex(this.palette.muted, ` ↻ ${resetStr}`) : '');
+      })()
       : '';
 
     const duration = ctx.sessionDuration;
     const durationText = hex(this.palette.muted, duration);
 
-    const line1 = `  ${modelText}   ${progressText} ${percentText}${warningText}   ${costText}${usageText}   ${durationText}`;
+    const line1 = `  ${modelText}${sessionText}   ${progressText} ${percentText}${warningText}   ${costText}${usageText}   ${durationText}`;
     lines.push(hex(this.palette.blue, this.chars.boxVertical) + line1 + ' '.repeat(Math.max(0, innerWidth - line1.length + 10)) + hex(this.palette.blue, this.chars.boxVertical));
 
     // Middle border
     const midBorder = this.chars.boxVertical + this.chars.boxHorizontal.repeat(innerWidth) + this.chars.boxVertical;
     lines.push(hex(this.palette.blue, midBorder));
 
-    // Line 2: Project, Git, Config
-    const project = ctx.stdin.cwd ? ctx.stdin.cwd.split('/').pop()?.toUpperCase() : null;
-    const projectText = project ? hex(this.palette.teal, `  ${project}`) : '';
-
-    const git = ctx.gitStatus?.branch || '';
-    const dirty = ctx.gitStatus?.isDirty ? '*' : '';
-    const gitText = git ? hex(this.palette.mauve, `  ${git}${dirty}`) : '';
+    // Line 2: Project/Git, Config
+    const projectGit = formatProjectGit(ctx, this.palette, this.icons);
 
     const configParts: string[] = [];
     if (ctx.configCounts.claudeMdCount > 0) configParts.push(`${ctx.configCounts.claudeMdCount} md`);
@@ -207,7 +211,7 @@ export const neonTheme: Theme = {
     if (ctx.configCounts.mcpCount > 0) configParts.push(`${ctx.configCounts.mcpCount} mcp`);
     const configText = configParts.length > 0 ? hex(this.palette.muted, `  ${configParts.join('  ')}`) : '';
 
-    const line2 = `${projectText}${gitText}${configText}`;
+    const line2 = `  ${projectGit}${configText}`;
     lines.push(hex(this.palette.blue, this.chars.boxVertical) + line2 + ' '.repeat(Math.max(0, innerWidth - line2.length + 10)) + hex(this.palette.blue, this.chars.boxVertical));
 
     // Box bottom
@@ -296,9 +300,9 @@ function renderToolsLine(ctx: RenderContext, icons: IconSet, palette: ColorPalet
 
   for (const tool of ctx.transcript.tools.slice(0, 5)) {
     const icon = tool.status === 'running' ? icons.running : tool.status === 'error' ? icons.error : icons.success;
-    const color = tool.status === 'running' ? palette.yellow : tool.status === 'error' ? palette.red : palette.green;
+    const iconColor = tool.status === 'running' ? palette.yellow : tool.status === 'error' ? palette.red : palette.green;
     const target = tool.target ? ` ${tool.target}` : '';
-    parts.push(hex(color, `${tool.name}${icon}`) + hex(palette.subtext, target));
+    parts.push(hex(palette.text, tool.name) + hex(iconColor, icon) + hex(palette.muted, target));
   }
 
   return hex(palette.categoryTools, icons.categoryTools + ' TOOLS: ') + parts.join('   ');
@@ -309,10 +313,10 @@ function renderAgentsLine(ctx: RenderContext, icons: IconSet, palette: ColorPale
 
   for (const agent of ctx.transcript.agents.slice(0, 3)) {
     const icon = agent.status === 'running' ? icons.running : agent.status === 'error' ? icons.error : icons.success;
-    const color = agent.status === 'running' ? palette.yellow : agent.status === 'error' ? palette.red : palette.green;
+    const iconColor = agent.status === 'running' ? palette.yellow : agent.status === 'error' ? palette.red : palette.green;
     const modelAbbr = agent.model ? `[${agent.model.toUpperCase()}]` : '';
     const desc = agent.description ? ` ${agent.description.substring(0, 40).toUpperCase()}` : '';
-    agentParts.push(hex(color, `${agent.type.toUpperCase()}${icon}`) + hex(palette.muted, ` ${modelAbbr}`) + hex(palette.subtext, desc));
+    agentParts.push(hex(palette.text, agent.type.toUpperCase()) + hex(iconColor, icon) + hex(palette.muted, ` ${modelAbbr}`) + hex(palette.muted, desc));
   }
 
   return hex(palette.categoryAgents, icons.categoryAgents + ' AGENTS: ') + agentParts.join('   ');
@@ -327,8 +331,42 @@ function renderTodoLine(ctx: RenderContext, icons: IconSet, palette: ColorPalett
 
   if (inProgress) {
     const progressBar = '█'.repeat(completed) + '░'.repeat(total - completed);
-    return label + hex(palette.yellow, `▸ ${inProgress.content.toUpperCase()}`) + hex(palette.muted, ` (${completed}/${total}) ${progressBar}`);
+    return label + hex(palette.yellow, '▸ ') + hex(palette.text, inProgress.content.toUpperCase()) + hex(palette.muted, ` (${completed}/${total}) ${progressBar}`);
   }
 
-  return label + hex(palette.green, `✓ ALL TASKS COMPLETED`) + hex(palette.muted, ` (${total}/${total})`);
+  return label + hex(palette.green, '✓ ') + hex(palette.text, 'ALL TASKS COMPLETED') + hex(palette.muted, ` (${total}/${total})`);
+}
+
+/**
+ * Format project and git with parentheses and clickable links (NEON style: uppercase)
+ */
+function formatProjectGit(ctx: RenderContext, palette: ColorPalette, _icons: IconSet): string {
+  const project = ctx.stdin.cwd ? ctx.stdin.cwd.split('/').pop()?.toUpperCase() : null;
+  const git = ctx.gitStatus?.branch || '';
+  const dirty = ctx.gitStatus?.isDirty ? '*' : '';
+
+  if (!project && !git) return '';
+
+  let result = '';
+
+  // Project name with file:// link
+  if (project && ctx.stdin.cwd) {
+    const projectLink = hyperlink(fileUrl(ctx.stdin.cwd), project);
+    result += hex(palette.teal, projectLink);
+  }
+
+  // Git branch with GitHub link (if available)
+  if (git) {
+    const branchText = `${git.toUpperCase()}${dirty}`;
+
+    if (ctx.gitStatus?.remoteUrl) {
+      const branchUrl = githubBranchUrl(ctx.gitStatus.remoteUrl, git);
+      const branchLink = hyperlink(branchUrl, branchText);
+      result += hex(palette.mauve, ` (${branchLink})`);
+    } else {
+      result += hex(palette.mauve, ` (${branchText})`);
+    }
+  }
+
+  return result;
 }

@@ -56,17 +56,37 @@ cc --plugin-dir .
 ### Aurora (Default)
 Inspired by Aurora Borealis. Polar night sky with green-teal-purple aurora gradients.
 
+**Example Output:**
+
+![Aurora Theme](./assets/theme-aurora.svg)
+
 ### Neon
 Cyberpunk neon sign aesthetic. High-contrast fluorescent green, cyan, and hot pink.
+
+**Example Output:**
+
+![Neon Theme](./assets/theme-neon.svg)
 
 ### Mono
 Pure black & white minimal. ASCII-compatible, accessibility-first design.
 
+**Example Output:**
+
+![Mono Theme](./assets/theme-mono.svg)
+
 ### Zen
 Ultra-minimal design. Calm tones inspired by traditional paper and ink.
 
+**Example Output:**
+
+![Zen Theme](./assets/theme-zen.svg)
+
 ### Retro
 80s CRT phosphor monitor nostalgia. Green phosphor glow and vintage terminal vibes.
+
+**Example Output:**
+
+![Retro Theme](./assets/theme-retro.svg)
 
 ## ⚙️ Configuration
 

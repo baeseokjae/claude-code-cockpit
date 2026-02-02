@@ -8,7 +8,7 @@ import type { GitStatus } from './git.js';
 import type { UsageData } from './usage.js';
 import type { CockpitConfig, ConfigCounts } from './config.js';
 import type { Theme } from './theme.js';
-import type { Alert } from '../data/alerts.js';
+import type { TokenSpeed } from '../data/speed-tracker.js';
 
 export interface RenderContext {
   stdin: StdinData;
@@ -19,12 +19,11 @@ export interface RenderContext {
 
   gitStatus: GitStatus | null;
   usageData: UsageData | null;
+  tokenSpeed: TokenSpeed | null;
   extraLabel: string | null;
 
   sessionDuration: string;
 
   theme: Theme;
   detailMode: boolean;
-
-  alerts: Alert[];
 }

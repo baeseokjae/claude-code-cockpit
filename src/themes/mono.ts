@@ -7,7 +7,8 @@ import { MONO_PALETTE } from './palettes/mono.js';
 import { FALLBACK_ICONS } from './icons.js';
 import { dim, bold } from '../render/colors.js';
 import { createProgressBar, formatPercent } from '../render/utils.js';
-import { getModelName, getContextPercent } from '../input/stdin.js';
+import { getModelName, getContextPercent, getAbsoluteTokens } from '../input/stdin.js';
+import { hyperlink, fileUrl, githubBranchUrl } from '../render/links.js';
 
 /**
  * Mono theme - No colors, ASCII only
@@ -60,12 +61,17 @@ export const monoTheme: Theme = {
     const model = getModelName(ctx.stdin);
     const percent = getContextPercent(ctx.stdin);
     const percentStr = percent !== null ? formatPercent(percent) : '??%';
-    const git = ctx.gitStatus?.branch || '';
-    const dirty = ctx.gitStatus?.isDirty ? '*' : '';
     const duration = ctx.sessionDuration;
 
+    const sessionName = ctx.config.display.showSessionName
+      ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
+      : null;
+    const sessionText = sessionName ? ` [${sessionName}]` : '';
+
+    const projectGit = formatProjectGit(ctx);
+
     // Text only, no colors
-    return [`[${model}] ${percentStr} | ${git}${dirty} | ${duration}`];
+    return [`[${model}]${sessionText} ${percentStr}${projectGit} | ${duration}`];
   },
 
   renderCompact(ctx: RenderContext): string[] {
@@ -75,11 +81,14 @@ export const monoTheme: Theme = {
     const percent = getContextPercent(ctx.stdin);
     const percentStr = percent !== null ? formatPercent(percent) : '??%';
 
+    const sessionName = ctx.config.display.showSessionName
+      ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
+      : null;
+    const sessionText = sessionName ? ` [${sessionName}]` : '';
+
     const progressBar = createProgressBar(percent || 0, 10, this.chars.progressFilled, this.chars.progressEmpty);
 
-    const project = ctx.stdin.cwd ? ctx.stdin.cwd.split('/').pop() : '';
-    const git = ctx.gitStatus?.branch || '';
-    const dirty = ctx.gitStatus?.isDirty ? '*' : '';
+    const projectGit = formatProjectGit(ctx);
     const duration = ctx.sessionDuration;
 
     // Usage (Mono style: no color)
@@ -90,7 +99,7 @@ export const monoTheme: Theme = {
     // Warning marker
     const warning = percent !== null && percent >= 75 ? ' !' : '';
 
-    lines.push(`[${model}] [${progressBar}] ${percentStr}${warning} | ${project} | ${git}${dirty}${usage} | ${duration}`);
+    lines.push(`[${model}]${sessionText} [${progressBar}] ${percentStr}${warning}${projectGit}${usage} | ${duration}`);
 
     // Activity line
     const activityParts: string[] = [];
@@ -131,8 +140,18 @@ export const monoTheme: Theme = {
     const percentStr = percent !== null ? formatPercent(percent) : '??%';
     const progressBar = createProgressBar(percent || 0, 15, this.chars.progressFilled, this.chars.progressEmpty);
 
-    const tokens = ctx.stdin.context_window?.current_usage;
-    const tokensStr = tokens ? `${Math.round((tokens.input_tokens || 0) / 1000)}k/${Math.round((ctx.stdin.context_window?.context_window_size || 200000) / 1000)}k` : '';
+    const sessionName = ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8);
+    const sessionStr = sessionName ? ` [${sessionName}]` : '';
+
+    const absoluteTokens = getAbsoluteTokens(ctx.stdin);
+    let tokensStr = '';
+
+    if (ctx.config.display.showAbsoluteTokens && absoluteTokens) {
+      tokensStr = `${Math.round(absoluteTokens.used / 1000)}k/${Math.round(absoluteTokens.total / 1000)}k`;
+    } else {
+      const tokens = ctx.stdin.context_window?.current_usage;
+      tokensStr = tokens ? `${Math.round((tokens.input_tokens || 0) / 1000)}k/${Math.round((ctx.stdin.context_window?.context_window_size || 200000) / 1000)}k` : '';
+    }
 
     const cost = ctx.stdin.cost?.total_cost_usd;
     const costStr = cost ? `$${cost.toFixed(2)}` : '';
@@ -152,20 +171,18 @@ export const monoTheme: Theme = {
       warningStr = ' [WARNING]';
     }
 
-    const parts = [`${bold(model)}`, `[${progressBar}]`, `${percentStr}${warningStr}`, `(${tokensStr})`, costStr, usageStr, duration].filter(Boolean);
+    const parts = [`${bold(model)}${sessionStr}`, `[${progressBar}]`, `${percentStr}${warningStr}`, `(${tokensStr})`, costStr, usageStr, duration].filter(Boolean);
     lines.push(`  ${parts.join('  ')}`);
 
     // Line 2
-    const project = ctx.stdin.cwd ? ctx.stdin.cwd.split('/').pop() : '';
-    const git = ctx.gitStatus?.branch || '';
-    const dirty = ctx.gitStatus?.isDirty ? '*' : '';
+    const projectGit = formatProjectGit(ctx);
 
     const configParts: string[] = [];
     if (ctx.configCounts.claudeMdCount > 0) configParts.push(`${ctx.configCounts.claudeMdCount}md`);
     if (ctx.configCounts.rulesCount > 0) configParts.push(`${ctx.configCounts.rulesCount}rules`);
     if (ctx.configCounts.mcpCount > 0) configParts.push(`${ctx.configCounts.mcpCount}mcp`);
 
-    lines.push(`  ${project}  #${git}${dirty}  ${dim(configParts.join(' '))}`);
+    lines.push(`  ${projectGit}  ${dim(configParts.join(' '))}`);
 
     // Separator
     lines.push(dim(headerLine));
@@ -204,7 +221,7 @@ function summarizeTools(ctx: RenderContext): string {
     parts.push(`${name}${marker}${count > 1 ? count : ''}`);
   }
 
-  return '[T] ' + parts.join(' ');
+  return '● ' + parts.join(' ');
 }
 
 function summarizeAgents(ctx: RenderContext): string {
@@ -217,7 +234,7 @@ function summarizeAgents(ctx: RenderContext): string {
     })
     .join(' ');
 
-  return '[A] ' + agentItems;
+  return '● ' + agentItems;
 }
 
 function summarizeTodos(ctx: RenderContext): string {
@@ -226,9 +243,9 @@ function summarizeTodos(ctx: RenderContext): string {
   const current = ctx.transcript.todos.find((t) => t.status === 'in_progress');
 
   if (current) {
-    return `[D] >${current.content.substring(0, 15)}... ${completed}/${total}`;
+    return `● >${current.content.substring(0, 15)}... ${completed}/${total}`;
   }
-  return `[D] ${completed}/${total}`;
+  return `● ${completed}/${total}`;
 }
 
 function renderToolsLine(ctx: RenderContext): string {
@@ -241,7 +258,7 @@ function renderToolsLine(ctx: RenderContext): string {
     })
     .join('  ');
 
-  return '[T] Tools: ' + tools;
+  return '● Tools: ' + tools;
 }
 
 function renderAgentsLine(ctx: RenderContext): string {
@@ -255,7 +272,7 @@ function renderAgentsLine(ctx: RenderContext): string {
     })
     .join('  ');
 
-  return '[A] Agents: ' + agents;
+  return '● Agents: ' + agents;
 }
 
 function renderTodoLine(ctx: RenderContext): string {
@@ -265,7 +282,41 @@ function renderTodoLine(ctx: RenderContext): string {
 
   if (current) {
     const bar = '#'.repeat(completed) + '-'.repeat(total - completed);
-    return `[D] Todos: > ${current.content} [${bar}] ${completed}/${total}`;
+    return `● Todos: > ${current.content} [${bar}] ${completed}/${total}`;
   }
-  return `[D] Todos: + All done (${total}/${total})`;
+  return `● Todos: + All done (${total}/${total})`;
+}
+
+/**
+ * Format project and git with parentheses and clickable links (Mono style: no colors)
+ */
+function formatProjectGit(ctx: RenderContext): string {
+  const project = ctx.stdin.cwd ? ctx.stdin.cwd.split('/').pop() : null;
+  const git = ctx.gitStatus?.branch || '';
+  const dirty = ctx.gitStatus?.isDirty ? '*' : '';
+
+  if (!project && !git) return '';
+
+  let result = ' | ';
+
+  // Project name with file:// link
+  if (project && ctx.stdin.cwd) {
+    const projectLink = hyperlink(fileUrl(ctx.stdin.cwd), project);
+    result += projectLink;
+  }
+
+  // Git branch with GitHub link (if available)
+  if (git) {
+    const branchText = `${git}${dirty}`;
+
+    if (ctx.gitStatus?.remoteUrl) {
+      const branchUrl = githubBranchUrl(ctx.gitStatus.remoteUrl, git);
+      const branchLink = hyperlink(branchUrl, branchText);
+      result += ` (${branchLink})`;
+    } else {
+      result += ` (${branchText})`;
+    }
+  }
+
+  return result;
 }

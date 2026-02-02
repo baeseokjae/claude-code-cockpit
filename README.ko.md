@@ -51,22 +51,42 @@ pnpm build
 cc --plugin-dir .
 ```
 
-## 🎨 Themes
+## 🎨 테마
 
 ### Aurora (기본)
 북극광(Aurora Borealis)에서 영감을 받은 색상 시스템. 극지방 밤하늘과 오로라의 초록-청록-보라 그라데이션.
 
+**출력 예시:**
+
+![Aurora Theme](./assets/theme-aurora.svg)
+
 ### Neon
 사이버펑크 네온사인 감성. 형광 그린, 시안, 핫핑크의 고대비 조합.
+
+**출력 예시:**
+
+![Neon Theme](./assets/theme-neon.svg)
 
 ### Mono
 순수 흑백 미니멀. ASCII 호환, 접근성 우선 설계.
 
+**출력 예시:**
+
+![Mono Theme](./assets/theme-mono.svg)
+
 ### Zen
 초미니멀 디자인. 한지와 먹에서 영감받은 차분한 톤.
 
+**출력 예시:**
+
+![Zen Theme](./assets/theme-zen.svg)
+
 ### Retro
 80년대 CRT 인광 모니터 감성. 녹색 인광색과 터미널 향수.
+
+**출력 예시:**
+
+![Retro Theme](./assets/theme-retro.svg)
 
 ## ⚙️ Configuration
 

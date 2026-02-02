@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="88" viewBox="0 0 600 88">
+  <defs>
+    <style>
+      .bg { fill: #000000; }
+      .text { fill: #ffffff; font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace; font-size: 13px; }
+      .subtext { fill: #cccccc; }
+      .muted { fill: #666666; }
+      .bold { font-weight: bold; }
+    </style>
+  </defs>
+  <rect class="bg" width="600" height="88" rx="8"/>
+
+  <!-- Line 1: Model, Progress, Git, Duration -->
+  <text y="28" class="text">
+    <tspan x="16" class="bold">Opus 4.5</tspan>
+    <tspan dx="8">####</tspan><tspan class="muted">------</tspan>
+    <tspan dx="4" class="bold">39%</tspan>
+    <tspan dx="12" class="subtext">my-project</tspan>
+    <tspan class="subtext"> (main*)</tspan>
+    <tspan dx="12" class="muted">29m</tspan>
+  </text>
+
+  <!-- Line 2: Tools -->
+  <text y="54" class="text">
+    <tspan x="24">●</tspan>
+    <tspan dx="4">Tools:</tspan>
+    <tspan dx="8">Bash ×6</tspan>
+    <tspan dx="8">Read ×4</tspan>
+    <tspan dx="8">Edit ×2</tspan>
+    <tspan dx="8" class="muted">(12)</tspan>
+  </text>
+
+  <!-- Line 3: Usage -->
+  <text y="80" class="text">
+    <tspan x="24">●</tspan>
+    <tspan dx="4">Usage:</tspan>
+    <tspan dx="8" class="bold">5h: 30%</tspan>
+    <tspan dx="4" class="muted">↻ 4h21m</tspan>
+    <tspan dx="12" class="bold">7d: 75%</tspan>
+    <tspan dx="4" class="muted">↻ 42h21m</tspan>
+  </text>
+</svg>

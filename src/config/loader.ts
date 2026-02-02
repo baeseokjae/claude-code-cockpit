@@ -2,7 +2,7 @@
  * Configuration loader and merger
  */
 
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import type { CockpitConfig, ThemeName } from '../types/index.js';
@@ -12,7 +12,34 @@ import { createDebug } from '../utils/debug.js';
 const debug = createDebug('config');
 
 function getConfigPath(): string {
-  return join(homedir(), '.claude', 'plugins', 'claude-code-cockpit', 'config.json');
+  // Start with base path
+  const claudeDir = join(homedir(), '.claude');
+  
+  // Resolve .claude directory if it's a symlink
+  let resolvedClaudeDir = claudeDir;
+  try {
+    if (existsSync(claudeDir)) {
+      resolvedClaudeDir = realpathSync(claudeDir);
+      debug('resolved .claude directory:', resolvedClaudeDir);
+    }
+  } catch (error) {
+    debug('failed to resolve .claude symlink:', error);
+  }
+  
+  const configPath = join(resolvedClaudeDir, 'plugins', 'claude-code-cockpit', 'config.json');
+  
+  // Also resolve the config.json file itself if it's a symlink
+  try {
+    if (existsSync(configPath)) {
+      const resolvedConfigPath = realpathSync(configPath);
+      debug('resolved config.json path:', resolvedConfigPath);
+      return resolvedConfigPath;
+    }
+  } catch (error) {
+    debug('failed to resolve config.json symlink:', error);
+  }
+  
+  return configPath;
 }
 
 export function loadConfig(): CockpitConfig {

@@ -8,6 +8,15 @@ export interface GitStatus {
   ahead: number;
   behind: number;
   hasConflicts?: boolean;
+  remoteUrl?: string;
+  fileStats?: FileStats;
+  subRepos?: SubRepoStatus[];
+}
+
+export interface SubRepoStatus {
+  path: string;
+  branch: string;
+  isDirty: boolean;
 }
 
 export interface FileStats {

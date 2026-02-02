@@ -8,6 +8,7 @@ import { FALLBACK_ICONS } from './icons.js';
 import { hex, bold } from '../render/colors.js';
 import { createProgressBar, formatPercent } from '../render/utils.js';
 import { getModelName, getContextPercent } from '../input/stdin.js';
+import { hyperlink, fileUrl, githubBranchUrl } from '../render/links.js';
 
 /**
  * Retro theme - CRT phosphor monitor
@@ -60,12 +61,17 @@ export const retroTheme: Theme = {
     const model = getModelName(ctx.stdin).toUpperCase();
     const percent = getContextPercent(ctx.stdin);
     const percentStr = percent !== null ? formatPercent(percent) : '??%';
-    const git = ctx.gitStatus?.branch || '';
-    const dirty = ctx.gitStatus?.isDirty ? '*' : '';
     const duration = ctx.sessionDuration;
 
+    const sessionName = ctx.config.display.showSessionName
+      ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
+      : null;
+    const sessionText = sessionName ? ` [${sessionName}]` : '';
+
+    const projectGit = formatProjectGit(ctx);
+
     const color = this.palette.text;
-    return [hex(color, `[${model}] ${percentStr} | ${git}${dirty} | ${duration}`)];
+    return [hex(color, `[${model}]${sessionText} ${percentStr}${projectGit} | ${duration}`)];
   },
 
   renderCompact(ctx: RenderContext): string[] {
@@ -77,18 +83,21 @@ export const retroTheme: Theme = {
     const percent = getContextPercent(ctx.stdin);
     const percentStr = percent !== null ? formatPercent(percent) : '??%';
 
+    const sessionName = ctx.config.display.showSessionName
+      ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
+      : null;
+    const sessionText = sessionName ? ` [${sessionName}]` : '';
+
     const progressBar = createProgressBar(percent || 0, 10, this.chars.progressFilled, this.chars.progressEmpty);
 
-    const project = ctx.stdin.cwd ? ctx.stdin.cwd.split('/').pop()?.toUpperCase() : '';
-    const git = ctx.gitStatus?.branch?.toUpperCase() || '';
-    const dirty = ctx.gitStatus?.isDirty ? '*' : '';
+    const projectGit = formatProjectGit(ctx);
     const duration = ctx.sessionDuration;
 
     // Warning
     const warningColor = percent !== null && percent >= 75 ? this.palette.red : color;
     const warning = percent !== null && percent >= 90 ? ' [!ALERT!]' : percent !== null && percent >= 75 ? ' [WARN]' : '';
 
-    lines.push(hex(color, `[${model}] `) + hex(warningColor, `[${progressBar}] ${percentStr}${warning}`) + hex(dimColor, ` | ${project} | ${git}${dirty} | ${duration}`));
+    lines.push(hex(color, `[${model}]${sessionText} `) + hex(warningColor, `[${progressBar}] ${percentStr}${warning}`) + hex(dimColor, `${projectGit} | ${duration}`));
 
     // Activity
     const activityParts: string[] = [];
@@ -130,21 +139,24 @@ export const retroTheme: Theme = {
     const percentStr = percent !== null ? formatPercent(percent) : '??%';
     const progressBar = createProgressBar(percent || 0, 20, this.chars.progressFilled, this.chars.progressEmpty);
 
+    const sessionName = ctx.config.display.showSessionName
+      ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
+      : null;
+    const sessionText = sessionName ? ` [${sessionName}]` : '';
+
     const warningColor = percent !== null && percent >= 75 ? this.palette.red : color;
     const warning = percent !== null && percent >= 90 ? bold(' [!CRITICAL ALERT!]') : percent !== null && percent >= 75 ? ' [WARNING]' : '';
 
-    const line1 = ` MODEL: ${model}  MEM: [${progressBar}] ${percentStr}${warning}`;
+    const line1 = ` MODEL: ${model}${sessionText}  MEM: [${progressBar}] ${percentStr}${warning}`;
     lines.push(hex(color, '║') + hex(warningColor, line1) + ' '.repeat(Math.max(0, innerWidth - line1.length)) + hex(color, '║'));
 
     // Project info
-    const project = ctx.stdin.cwd ? ctx.stdin.cwd.split('/').pop()?.toUpperCase() : 'N/A';
-    const git = ctx.gitStatus?.branch?.toUpperCase() || 'N/A';
-    const dirty = ctx.gitStatus?.isDirty ? '*' : '';
+    const projectGit = formatProjectGit(ctx);
     const duration = ctx.sessionDuration;
     const cost = ctx.stdin.cost?.total_cost_usd;
     const costStr = cost ? `$${cost.toFixed(2)}` : '$0.00';
 
-    const line2 = ` DIR: ${project}  BRANCH: ${git}${dirty}  TIME: ${duration}  COST: ${costStr}`;
+    const line2 = ` ${projectGit}  TIME: ${duration}  COST: ${costStr}`;
     lines.push(hex(color, '║') + hex(dimColor, line2) + ' '.repeat(Math.max(0, innerWidth - line2.length)) + hex(color, '║'));
 
     // Separator
@@ -203,7 +215,7 @@ function summarizeTools(ctx: RenderContext, _palette: typeof RETRO_PALETTE): str
     parts.push(`${name.toUpperCase()}${marker}${count > 1 ? count : ''}`);
   }
 
-  return '[T] ' + parts.join(' ');
+  return '● ' + parts.join(' ');
 }
 
 function summarizeAgents(ctx: RenderContext, _palette: typeof RETRO_PALETTE): string {
@@ -216,7 +228,7 @@ function summarizeAgents(ctx: RenderContext, _palette: typeof RETRO_PALETTE): st
     })
     .join(' ');
 
-  return '[A] ' + agentItems;
+  return '● ' + agentItems;
 }
 
 function summarizeTodos(ctx: RenderContext, _palette: typeof RETRO_PALETTE): string {
@@ -225,7 +237,41 @@ function summarizeTodos(ctx: RenderContext, _palette: typeof RETRO_PALETTE): str
   const current = ctx.transcript.todos.find((t) => t.status === 'in_progress');
 
   if (current) {
-    return `[D] >${current.content.substring(0, 25).toUpperCase()}... (${completed}/${total})`;
+    return `● >${current.content.substring(0, 25).toUpperCase()}... (${completed}/${total})`;
   }
-  return `[D] ${completed}/${total}`;
+  return `● ${completed}/${total}`;
+}
+
+/**
+ * Format project and git with parentheses and clickable links (Retro style: uppercase)
+ */
+function formatProjectGit(ctx: RenderContext): string {
+  const project = ctx.stdin.cwd ? ctx.stdin.cwd.split('/').pop()?.toUpperCase() : null;
+  const git = ctx.gitStatus?.branch?.toUpperCase() || '';
+  const dirty = ctx.gitStatus?.isDirty ? '*' : '';
+
+  if (!project && !git) return '';
+
+  let result = '';
+
+  // Project name with file:// link
+  if (project && ctx.stdin.cwd) {
+    const projectLink = hyperlink(fileUrl(ctx.stdin.cwd), project);
+    result += `DIR: ${projectLink}`;
+  }
+
+  // Git branch with GitHub link (if available)
+  if (git) {
+    const branchText = `${git}${dirty}`;
+
+    if (ctx.gitStatus?.remoteUrl) {
+      const branchUrl = githubBranchUrl(ctx.gitStatus.remoteUrl, ctx.gitStatus.branch || git);
+      const branchLink = hyperlink(branchUrl, branchText);
+      result += `  BRANCH: (${branchLink})`;
+    } else {
+      result += `  BRANCH: (${branchText})`;
+    }
+  }
+
+  return result;
 }

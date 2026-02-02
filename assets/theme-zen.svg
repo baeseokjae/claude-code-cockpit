@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="88" viewBox="0 0 600 88">
+  <defs>
+    <style>
+      .bg { fill: #181b1a; }
+      .text { fill: #e4e8e6; font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace; font-size: 13px; }
+      .blue { fill: #6aadbd; }
+      .green { fill: #6db88e; }
+      .yellow { fill: #c9b86a; }
+      .mauve { fill: #a68dbd; }
+      .teal { fill: #6ab8aa; }
+      .muted { fill: #6e7572; }
+      .bold { font-weight: bold; }
+    </style>
+  </defs>
+  <rect class="bg" width="600" height="88" rx="8"/>
+
+  <!-- Line 1: Model, Progress, Git, Usage, Duration -->
+  <text y="28" class="text">
+    <tspan x="16" class="blue bold">Opus 4.5</tspan>
+    <tspan dx="8" class="green">▰▰▰▰</tspan><tspan class="muted">▱▱▱▱▱▱</tspan>
+    <tspan dx="4" class="green bold">39%</tspan>
+    <tspan dx="12" class="teal">my-project</tspan>
+    <tspan class="mauve"> (main*)</tspan>
+    <tspan dx="12" class="yellow bold">5h:30%</tspan>
+    <tspan dx="12" class="muted">29m</tspan>
+  </text>
+
+  <!-- Line 2: Tools -->
+  <text y="54" class="text">
+    <tspan x="24" class="blue">●</tspan>
+    <tspan dx="4" class="blue">Tools:</tspan>
+    <tspan dx="8">Bash ×6</tspan>
+    <tspan dx="8">Read ×4</tspan>
+    <tspan dx="8">Edit ×2</tspan>
+    <tspan dx="8" class="muted">(12)</tspan>
+  </text>
+
+  <!-- Line 3: Usage -->
+  <text y="80" class="text">
+    <tspan x="24" class="blue">●</tspan>
+    <tspan dx="4" class="blue">Usage:</tspan>
+    <tspan dx="8" class="yellow bold">5h: 30%</tspan>
+    <tspan dx="4" class="muted">↻ 4h21m</tspan>
+    <tspan dx="12" class="green bold">7d: 75%</tspan>
+    <tspan dx="4" class="muted">↻ 42h21m</tspan>
+  </text>
+</svg>

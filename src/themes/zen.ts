@@ -13,6 +13,7 @@ import { getIcons } from './icons.js';
 import { hex } from '../render/colors.js';
 import { formatPercent } from '../render/utils.js';
 import { getModelName, getContextPercent } from '../input/stdin.js';
+import { hyperlink, fileUrl, githubBranchUrl } from '../render/links.js';
 
 /**
  * Zen theme - Minimal information, maximum serenity
@@ -67,8 +68,13 @@ export const zenTheme: Theme = {
     const percentStr = percent !== null ? formatPercent(percent) : '?';
     const duration = ctx.sessionDuration;
 
+    const sessionName = ctx.config.display.showSessionName
+      ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
+      : null;
+    const sessionText = sessionName ? `[${sessionName}] ` : '';
+
     // Ultra simple
-    return [hex(this.palette.subtext, `${model} ${percentStr} · ${duration}`)];
+    return [hex(this.palette.subtext, `${sessionText}${model} ${percentStr} · ${duration}`)];
   },
 
   renderCompact(ctx: RenderContext): string[] {
@@ -76,12 +82,15 @@ export const zenTheme: Theme = {
     const percent = getContextPercent(ctx.stdin);
     const percentStr = percent !== null ? formatPercent(percent) : '?';
 
-    const project = ctx.stdin.cwd ? ctx.stdin.cwd.split('/').pop() : '';
-    const git = ctx.gitStatus?.branch || '';
-    const dirty = ctx.gitStatus?.isDirty ? '*' : '';
+    const sessionName = ctx.config.display.showSessionName
+      ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
+      : null;
+    const sessionText = sessionName ? `[${sessionName}] ` : '';
+
+    const projectGit = formatProjectGit(ctx);
     const duration = ctx.sessionDuration;
 
-    const line = `${model} ${percentStr} · ${project} · ${git}${dirty} · ${duration}`;
+    const line = `${sessionText}${model} ${percentStr}${projectGit} · ${duration}`;
     return [hex(this.palette.subtext, line)];
   },
 
@@ -93,9 +102,12 @@ export const zenTheme: Theme = {
     const percent = getContextPercent(ctx.stdin);
     const percentStr = percent !== null ? formatPercent(percent) : '?';
 
-    const project = ctx.stdin.cwd ? ctx.stdin.cwd.split('/').pop() : '';
-    const git = ctx.gitStatus?.branch || '';
-    const dirty = ctx.gitStatus?.isDirty ? '*' : '';
+    const sessionName = ctx.config.display.showSessionName
+      ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
+      : null;
+    const sessionPart = sessionName ? `[${sessionName}]` : null;
+
+    const projectGit = formatProjectGit(ctx);
     const duration = ctx.sessionDuration;
 
     // Usage (Zen style: minimal)
@@ -103,7 +115,7 @@ export const zenTheme: Theme = {
       ? `5h:${Math.round(ctx.usageData.fiveHour)}%`
       : null;
 
-    const line1Parts = [model, percentStr, project, `${git}${dirty}`, usage, duration].filter(Boolean);
+    const line1Parts = [sessionPart, model, percentStr, projectGit, usage, duration].filter(Boolean);
     lines.push(hex(this.palette.subtext, line1Parts.join(' · ')));
 
     // Line 2: Activity (when present)
@@ -146,3 +158,37 @@ export const zenTheme: Theme = {
     return lines;
   },
 };
+
+/**
+ * Format project and git with parentheses and clickable links (Zen style: minimal)
+ */
+function formatProjectGit(ctx: RenderContext): string {
+  const project = ctx.stdin.cwd ? ctx.stdin.cwd.split('/').pop() : null;
+  const git = ctx.gitStatus?.branch || '';
+  const dirty = ctx.gitStatus?.isDirty ? '*' : '';
+
+  if (!project && !git) return '';
+
+  let result = '';
+
+  // Project name with file:// link
+  if (project && ctx.stdin.cwd) {
+    const projectLink = hyperlink(fileUrl(ctx.stdin.cwd), project);
+    result += projectLink;
+  }
+
+  // Git branch with GitHub link (if available)
+  if (git) {
+    const branchText = `${git}${dirty}`;
+
+    if (ctx.gitStatus?.remoteUrl) {
+      const branchUrl = githubBranchUrl(ctx.gitStatus.remoteUrl, git);
+      const branchLink = hyperlink(branchUrl, branchText);
+      result += ` (${branchLink})`;
+    } else {
+      result += ` (${branchText})`;
+    }
+  }
+
+  return result;
+}
