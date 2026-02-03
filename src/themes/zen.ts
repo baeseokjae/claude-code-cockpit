@@ -12,6 +12,7 @@ import { ZEN_PALETTE } from './palettes/zen.js';
 import { getIcons } from './icons.js';
 import { hex } from '../render/colors.js';
 import { formatPercent } from '../render/utils.js';
+import { formatTokenSpeed } from '../data/speed-tracker.js';
 import { getModelName, getContextPercent } from '../input/stdin.js';
 import { hyperlink, fileUrl, githubBranchUrl } from '../render/links.js';
 
@@ -115,7 +116,12 @@ export const zenTheme: Theme = {
       ? `5h:${Math.round(ctx.usageData.fiveHour)}%`
       : null;
 
-    const line1Parts = [sessionPart, model, percentStr, projectGit, usage, duration].filter(Boolean);
+    // Token speed (Zen style: minimal, muted)
+    const speed = ctx.config.display.showTokenSpeed && ctx.tokenSpeed
+      ? formatTokenSpeed(ctx.tokenSpeed, 'output')
+      : null;
+
+    const line1Parts = [sessionPart, model, percentStr, projectGit, usage, speed, duration].filter(Boolean);
     lines.push(hex(this.palette.subtext, line1Parts.join(' · ')));
 
     // Line 2: Activity (when present)
@@ -188,6 +194,19 @@ function formatProjectGit(ctx: RenderContext): string {
     } else {
       result += ` (${branchText})`;
     }
+  }
+
+  // Subdirectory repos (Zen style: minimal)
+  if (ctx.config.display.showAllBranches && ctx.gitStatus?.subRepos && ctx.gitStatus.subRepos.length > 0) {
+    const subItems = ctx.gitStatus.subRepos.slice(0, 2).map((sub) => {
+      const subDirty = sub.isDirty ? '*' : '';
+      return `${sub.path}:${sub.branch}${subDirty}`;
+    });
+
+    const remaining = ctx.gitStatus.subRepos.length - 2;
+    const moreText = remaining > 0 ? ` +${remaining}` : '';
+
+    result += ` ${subItems.join(' ')}${moreText}`;
   }
 
   return result;

@@ -240,7 +240,7 @@ export const auroraTheme: Theme = {
     const durationText = hex(this.palette.muted, duration);
 
     // Token speed
-    const speedText = ctx.tokenSpeed
+    const speedText = ctx.config.display.showTokenSpeed && ctx.tokenSpeed
       ? '  ' + hex(this.palette.green, formatTokenSpeed(ctx.tokenSpeed, 'output'))
       : '';
 
@@ -550,6 +550,19 @@ function formatProjectGit(ctx: RenderContext, palette: ColorPalette, _icons: Ico
     } else {
       result += hex(palette.teal, ` (${branchText})`);
     }
+  }
+
+  // Subdirectory repos (monorepo support)
+  if (ctx.config.display.showAllBranches && ctx.gitStatus?.subRepos && ctx.gitStatus.subRepos.length > 0) {
+    const subItems = ctx.gitStatus.subRepos.slice(0, 3).map((sub) => {
+      const subDirty = sub.isDirty ? '*' : '';
+      return `${sub.path}(${sub.branch}${subDirty})`;
+    });
+
+    const remaining = ctx.gitStatus.subRepos.length - 3;
+    const moreText = remaining > 0 ? ` +${remaining}` : '';
+
+    result += hex(palette.muted, `  sub: ${subItems.join(' ')}${moreText}`);
   }
 
   return result;

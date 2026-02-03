@@ -18,6 +18,7 @@ export interface CockpitConfig {
     showCost: boolean;
     showAbsoluteTokens: boolean;
     showSessionName: boolean;
+    showTokenSpeed: boolean;
     sevenDayThreshold: number;
     showGitFileStats: boolean;
     showAllBranches: boolean;

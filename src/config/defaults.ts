@@ -18,6 +18,7 @@ export const DEFAULT_CONFIG: CockpitConfig = {
     showCost: true,
     showAbsoluteTokens: false,
     showSessionName: true,
+    showTokenSpeed: true,
     sevenDayThreshold: 80,
     showGitFileStats: false,
     showAllBranches: false,

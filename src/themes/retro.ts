@@ -7,6 +7,7 @@ import { RETRO_PALETTE } from './palettes/retro.js';
 import { FALLBACK_ICONS } from './icons.js';
 import { hex, bold } from '../render/colors.js';
 import { createProgressBar, formatPercent } from '../render/utils.js';
+import { formatTokenSpeed } from '../data/speed-tracker.js';
 import { getModelName, getContextPercent } from '../input/stdin.js';
 import { hyperlink, fileUrl, githubBranchUrl } from '../render/links.js';
 
@@ -156,7 +157,12 @@ export const retroTheme: Theme = {
     const cost = ctx.stdin.cost?.total_cost_usd;
     const costStr = cost ? `$${cost.toFixed(2)}` : '$0.00';
 
-    const line2 = ` ${projectGit}  TIME: ${duration}  COST: ${costStr}`;
+    // Token speed (Retro style: uppercase)
+    const speedStr = ctx.config.display.showTokenSpeed && ctx.tokenSpeed
+      ? `  SPEED: ${formatTokenSpeed(ctx.tokenSpeed, 'output').toUpperCase()}`
+      : '';
+
+    const line2 = ` ${projectGit}  TIME: ${duration}  COST: ${costStr}${speedStr}`;
     lines.push(hex(color, '║') + hex(dimColor, line2) + ' '.repeat(Math.max(0, innerWidth - line2.length)) + hex(color, '║'));
 
     // Separator
@@ -271,6 +277,19 @@ function formatProjectGit(ctx: RenderContext): string {
     } else {
       result += `  BRANCH: (${branchText})`;
     }
+  }
+
+  // Subdirectory repos (Retro style: uppercase)
+  if (ctx.config.display.showAllBranches && ctx.gitStatus?.subRepos && ctx.gitStatus.subRepos.length > 0) {
+    const subItems = ctx.gitStatus.subRepos.slice(0, 3).map((sub) => {
+      const subDirty = sub.isDirty ? '*' : '';
+      return `${sub.path.toUpperCase()}(${sub.branch.toUpperCase()}${subDirty})`;
+    });
+
+    const remaining = ctx.gitStatus.subRepos.length - 3;
+    const moreText = remaining > 0 ? ` +${remaining}` : '';
+
+    result += `  SUBS: ${subItems.join(' ')}${moreText}`;
   }
 
   return result;

@@ -7,6 +7,7 @@ import { MONO_PALETTE } from './palettes/mono.js';
 import { FALLBACK_ICONS } from './icons.js';
 import { dim, bold } from '../render/colors.js';
 import { createProgressBar, formatPercent } from '../render/utils.js';
+import { formatTokenSpeed } from '../data/speed-tracker.js';
 import { getModelName, getContextPercent, getAbsoluteTokens } from '../input/stdin.js';
 import { hyperlink, fileUrl, githubBranchUrl } from '../render/links.js';
 
@@ -165,6 +166,11 @@ export const monoTheme: Theme = {
 
     const duration = ctx.sessionDuration;
 
+    // Token speed (Mono style: no color)
+    const speedStr = ctx.config.display.showTokenSpeed && ctx.tokenSpeed
+      ? formatTokenSpeed(ctx.tokenSpeed, 'output')
+      : '';
+
     // Warning
     let warningStr = '';
     if (percent !== null && percent >= 90) {
@@ -173,7 +179,7 @@ export const monoTheme: Theme = {
       warningStr = ' [WARNING]';
     }
 
-    const parts = [`${bold(model)}${sessionStr}`, `[${progressBar}]`, `${percentStr}${warningStr}`, `(${tokensStr})`, costStr, usageStr, duration].filter(Boolean);
+    const parts = [`${bold(model)}${sessionStr}`, `[${progressBar}]`, `${percentStr}${warningStr}`, `(${tokensStr})`, costStr, usageStr, duration, speedStr].filter(Boolean);
     lines.push(`  ${parts.join('  ')}`);
 
     // Line 2
@@ -318,6 +324,19 @@ function formatProjectGit(ctx: RenderContext): string {
     } else {
       result += ` (${branchText})`;
     }
+  }
+
+  // Subdirectory repos (Mono style: plain text)
+  if (ctx.config.display.showAllBranches && ctx.gitStatus?.subRepos && ctx.gitStatus.subRepos.length > 0) {
+    const subItems = ctx.gitStatus.subRepos.slice(0, 3).map((sub) => {
+      const subDirty = sub.isDirty ? '*' : '';
+      return `${sub.path}(${sub.branch}${subDirty})`;
+    });
+
+    const remaining = ctx.gitStatus.subRepos.length - 3;
+    const moreText = remaining > 0 ? ` +${remaining}` : '';
+
+    result += `  subs: ${subItems.join(' ')}${moreText}`;
   }
 
   return result;

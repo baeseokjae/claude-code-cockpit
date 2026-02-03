@@ -15,6 +15,7 @@ import { createProgressBar, formatPercent } from '../render/utils.js';
 import { formatCount } from '../render/superscript.js';
 import { getUsageColor } from '../render/usage.js';
 import { formatResetTime } from '../data/usage-api.js';
+import { formatTokenSpeed } from '../data/speed-tracker.js';
 import { getModelName, getContextPercent } from '../input/stdin.js';
 import { hyperlink, fileUrl, githubBranchUrl } from '../render/links.js';
 
@@ -195,7 +196,12 @@ export const neonTheme: Theme = {
     const duration = ctx.sessionDuration;
     const durationText = hex(this.palette.muted, duration);
 
-    const line1 = `  ${modelText}${sessionText}   ${progressText} ${percentText}${warningText}   ${costText}${usageText}   ${durationText}`;
+    // Token speed (Neon style: uppercase, bold)
+    const speedText = ctx.config.display.showTokenSpeed && ctx.tokenSpeed
+      ? '  ' + hex(this.palette.green, bold(formatTokenSpeed(ctx.tokenSpeed, 'output').toUpperCase()))
+      : '';
+
+    const line1 = `  ${modelText}${sessionText}   ${progressText} ${percentText}${warningText}   ${costText}${usageText}   ${durationText}${speedText}`;
     lines.push(hex(this.palette.blue, this.chars.boxVertical) + line1 + ' '.repeat(Math.max(0, innerWidth - line1.length + 10)) + hex(this.palette.blue, this.chars.boxVertical));
 
     // Middle border
@@ -366,6 +372,19 @@ function formatProjectGit(ctx: RenderContext, palette: ColorPalette, _icons: Ico
     } else {
       result += hex(palette.mauve, ` (${branchText})`);
     }
+  }
+
+  // Subdirectory repos (Neon style: uppercase)
+  if (ctx.config.display.showAllBranches && ctx.gitStatus?.subRepos && ctx.gitStatus.subRepos.length > 0) {
+    const subItems = ctx.gitStatus.subRepos.slice(0, 3).map((sub) => {
+      const subDirty = sub.isDirty ? '*' : '';
+      return `${sub.path.toUpperCase()}(${sub.branch.toUpperCase()}${subDirty})`;
+    });
+
+    const remaining = ctx.gitStatus.subRepos.length - 3;
+    const moreText = remaining > 0 ? ` +${remaining}` : '';
+
+    result += hex(palette.muted, `  SUBS: ${subItems.join(' ')}${moreText}`);
   }
 
   return result;
