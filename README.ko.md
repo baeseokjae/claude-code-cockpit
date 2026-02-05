@@ -14,6 +14,9 @@ Claude Code를 위한 고급 HUD 시스템으로, 5가지 테마, Skill 추적, 
 - ✅ **Todo 진행률**: TodoWrite 진행 상황 표시
 - ⚡ **Skill 추적**: /commit, /review-pr 등 Skill 호출 추적
 - 📊 **Git 상태**: 브랜치, dirty 표시
+- 📝 **라인 위젯**: 코드 추가/삭제 라인 추적 (+152 -48)
+- 💾 **캐시 메트릭**: 캐시 히트율 및 절약 금액 표시
+- 🏷️ **Git 태그**: 브랜치 옆에 최신 릴리즈 태그 표시
 - 💰 **비용 추정**: 모델별 토큰 비용 계산
 - 🚨 **알림 시스템**: 컨텍스트/비용/세션 경고
 - 📱 **반응형 레이아웃**: 터미널 너비에 따라 자동 조정
@@ -129,9 +132,21 @@ Claude Code Cockpit은 세션을 자세히 모니터링할 수 있는 여러 대
 
 ### Git 통합
 - **현재 브랜치 및 dirty 상태** - 커밋되지 않은 변경사항 표시와 함께 현재 git 브랜치 확인
+- **최신 태그 표시** - 브랜치 이름 옆에 최신 git 태그 표시
 - **파일 수정 통계** - 수정/추가/삭제/추적되지 않는 파일 개수 추적
 - **모노레포 지원** - 여러 하위 디렉토리의 브랜치 표시
 - **클릭 가능한 GitHub 링크** - GitHub 브랜치 URL로 연결되는 터미널 하이퍼링크 (터미널 의존적)
+
+### 라인 위젯
+- **코드 변경 추적** - 추가/삭제된 라인 표시 (+152 -48)
+- **컴팩트 포맷** - 큰 숫자는 5.0k로 표시하여 가독성 향상
+- **설정 가능한 표시** - `showLines` 옵션으로 토글
+
+### 캐시 메트릭
+- **캐시 히트율** - 캐시 읽기로부터 온 입력의 비율
+- **예상 절약 금액** - 프롬프트 캐싱으로 절약된 비용
+- **모델별 가격 정책** - Sonnet, Opus, Haiku 가격 지원
+- **설정 가능한 표시** - `showCacheMetrics` 옵션으로 토글
 
 ### 터미널 하이퍼링크
 - **클릭 가능한 파일 경로** - file:// 프로토콜 링크를 위한 OSC 8 escape sequences
@@ -184,6 +199,9 @@ export COCKPIT_PATH_LEVELS=2
     "showGitFileStats": false,
     "showAllBranches": false,
     "showAllBranchesDepth": 2,
+    "showLines": true,
+    "showCacheMetrics": true,
+    "showGitTag": true,
     "sevenDayThreshold": 80
   },
   "usage": {
@@ -219,6 +237,11 @@ export COCKPIT_PATH_LEVELS=2
 - `showGitFileStats` (기본값: false) - 수정/추가/삭제된 파일 개수 표시
 - `showAllBranches` (기본값: false) - 하위 디렉토리의 브랜치 표시 (모노레포 지원)
 - `showAllBranchesDepth` (기본값: 2) - 하위 디렉토리 git 스캔 최대 깊이
+- `showGitTag` (기본값: true) - 브랜치 옆에 최신 git 태그 표시
+
+#### 라인 & 캐시
+- `showLines` (기본값: true) - 코드 추가/삭제 표시 (+152 -48)
+- `showCacheMetrics` (기본값: true) - 캐시 히트율 및 절약 금액 표시
 
 #### 설정 개수
 - `showConfigCounts` (기본값: true) - .claude.md, rules, MCP 서버, hooks 개수 표시

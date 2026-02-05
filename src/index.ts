@@ -4,7 +4,7 @@
  * Claude Code Cockpit main entry point
  */
 
-import type { RenderContext, TranscriptData } from './types/index.js';
+import type { RenderContext } from './types/index.js';
 import { readStdin, getCwd } from './input/stdin.js';
 import { parseTranscript } from './input/transcript.js';
 import { countConfigs } from './input/config-reader.js';
@@ -13,6 +13,9 @@ import { getGitStatus } from './data/git.js';
 import { formatSessionDuration } from './data/time.js';
 import { fetchUsage } from './data/usage-api.js';
 import { calculateTokenSpeed } from './data/speed-tracker.js';
+import { calculateSessionDuration } from './data/session-time.js';
+import { getLinesData } from './data/lines.js';
+import { calculateCacheMetrics } from './data/cache-metrics.js';
 import { loadConfig } from './config/loader.js';
 import { loadTheme } from './themes/index.js';
 import { writeOutput } from './output/writer.js';
@@ -62,7 +65,7 @@ export async function main(deps: MainDeps = defaultDeps): Promise<void> {
     const theme = deps.loadTheme(config.theme);
 
     const transcriptPath = stdin.transcript_path || null;
-    const transcript: TranscriptData = await deps.parseTranscript(transcriptPath);
+    const transcript = await deps.parseTranscript(transcriptPath);
 
     const cwd = getCwd(stdin);
     const configCounts = deps.countConfigs(cwd);
@@ -70,16 +73,22 @@ export async function main(deps: MainDeps = defaultDeps): Promise<void> {
     const gitStatus = await deps.getGitStatus(cwd || undefined, {
       showAllBranches: config.display.showAllBranches,
       showAllBranchesDepth: config.display.showAllBranchesDepth,
+      includeTag: config.display.showGitTag,
     });
 
-    const durationMs = stdin.cost?.total_duration_ms || 0;
+    const durationMs = stdin.cost?.total_duration_ms ||
+      stdin.cost?.total_api_duration_ms ||
+      calculateSessionDuration(stdin.session_id);
     const sessionDuration = formatSessionDuration(durationMs);
 
     const extraLabel = null;
 
     const usageData = config.display.showUsage ? await deps.fetchUsage() : null;
 
-    const tokenSpeed = calculateTokenSpeed(stdin);
+    const tokenSpeed = calculateTokenSpeed(stdin, durationMs);
+
+    const linesData = getLinesData(stdin);
+    const cacheMetrics = calculateCacheMetrics(stdin);
 
     const ctx: RenderContext = {
       stdin,
@@ -90,6 +99,8 @@ export async function main(deps: MainDeps = defaultDeps): Promise<void> {
       usageData,
       tokenSpeed,
       extraLabel,
+      linesData,
+      cacheMetrics,
       sessionDuration,
       theme,
       detailMode: config.detailMode,

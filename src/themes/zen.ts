@@ -13,8 +13,9 @@ import { getIcons } from './icons.js';
 import { hex } from '../render/colors.js';
 import { formatPercent } from '../render/utils.js';
 import { formatTokenSpeed } from '../data/speed-tracker.js';
-import { getModelName, getContextPercent } from '../input/stdin.js';
+import { getModelName, getContextPercent, getAbsoluteTokens } from '../input/stdin.js';
 import { hyperlink, fileUrl, githubBranchUrl } from '../render/links.js';
+import { formatLinesDisplay, formatCacheDisplay } from './helpers.js';
 
 /**
  * Zen theme - Minimal information, maximum serenity
@@ -69,19 +70,40 @@ export const zenTheme: Theme = {
     const percentStr = percent !== null ? formatPercent(percent) : '?';
     const duration = ctx.sessionDuration;
 
+    // Context display (absolute tokens or percentage)
+    const absoluteTokens = getAbsoluteTokens(ctx.stdin);
+    let contextStr = '';
+    if (ctx.config.display.showAbsoluteTokens && absoluteTokens) {
+      contextStr = `${Math.round(absoluteTokens.used / 1000)}k/${Math.round(absoluteTokens.total / 1000)}k`;
+    } else {
+      contextStr = percentStr;
+    }
+
     const sessionName = ctx.config.display.showSessionName
       ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
       : null;
     const sessionText = sessionName ? `[${sessionName}] ` : '';
 
+    const linesText = formatLinesDisplay(ctx, this.palette, this.icons, 'compact');
+    const linesDisplay = linesText ? ` ${linesText} ·` : '';
+
     // Ultra simple
-    return [hex(this.palette.subtext, `${sessionText}${model} ${percentStr} · ${duration}`)];
+    return [hex(this.palette.subtext, `${sessionText}${model} ${contextStr}${linesDisplay} · ${duration}`)];
   },
 
   renderCompact(ctx: RenderContext): string[] {
     const model = getModelName(ctx.stdin).toLowerCase();
     const percent = getContextPercent(ctx.stdin);
     const percentStr = percent !== null ? formatPercent(percent) : '?';
+
+    // Context display (absolute tokens or percentage)
+    const absoluteTokens = getAbsoluteTokens(ctx.stdin);
+    let contextStr = '';
+    if (ctx.config.display.showAbsoluteTokens && absoluteTokens) {
+      contextStr = `${Math.round(absoluteTokens.used / 1000)}k/${Math.round(absoluteTokens.total / 1000)}k`;
+    } else {
+      contextStr = percentStr;
+    }
 
     const sessionName = ctx.config.display.showSessionName
       ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
@@ -91,8 +113,19 @@ export const zenTheme: Theme = {
     const projectGit = formatProjectGit(ctx);
     const duration = ctx.sessionDuration;
 
-    const line = `${sessionText}${model} ${percentStr}${projectGit} · ${duration}`;
-    return [hex(this.palette.subtext, line)];
+    // Token speed (Zen style: minimal)
+    const speed = ctx.config.display.showTokenSpeed && ctx.tokenSpeed
+      ? formatTokenSpeed(ctx.tokenSpeed, 'output')
+      : null;
+
+    const linesText = formatLinesDisplay(ctx, this.palette, this.icons, 'compact');
+    const linesDisplay = linesText ? linesText : null;
+
+    const cacheText = formatCacheDisplay(ctx, this.palette, this.icons, 'compact');
+    const cacheDisplay = cacheText ? cacheText : null;
+
+    const parts = [sessionText ? sessionText.trim() : null, model, contextStr, projectGit || null, linesDisplay, cacheDisplay, speed, duration].filter(Boolean);
+    return [hex(this.palette.subtext, parts.join(' · '))];
   },
 
   renderFull(ctx: RenderContext): string[] {
@@ -102,6 +135,15 @@ export const zenTheme: Theme = {
     const model = getModelName(ctx.stdin).toLowerCase();
     const percent = getContextPercent(ctx.stdin);
     const percentStr = percent !== null ? formatPercent(percent) : '?';
+
+    // Context display (absolute tokens or percentage)
+    const absoluteTokens = getAbsoluteTokens(ctx.stdin);
+    let contextStr = '';
+    if (ctx.config.display.showAbsoluteTokens && absoluteTokens) {
+      contextStr = `${Math.round(absoluteTokens.used / 1000)}k/${Math.round(absoluteTokens.total / 1000)}k`;
+    } else {
+      contextStr = percentStr;
+    }
 
     const sessionName = ctx.config.display.showSessionName
       ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
@@ -121,7 +163,13 @@ export const zenTheme: Theme = {
       ? formatTokenSpeed(ctx.tokenSpeed, 'output')
       : null;
 
-    const line1Parts = [sessionPart, model, percentStr, projectGit, usage, speed, duration].filter(Boolean);
+    const linesText = formatLinesDisplay(ctx, this.palette, this.icons, 'compact');
+    const linesDisplay = linesText ? linesText : null;
+
+    const cacheText = formatCacheDisplay(ctx, this.palette, this.icons, 'full');
+    const cacheDisplay = cacheText ? cacheText : null;
+
+    const line1Parts = [sessionPart, model, contextStr, projectGit, linesDisplay, cacheDisplay, usage, speed, duration].filter(Boolean);
     lines.push(hex(this.palette.subtext, line1Parts.join(' · ')));
 
     // Line 2: Activity (when present)
@@ -157,6 +205,16 @@ export const zenTheme: Theme = {
       activityParts.push(hex(this.palette.categoryTodos, 'todos ') + hex(this.palette.muted, `${completed}/${total}`));
     }
 
+    if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
+      const running = ctx.transcript.skills.find((s) => s.status === 'running');
+      if (running) {
+        activityParts.push(hex(this.palette.mauve, 'skills ') + hex(this.palette.text, `${running.name.toLowerCase()}~`));
+      } else {
+        const total = ctx.transcript.skills.length;
+        activityParts.push(hex(this.palette.mauve, 'skills ') + hex(this.palette.muted, `${total}`));
+      }
+    }
+
     if (activityParts.length > 0) {
       lines.push(activityParts.join(hex(this.palette.muted, ' · ')));
     }
@@ -170,7 +228,7 @@ export const zenTheme: Theme = {
  */
 function formatProjectGit(ctx: RenderContext): string {
   const project = ctx.stdin.cwd ? ctx.stdin.cwd.split('/').pop() : null;
-  const git = ctx.gitStatus?.branch || '';
+  const git = ctx.config.display.showGit ? (ctx.gitStatus?.branch || '') : '';
   const dirty = ctx.gitStatus?.isDirty ? '*' : '';
 
   if (!project && !git) return '';
@@ -185,7 +243,11 @@ function formatProjectGit(ctx: RenderContext): string {
 
   // Git branch with GitHub link (if available)
   if (git) {
-    const branchText = `${git}${dirty}`;
+    let branchText = `${git}`;
+    if (ctx.gitStatus?.tag) {
+      branchText += ` ${ctx.gitStatus.tag}`;
+    }
+    branchText += dirty;
 
     if (ctx.gitStatus?.remoteUrl) {
       const branchUrl = githubBranchUrl(ctx.gitStatus.remoteUrl, git);

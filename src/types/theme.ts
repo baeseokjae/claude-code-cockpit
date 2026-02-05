@@ -58,6 +58,10 @@ export interface IconSet {
   warning: string;
   cost: string;
 
+  lines: string;
+  cache: string;
+  tag: string;
+
   categoryTools: string;
   categoryAgents: string;
   categoryTodos: string;

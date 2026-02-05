@@ -16,8 +16,9 @@ import { formatCount } from '../render/superscript.js';
 import { getUsageColor } from '../render/usage.js';
 import { formatResetTime } from '../data/usage-api.js';
 import { formatTokenSpeed } from '../data/speed-tracker.js';
-import { getModelName, getContextPercent } from '../input/stdin.js';
+import { getModelName, getContextPercent, getAbsoluteTokens } from '../input/stdin.js';
 import { hyperlink, fileUrl, githubBranchUrl } from '../render/links.js';
+import { formatLinesDisplay, formatCacheDisplay } from './helpers.js';
 
 /**
  * Neon theme
@@ -85,7 +86,11 @@ export const neonTheme: Theme = {
     const projectGit = formatProjectGit(ctx, this.palette, this.icons);
     const durationText = hex(this.palette.muted, ` ${duration}`);
 
-    return [`${modelText}${sessionText} ${percentText}${projectGit}${durationText}`];
+    // Lines
+    const linesText = formatLinesDisplay(ctx, this.palette, this.icons, 'compact');
+    const linesDisplay = linesText ? ` ${linesText}` : '';
+
+    return [`${modelText}${sessionText} ${percentText}${projectGit}${linesDisplay}${durationText}`];
   },
 
   renderCompact(ctx: RenderContext): string[] {
@@ -105,7 +110,15 @@ export const neonTheme: Theme = {
     const progressBar = createProgressBar(percent || 0, 10, this.chars.progressFilled, this.chars.progressEmpty);
     const progressColor = getPercentColor(percent, this.palette);
     const progressText = hex(progressColor, progressBar);
-    const percentText = hex(progressColor, bold(percentStr));
+
+    // Context display (absolute tokens or percentage)
+    const absoluteTokens = getAbsoluteTokens(ctx.stdin);
+    let contextText = '';
+    if (ctx.config.display.showAbsoluteTokens && absoluteTokens) {
+      contextText = hex(progressColor, bold(`${Math.round(absoluteTokens.used / 1000)}K/${Math.round(absoluteTokens.total / 1000)}K`));
+    } else {
+      contextText = hex(progressColor, bold(percentStr));
+    }
 
     const projectGit = formatProjectGit(ctx, this.palette, this.icons);
 
@@ -117,8 +130,21 @@ export const neonTheme: Theme = {
       ? '  ' + hex(getUsageColor(ctx.usageData.fiveHour, this.palette), bold(`5H:${Math.round(ctx.usageData.fiveHour)}%`))
       : '';
 
+    // Token speed (Neon style: uppercase, bold)
+    const speedText = ctx.config.display.showTokenSpeed && ctx.tokenSpeed
+      ? '  ' + hex(this.palette.green, bold(formatTokenSpeed(ctx.tokenSpeed, 'output').toUpperCase()))
+      : '';
+
+    // Lines
+    const linesText = formatLinesDisplay(ctx, this.palette, this.icons, 'compact');
+    const linesDisplay = linesText ? '  ' + linesText : '';
+
+    // Cache
+    const cacheText = formatCacheDisplay(ctx, this.palette, this.icons, 'compact');
+    const cacheDisplay = cacheText ? '  ' + cacheText : '';
+
     lines.push(
-      `${modelText}${sessionText}  ${progressText} ${percentText}  ${projectGit}${usageText}  ${durationText}`
+      `${modelText}${sessionText}  ${progressText} ${contextText}  ${projectGit}${linesDisplay}${cacheDisplay}${usageText}  ${durationText}${speedText}`
     );
 
     // Line 2: Activity
@@ -137,6 +163,11 @@ export const neonTheme: Theme = {
     if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
       const todosSummary = summarizeTodos(ctx, this.icons, this.palette);
       if (todosSummary) activityParts.push(todosSummary);
+    }
+
+    if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
+      const skillsSummary = summarizeSkills(ctx, this.icons, this.palette);
+      if (skillsSummary) activityParts.push(skillsSummary);
     }
 
     if (activityParts.length > 0) {
@@ -170,7 +201,15 @@ export const neonTheme: Theme = {
     const progressBar = createProgressBar(percent || 0, 10, this.chars.progressFilled, this.chars.progressEmpty);
     const progressColor = getPercentColor(percent, this.palette);
     const progressText = hex(progressColor, progressBar);
-    const percentText = hex(progressColor, bold(percentStr));
+
+    // Context display (absolute tokens or percentage)
+    const absoluteTokens = getAbsoluteTokens(ctx.stdin);
+    let contextText = '';
+    if (ctx.config.display.showAbsoluteTokens && absoluteTokens) {
+      contextText = hex(progressColor, bold(`${Math.round(absoluteTokens.used / 1000)}K/${Math.round(absoluteTokens.total / 1000)}K`));
+    } else {
+      contextText = hex(progressColor, bold(percentStr));
+    }
 
     // Warning for high usage
     let warningText = '';
@@ -180,7 +219,7 @@ export const neonTheme: Theme = {
       warningText = hex(this.palette.yellow, '  WARNING');
     }
 
-    const cost = ctx.stdin.cost?.total_cost_usd;
+    const cost = ctx.config.display.showCost ? ctx.stdin.cost?.total_cost_usd : undefined;
     const costText = cost ? hex(this.palette.peach, `$${cost.toFixed(2)}`) : '';
 
     // Usage (Neon style: uppercase + bold + reset time)
@@ -201,7 +240,15 @@ export const neonTheme: Theme = {
       ? '  ' + hex(this.palette.green, bold(formatTokenSpeed(ctx.tokenSpeed, 'output').toUpperCase()))
       : '';
 
-    const line1 = `  ${modelText}${sessionText}   ${progressText} ${percentText}${warningText}   ${costText}${usageText}   ${durationText}${speedText}`;
+    // Lines
+    const linesText = formatLinesDisplay(ctx, this.palette, this.icons, 'compact');
+    const linesDisplay = linesText ? '  ' + linesText : '';
+
+    // Cache
+    const cacheText = formatCacheDisplay(ctx, this.palette, this.icons, 'full');
+    const cacheDisplay = cacheText ? '  ' + cacheText : '';
+
+    const line1 = `  ${modelText}${sessionText}   ${progressText} ${contextText}${warningText}   ${costText}${linesDisplay}${cacheDisplay}${usageText}   ${durationText}${speedText}`;
     lines.push(hex(this.palette.blue, this.chars.boxVertical) + line1 + ' '.repeat(Math.max(0, innerWidth - line1.length + 10)) + hex(this.palette.blue, this.chars.boxVertical));
 
     // Middle border
@@ -212,9 +259,11 @@ export const neonTheme: Theme = {
     const projectGit = formatProjectGit(ctx, this.palette, this.icons);
 
     const configParts: string[] = [];
-    if (ctx.configCounts.claudeMdCount > 0) configParts.push(`${ctx.configCounts.claudeMdCount} md`);
-    if (ctx.configCounts.rulesCount > 0) configParts.push(`${ctx.configCounts.rulesCount} rules`);
-    if (ctx.configCounts.mcpCount > 0) configParts.push(`${ctx.configCounts.mcpCount} mcp`);
+    if (ctx.config.display.showConfigCounts) {
+      if (ctx.configCounts.claudeMdCount > 0) configParts.push(`${ctx.configCounts.claudeMdCount} md`);
+      if (ctx.configCounts.rulesCount > 0) configParts.push(`${ctx.configCounts.rulesCount} rules`);
+      if (ctx.configCounts.mcpCount > 0) configParts.push(`${ctx.configCounts.mcpCount} mcp`);
+    }
     const configText = configParts.length > 0 ? hex(this.palette.muted, `  ${configParts.join('  ')}`) : '';
 
     const line2 = `  ${projectGit}${configText}`;
@@ -238,6 +287,11 @@ export const neonTheme: Theme = {
     if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
       const todoLine = renderTodoLine(ctx, this.icons, this.palette);
       if (todoLine) lines.push('  ' + todoLine);
+    }
+
+    if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
+      const skillsLine = renderSkillsLine(ctx, this.icons, this.palette);
+      if (skillsLine) lines.push('  ' + skillsLine);
     }
 
     return lines;
@@ -343,12 +397,37 @@ function renderTodoLine(ctx: RenderContext, icons: IconSet, palette: ColorPalett
   return label + hex(palette.green, '✓ ') + hex(palette.text, 'ALL TASKS COMPLETED') + hex(palette.muted, ` (${total}/${total})`);
 }
 
+function summarizeSkills(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
+  const skillItems: string[] = [];
+
+  for (const skill of ctx.transcript.skills.slice(0, 3)) {
+    const icon = skill.status === 'running' ? icons.running : icons.success;
+    const iconColor = skill.status === 'running' ? palette.yellow : palette.green;
+    skillItems.push(hex(iconColor, `${skill.name.toUpperCase()}${icon}`));
+  }
+
+  return hex(palette.mauve, icons.skill) + ' ' + skillItems.join(' ');
+}
+
+function renderSkillsLine(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
+  const parts: string[] = [];
+
+  for (const skill of ctx.transcript.skills.slice(0, 5)) {
+    const icon = skill.status === 'running' ? icons.running : skill.status === 'error' ? icons.error : icons.success;
+    const iconColor = skill.status === 'running' ? palette.yellow : skill.status === 'error' ? palette.red : palette.green;
+    const args = skill.args ? ` ${skill.args.toUpperCase()}` : '';
+    parts.push(hex(palette.text, skill.name.toUpperCase()) + hex(iconColor, icon) + hex(palette.muted, args));
+  }
+
+  return hex(palette.mauve, icons.skill + ' SKILLS: ') + parts.join('   ');
+}
+
 /**
  * Format project and git with parentheses and clickable links (NEON style: uppercase)
  */
 function formatProjectGit(ctx: RenderContext, palette: ColorPalette, _icons: IconSet): string {
   const project = ctx.stdin.cwd ? ctx.stdin.cwd.split('/').pop()?.toUpperCase() : null;
-  const git = ctx.gitStatus?.branch || '';
+  const git = ctx.config.display.showGit ? (ctx.gitStatus?.branch || '') : '';
   const dirty = ctx.gitStatus?.isDirty ? '*' : '';
 
   if (!project && !git) return '';
@@ -363,7 +442,14 @@ function formatProjectGit(ctx: RenderContext, palette: ColorPalette, _icons: Ico
 
   // Git branch with GitHub link (if available)
   if (git) {
-    const branchText = `${git.toUpperCase()}${dirty}`;
+    let branchText = `${git.toUpperCase()}`;
+
+    // Add tag if available
+    if (ctx.gitStatus?.tag) {
+      branchText += ` ${ctx.gitStatus.tag.toUpperCase()}`;
+    }
+
+    branchText += dirty;
 
     if (ctx.gitStatus?.remoteUrl) {
       const branchUrl = githubBranchUrl(ctx.gitStatus.remoteUrl, git);

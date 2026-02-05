@@ -15,13 +15,18 @@ export interface TokenSpeed {
 
 /**
  * Calculate token generation speed based on session duration
+ * @param stdin - stdin data from Claude Code
+ * @param fallbackDurationMs - fallback duration if not provided by Claude Code
  */
-export function calculateTokenSpeed(stdin: StdinData): TokenSpeed | null {
+export function calculateTokenSpeed(stdin: StdinData, fallbackDurationMs?: number): TokenSpeed | null {
   const usage = stdin.context_window?.current_usage;
-  const durationMs = stdin.cost?.total_duration_ms;
+  // Try total_duration_ms first, then fallback to total_api_duration_ms, then provided fallback
+  const durationMs = stdin.cost?.total_duration_ms ||
+                     stdin.cost?.total_api_duration_ms ||
+                     fallbackDurationMs;
 
   if (!usage || !durationMs || durationMs === 0) {
-    debug('insufficient data for speed calculation');
+    debug('insufficient data for speed calculation: usage=%o, durationMs=%s', usage, durationMs);
     return null;
   }
 

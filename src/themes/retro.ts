@@ -8,8 +8,9 @@ import { FALLBACK_ICONS } from './icons.js';
 import { hex, bold } from '../render/colors.js';
 import { createProgressBar, formatPercent } from '../render/utils.js';
 import { formatTokenSpeed } from '../data/speed-tracker.js';
-import { getModelName, getContextPercent } from '../input/stdin.js';
+import { getModelName, getContextPercent, getAbsoluteTokens } from '../input/stdin.js';
 import { hyperlink, fileUrl, githubBranchUrl } from '../render/links.js';
+import { formatLinesDisplay, formatCacheDisplay } from './helpers.js';
 
 /**
  * Retro theme - CRT phosphor monitor
@@ -64,6 +65,15 @@ export const retroTheme: Theme = {
     const percentStr = percent !== null ? formatPercent(percent) : '??%';
     const duration = ctx.sessionDuration;
 
+    // Context display (absolute tokens or percentage)
+    const absoluteTokens = getAbsoluteTokens(ctx.stdin);
+    let contextStr = '';
+    if (ctx.config.display.showAbsoluteTokens && absoluteTokens) {
+      contextStr = `${Math.round(absoluteTokens.used / 1000)}K/${Math.round(absoluteTokens.total / 1000)}K`;
+    } else {
+      contextStr = percentStr;
+    }
+
     const sessionName = ctx.config.display.showSessionName
       ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
       : null;
@@ -71,8 +81,11 @@ export const retroTheme: Theme = {
 
     const projectGit = formatProjectGit(ctx);
 
+    const linesText = formatLinesDisplay(ctx, this.palette, this.icons, 'compact');
+    const linesDisplay = linesText ? ` ${linesText}` : '';
+
     const color = this.palette.text;
-    return [hex(color, `[${model}]${sessionText} ${percentStr}${projectGit} | ${duration}`)];
+    return [hex(color, `[${model}]${sessionText} ${contextStr}${projectGit}${linesDisplay} | ${duration}`)];
   },
 
   renderCompact(ctx: RenderContext): string[] {
@@ -83,6 +96,15 @@ export const retroTheme: Theme = {
     const model = getModelName(ctx.stdin).toUpperCase();
     const percent = getContextPercent(ctx.stdin);
     const percentStr = percent !== null ? formatPercent(percent) : '??%';
+
+    // Context display (absolute tokens or percentage)
+    const absoluteTokens = getAbsoluteTokens(ctx.stdin);
+    let contextStr = '';
+    if (ctx.config.display.showAbsoluteTokens && absoluteTokens) {
+      contextStr = `${Math.round(absoluteTokens.used / 1000)}K/${Math.round(absoluteTokens.total / 1000)}K`;
+    } else {
+      contextStr = percentStr;
+    }
 
     const sessionName = ctx.config.display.showSessionName
       ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
@@ -98,7 +120,18 @@ export const retroTheme: Theme = {
     const warningColor = percent !== null && percent >= 75 ? this.palette.red : color;
     const warning = percent !== null && percent >= 90 ? ' [!ALERT!]' : percent !== null && percent >= 75 ? ' [WARN]' : '';
 
-    lines.push(hex(color, `[${model}]${sessionText} `) + hex(warningColor, `[${progressBar}] ${percentStr}${warning}`) + hex(dimColor, `${projectGit} | ${duration}`));
+    // Token speed (Retro style: uppercase)
+    const speed = ctx.config.display.showTokenSpeed && ctx.tokenSpeed
+      ? ` | ${formatTokenSpeed(ctx.tokenSpeed, 'output').toUpperCase()}`
+      : '';
+
+    const linesText = formatLinesDisplay(ctx, this.palette, this.icons, 'compact');
+    const linesDisplay = linesText ? '  ' + linesText : '';
+
+    const cacheText = formatCacheDisplay(ctx, this.palette, this.icons, 'compact');
+    const cacheDisplay = cacheText ? '  ' + cacheText : '';
+
+    lines.push(hex(color, `[${model}]${sessionText} `) + hex(warningColor, `[${progressBar}] ${contextStr}${warning}`) + hex(dimColor, `${projectGit}${linesDisplay}${cacheDisplay} | ${duration}${speed}`));
 
     // Activity
     const activityParts: string[] = [];
@@ -113,6 +146,10 @@ export const retroTheme: Theme = {
 
     if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
       activityParts.push(summarizeTodos(ctx, this.palette));
+    }
+
+    if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
+      activityParts.push(summarizeSkills(ctx, this.palette));
     }
 
     if (activityParts.length > 0) {
@@ -140,6 +177,15 @@ export const retroTheme: Theme = {
     const percentStr = percent !== null ? formatPercent(percent) : '??%';
     const progressBar = createProgressBar(percent || 0, 20, this.chars.progressFilled, this.chars.progressEmpty);
 
+    // Context display (absolute tokens or percentage)
+    const absoluteTokens = getAbsoluteTokens(ctx.stdin);
+    let contextStr = '';
+    if (ctx.config.display.showAbsoluteTokens && absoluteTokens) {
+      contextStr = `${Math.round(absoluteTokens.used / 1000)}K/${Math.round(absoluteTokens.total / 1000)}K`;
+    } else {
+      contextStr = percentStr;
+    }
+
     const sessionName = ctx.config.display.showSessionName
       ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
       : null;
@@ -148,21 +194,27 @@ export const retroTheme: Theme = {
     const warningColor = percent !== null && percent >= 75 ? this.palette.red : color;
     const warning = percent !== null && percent >= 90 ? bold(' [!CRITICAL ALERT!]') : percent !== null && percent >= 75 ? ' [WARNING]' : '';
 
-    const line1 = ` MODEL: ${model}${sessionText}  MEM: [${progressBar}] ${percentStr}${warning}`;
+    const line1 = ` MODEL: ${model}${sessionText}  MEM: [${progressBar}] ${contextStr}${warning}`;
     lines.push(hex(color, '║') + hex(warningColor, line1) + ' '.repeat(Math.max(0, innerWidth - line1.length)) + hex(color, '║'));
 
     // Project info
     const projectGit = formatProjectGit(ctx);
     const duration = ctx.sessionDuration;
-    const cost = ctx.stdin.cost?.total_cost_usd;
-    const costStr = cost ? `$${cost.toFixed(2)}` : '$0.00';
+    const cost = ctx.config.display.showCost ? ctx.stdin.cost?.total_cost_usd : undefined;
+    const costStr = cost ? `$${cost.toFixed(2)}` : (ctx.config.display.showCost ? '$0.00' : '');
 
     // Token speed (Retro style: uppercase)
     const speedStr = ctx.config.display.showTokenSpeed && ctx.tokenSpeed
       ? `  SPEED: ${formatTokenSpeed(ctx.tokenSpeed, 'output').toUpperCase()}`
       : '';
 
-    const line2 = ` ${projectGit}  TIME: ${duration}  COST: ${costStr}${speedStr}`;
+    const linesText = formatLinesDisplay(ctx, this.palette, this.icons, 'compact');
+    const linesDisplay = linesText ? '  ' + linesText : '';
+
+    const cacheText = formatCacheDisplay(ctx, this.palette, this.icons, 'full');
+    const cacheDisplay = cacheText ? '  ' + cacheText : '';
+
+    const line2 = ` ${projectGit}${linesDisplay}${cacheDisplay}  TIME: ${duration}  COST: ${costStr}${speedStr}`;
     lines.push(hex(color, '║') + hex(dimColor, line2) + ' '.repeat(Math.max(0, innerWidth - line2.length)) + hex(color, '║'));
 
     // Separator
@@ -170,10 +222,12 @@ export const retroTheme: Theme = {
 
     // Config counts
     const configs = [];
-    if (ctx.configCounts.claudeMdCount > 0) configs.push(`MD:${ctx.configCounts.claudeMdCount}`);
-    if (ctx.configCounts.rulesCount > 0) configs.push(`RULES:${ctx.configCounts.rulesCount}`);
-    if (ctx.configCounts.mcpCount > 0) configs.push(`MCP:${ctx.configCounts.mcpCount}`);
-    if (ctx.configCounts.hooksCount > 0) configs.push(`HOOKS:${ctx.configCounts.hooksCount}`);
+    if (ctx.config.display.showConfigCounts) {
+      if (ctx.configCounts.claudeMdCount > 0) configs.push(`MD:${ctx.configCounts.claudeMdCount}`);
+      if (ctx.configCounts.rulesCount > 0) configs.push(`RULES:${ctx.configCounts.rulesCount}`);
+      if (ctx.configCounts.mcpCount > 0) configs.push(`MCP:${ctx.configCounts.mcpCount}`);
+      if (ctx.configCounts.hooksCount > 0) configs.push(`HOOKS:${ctx.configCounts.hooksCount}`);
+    }
 
     if (configs.length > 0) {
       const configLine = ` CONFIG: ${configs.join('  ')}`;
@@ -196,6 +250,12 @@ export const retroTheme: Theme = {
     if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
       const todosLine = ` TASKS: ${summarizeTodos(ctx, this.palette)}`;
       lines.push(hex(color, '║') + hex(color, todosLine) + ' '.repeat(Math.max(0, innerWidth - todosLine.length)) + hex(color, '║'));
+    }
+
+    // Skills
+    if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
+      const skillsLine = ` SKILLS: ${summarizeSkills(ctx, this.palette)}`;
+      lines.push(hex(color, '║') + hex(color, skillsLine) + ' '.repeat(Math.max(0, innerWidth - skillsLine.length)) + hex(color, '║'));
     }
 
     // Footer
@@ -248,12 +308,24 @@ function summarizeTodos(ctx: RenderContext, _palette: typeof RETRO_PALETTE): str
   return `● ${completed}/${total}`;
 }
 
+function summarizeSkills(ctx: RenderContext, _palette: typeof RETRO_PALETTE): string {
+  const skillItems = ctx.transcript.skills
+    .slice(0, 3)
+    .map((s) => {
+      const marker = s.status === 'running' ? '~' : '+';
+      return `${s.name.toUpperCase()}${marker}`;
+    })
+    .join(' ');
+
+  return '● ' + skillItems;
+}
+
 /**
  * Format project and git with parentheses and clickable links (Retro style: uppercase)
  */
 function formatProjectGit(ctx: RenderContext): string {
   const project = ctx.stdin.cwd ? ctx.stdin.cwd.split('/').pop()?.toUpperCase() : null;
-  const git = ctx.gitStatus?.branch?.toUpperCase() || '';
+  const git = ctx.config.display.showGit ? (ctx.gitStatus?.branch?.toUpperCase() || '') : '';
   const dirty = ctx.gitStatus?.isDirty ? '*' : '';
 
   if (!project && !git) return '';
@@ -268,7 +340,11 @@ function formatProjectGit(ctx: RenderContext): string {
 
   // Git branch with GitHub link (if available)
   if (git) {
-    const branchText = `${git}${dirty}`;
+    let branchText = `${git}`;
+    if (ctx.gitStatus?.tag) {
+      branchText += ` ${ctx.gitStatus.tag}`;
+    }
+    branchText += dirty;
 
     if (ctx.gitStatus?.remoteUrl) {
       const branchUrl = githubBranchUrl(ctx.gitStatus.remoteUrl, ctx.gitStatus.branch || git);

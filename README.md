@@ -14,6 +14,9 @@ Advanced HUD system for Claude Code featuring 5 themes, skill tracking, and deta
 - ✅ **Todo Progress**: Track TodoWrite task status
 - ⚡ **Skill Tracking**: Monitor /commit, /review-pr and other skill invocations
 - 📊 **Git Status**: Branch name and dirty indicator
+- 📝 **Lines Widget**: Track code additions/removals (+152 -48)
+- 💾 **Cache Metrics**: Cache hit rate and estimated savings display
+- 🏷️ **Git Tag**: Latest release tag next to branch name
 - 💰 **Cost Estimation**: Token-based cost calculation per model
 - 🚨 **Smart Alerts**: Context/cost/session warnings
 - 📱 **Responsive Layout**: Auto-adjusts to terminal width
@@ -129,9 +132,21 @@ Ultra-minimal design. Calm tones inspired by traditional paper and ink.
 
 ### Git Integration
 - **Current branch and dirty status** - See your current git branch with uncommitted changes indicator
+- **Latest tag display** - Show most recent git tag next to branch name
 - **File modification statistics** - Track modified/added/deleted/untracked file counts
 - **Monorepo support** - Display branches from multiple subdirectories
 - **Clickable GitHub links** - Terminal-dependent hyperlinks to GitHub branch URLs
+
+### Lines Widget
+- **Code changes tracking** - Display added/removed lines (+152 -48)
+- **Compact format** - Large numbers shown as 5.0k for readability
+- **Configurable display** - Toggle via `showLines` option
+
+### Cache Metrics
+- **Cache hit rate** - Percentage of input from cache reads
+- **Estimated savings** - Cost savings from prompt caching
+- **Model-aware pricing** - Supports Sonnet, Opus, Haiku pricing
+- **Configurable display** - Toggle via `showCacheMetrics` option
 
 ### Terminal Hyperlinks
 - **Clickable file paths** - OSC 8 escape sequences for file:// protocol links
@@ -184,6 +199,9 @@ export COCKPIT_PATH_LEVELS=2
     "showGitFileStats": false,
     "showAllBranches": false,
     "showAllBranchesDepth": 2,
+    "showLines": true,
+    "showCacheMetrics": true,
+    "showGitTag": true,
     "sevenDayThreshold": 80
   },
   "usage": {
@@ -219,6 +237,11 @@ export COCKPIT_PATH_LEVELS=2
 - `showGitFileStats` (default: false) - Show modified/added/deleted file counts
 - `showAllBranches` (default: false) - Show branches from subdirectories (monorepo support)
 - `showAllBranchesDepth` (default: 2) - Maximum depth for subdirectory git scanning
+- `showGitTag` (default: true) - Show latest git tag next to branch
+
+#### Lines & Cache
+- `showLines` (default: true) - Show code additions/removals (+152 -48)
+- `showCacheMetrics` (default: true) - Show cache hit rate and savings
 
 #### Configuration Counts
 - `showConfigCounts` (default: true) - Show count of .claude.md, rules, MCP servers, hooks

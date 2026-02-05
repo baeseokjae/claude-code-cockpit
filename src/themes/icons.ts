@@ -31,6 +31,10 @@ export const NERD_ICONS: IconSet = {
   warning: '',
   cost: '$',
 
+  lines: '📊',
+  cache: '💾',
+  tag: '🏷️',
+
   categoryTools: '◆',
   categoryAgents: '●',
   categoryTodos: '▸',
@@ -61,6 +65,10 @@ export const FALLBACK_ICONS: IconSet = {
   config: '*',
   warning: '!',
   cost: '$',
+
+  lines: '±',
+  cache: '$',
+  tag: '@',
 
   categoryTools: '●',
   categoryAgents: '●',

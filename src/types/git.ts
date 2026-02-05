@@ -11,6 +11,7 @@ export interface GitStatus {
   remoteUrl?: string;
   fileStats?: FileStats;
   subRepos?: SubRepoStatus[];
+  tag?: string;
 }
 
 export interface SubRepoStatus {

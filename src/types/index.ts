@@ -24,6 +24,10 @@ export type { GitStatus, FileStats, SubRepoStatus } from './git.js';
 
 export type { UsageData } from './usage.js';
 
+export type { LinesData } from './lines.js';
+
+export type { CacheMetrics } from './cache-metrics.js';
+
 export type {
   ThemeName,
   CockpitConfig,

@@ -23,6 +23,9 @@ export const DEFAULT_CONFIG: CockpitConfig = {
     showGitFileStats: false,
     showAllBranches: false,
     showAllBranchesDepth: 2,
+    showLines: true,
+    showCacheMetrics: true,
+    showGitTag: true,
   },
 
   detailMode: false,
@@ -43,6 +46,6 @@ export const DEFAULT_CONFIG: CockpitConfig = {
 
   performance: {
     maxTools: 20,
-    maxAgents: 10,
+    maxAgents: 20,
   },
 };

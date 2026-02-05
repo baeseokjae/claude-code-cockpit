@@ -9,6 +9,8 @@ import type { UsageData } from './usage.js';
 import type { CockpitConfig, ConfigCounts } from './config.js';
 import type { Theme } from './theme.js';
 import type { TokenSpeed } from '../data/speed-tracker.js';
+import type { LinesData } from './lines.js';
+import type { CacheMetrics } from './cache-metrics.js';
 
 export interface RenderContext {
   stdin: StdinData;
@@ -21,6 +23,9 @@ export interface RenderContext {
   usageData: UsageData | null;
   tokenSpeed: TokenSpeed | null;
   extraLabel: string | null;
+
+  linesData: LinesData | null;
+  cacheMetrics: CacheMetrics | null;
 
   sessionDuration: string;
 

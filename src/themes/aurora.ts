@@ -23,6 +23,7 @@ import { formatResetTime } from '../data/usage-api.js';
 import { formatTokenSpeed } from '../data/speed-tracker.js';
 import { getModelName, getContextPercent, getAbsoluteTokens } from '../input/stdin.js';
 import { hyperlink, fileUrl, githubBranchUrl } from '../render/links.js';
+import { formatLinesDisplay, formatCacheDisplay } from './helpers.js';
 
 export const auroraTheme: Theme = {
   name: 'aurora',
@@ -90,7 +91,11 @@ export const auroraTheme: Theme = {
 
     const durationText = hex(this.palette.muted, ` ${duration}`);
 
-    return [`${modelText}${sessionText} ${percentText}${projectGit}${durationText}`];
+    // Lines
+    const linesText = formatLinesDisplay(ctx, this.palette, this.icons, 'compact');
+    const linesDisplay = linesText ? ` ${linesText}` : '';
+
+    return [`${modelText}${sessionText} ${percentText}${projectGit}${linesDisplay}${durationText}`];
   },
 
   renderCompact(ctx: RenderContext): string[] {
@@ -116,7 +121,14 @@ export const auroraTheme: Theme = {
     const progressColor = getPercentColor(percent, this.palette);
     const progressText = hex(progressColor, progressBar);
 
-    const percentText = hex(progressColor, percentStr);
+    // Context display (absolute tokens or percentage)
+    const absoluteTokens = getAbsoluteTokens(ctx.stdin);
+    let contextText = '';
+    if (ctx.config.display.showAbsoluteTokens && absoluteTokens) {
+      contextText = hex(progressColor, `${Math.round(absoluteTokens.used / 1000)}k/${Math.round(absoluteTokens.total / 1000)}k`);
+    } else {
+      contextText = hex(progressColor, percentStr);
+    }
 
     // Project and git with parentheses and links
     const projectGit = formatProjectGit(ctx, this.palette, this.icons);
@@ -130,8 +142,21 @@ export const auroraTheme: Theme = {
       ? '  ' + formatUsageCompact(ctx.usageData, this.palette)
       : '';
 
+    // Token speed
+    const speedText = ctx.config.display.showTokenSpeed && ctx.tokenSpeed
+      ? '  ' + hex(this.palette.green, formatTokenSpeed(ctx.tokenSpeed, 'output'))
+      : '';
+
+    // Lines
+    const linesText = formatLinesDisplay(ctx, this.palette, this.icons, 'compact');
+    const linesDisplay = linesText ? '  ' + linesText : '';
+
+    // Cache
+    const cacheText = formatCacheDisplay(ctx, this.palette, this.icons, 'compact');
+    const cacheDisplay = cacheText ? '  ' + cacheText : '';
+
     lines.push(
-      `${modelText}${sessionText}  ${progressText} ${percentText}  ${projectGit}${usageText}  ${durationText}`
+      `${modelText}${sessionText}  ${progressText} ${contextText}  ${projectGit}${linesDisplay}${cacheDisplay}${usageText}  ${durationText}${speedText}`
     );
 
     // Line 2+: Activity (detailMode or compact)
@@ -176,6 +201,11 @@ export const auroraTheme: Theme = {
       if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
         const todosSummary = summarizeTodos(ctx, this.palette, this.icons);
         if (todosSummary) activityParts.push(todosSummary);
+      }
+
+      if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
+        const skillsSummary = summarizeSkills(ctx, this.icons, this.palette);
+        if (skillsSummary) activityParts.push(skillsSummary);
       }
 
       if (activityParts.length > 0) {
@@ -227,7 +257,7 @@ export const auroraTheme: Theme = {
     }
 
     // Cost
-    const cost = ctx.stdin.cost?.total_cost_usd;
+    const cost = ctx.config.display.showCost ? ctx.stdin.cost?.total_cost_usd : undefined;
     const costText = cost ? hex(this.palette.peach, ` ~$${cost.toFixed(2)}`) : '';
 
     // Usage
@@ -244,7 +274,15 @@ export const auroraTheme: Theme = {
       ? '  ' + hex(this.palette.green, formatTokenSpeed(ctx.tokenSpeed, 'output'))
       : '';
 
-    const line1Content = `  ${modelText}${sessionText}   ${progressText} ${percentText}  ${tokensText}${costText}${usageText}   ${durationText}${speedText}`;
+    // Lines
+    const linesText = formatLinesDisplay(ctx, this.palette, this.icons, 'compact');
+    const linesDisplay = linesText ? '  ' + linesText : '';
+
+    // Cache
+    const cacheText = formatCacheDisplay(ctx, this.palette, this.icons, 'full');
+    const cacheDisplay = cacheText ? '  ' + cacheText : '';
+
+    const line1Content = `  ${modelText}${sessionText}   ${progressText} ${percentText}  ${tokensText}${costText}${linesDisplay}${cacheDisplay}${usageText}   ${durationText}${speedText}`;
     lines.push(this.chars.boxVertical + line1Content + ' '.repeat(Math.max(0, width - 2 - line1Content.length)) + this.chars.boxVertical);
 
     // Middle border
@@ -253,14 +291,16 @@ export const auroraTheme: Theme = {
 
     // Line 2: Project/Git, Config counts
     const configParts: string[] = [];
-    if (ctx.configCounts.claudeMdCount > 0) {
-      configParts.push(`${ctx.configCounts.claudeMdCount} md`);
-    }
-    if (ctx.configCounts.rulesCount > 0) {
-      configParts.push(`${ctx.configCounts.rulesCount} rules`);
-    }
-    if (ctx.configCounts.mcpCount > 0) {
-      configParts.push(`${ctx.configCounts.mcpCount} mcp`);
+    if (ctx.config.display.showConfigCounts) {
+      if (ctx.configCounts.claudeMdCount > 0) {
+        configParts.push(`${ctx.configCounts.claudeMdCount} md`);
+      }
+      if (ctx.configCounts.rulesCount > 0) {
+        configParts.push(`${ctx.configCounts.rulesCount} rules`);
+      }
+      if (ctx.configCounts.mcpCount > 0) {
+        configParts.push(`${ctx.configCounts.mcpCount} mcp`);
+      }
     }
     const configText = configParts.length > 0 ? hex(this.palette.muted, `  ${configParts.join('  ')}`) : '';
 
@@ -311,6 +351,12 @@ export const auroraTheme: Theme = {
       if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
         const todoLine = renderTodoLine(ctx, this.icons, this.palette);
         if (todoLine) lines.push('  ' + todoLine);
+      }
+
+      // Skills
+      if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
+        const skillsLine = renderSkillsLine(ctx, this.icons, this.palette);
+        if (skillsLine) lines.push('  ' + skillsLine);
       }
     }
 
@@ -421,6 +467,31 @@ function renderTodoLine(ctx: RenderContext, icons: IconSet, palette: ColorPalett
   return label + hex(palette.green, '✓ ') + hex(palette.text, 'All tasks completed') + hex(palette.muted, ` (${total}/${total})`);
 }
 
+function summarizeSkills(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
+  const skillItems: string[] = [];
+
+  for (const skill of ctx.transcript.skills.slice(0, 3)) {
+    const icon = skill.status === 'running' ? icons.running : icons.success;
+    const iconColor = skill.status === 'running' ? palette.yellow : palette.green;
+    skillItems.push(hex(palette.text, skill.name) + hex(iconColor, icon));
+  }
+
+  return hex(palette.mauve, icons.skill) + ' ' + skillItems.join(' ');
+}
+
+function renderSkillsLine(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
+  const parts: string[] = [];
+
+  for (const skill of ctx.transcript.skills.slice(0, 5)) {
+    const icon = skill.status === 'running' ? icons.running : skill.status === 'error' ? icons.error : icons.success;
+    const iconColor = skill.status === 'running' ? palette.yellow : skill.status === 'error' ? palette.red : palette.green;
+    const args = skill.args ? ` ${skill.args}` : '';
+    parts.push(hex(palette.text, skill.name) + hex(iconColor, icon) + hex(palette.muted, args));
+  }
+
+  return hex(palette.mauve, icons.skill + ' Skills: ') + parts.join('   ');
+}
+
 /**
  * Format tools summary with counts
  */
@@ -511,7 +582,7 @@ function formatUsageSummaryLine(usageData: any, palette: ColorPalette): string {
  */
 function formatProjectGit(ctx: RenderContext, palette: ColorPalette, _icons: IconSet): string {
   const project = ctx.stdin.cwd ? ctx.stdin.cwd.split('/').pop() : null;
-  const git = ctx.gitStatus?.branch || '';
+  const git = ctx.config.display.showGit ? (ctx.gitStatus?.branch || '') : '';
   const dirty = ctx.gitStatus?.isDirty ? '*' : '';
 
   if (!project && !git) return '';
@@ -526,18 +597,25 @@ function formatProjectGit(ctx: RenderContext, palette: ColorPalette, _icons: Ico
 
   // Git branch with GitHub link (if available)
   if (git) {
-    let branchText = `${git}${dirty}`;
-    
+    let branchText = `${git}`;
+
+    // Add tag if available
+    if (ctx.gitStatus?.tag) {
+      branchText += ` ${ctx.gitStatus.tag}`;
+    }
+
+    branchText += dirty;
+
     // Add file stats if enabled
     if (ctx.config.display.showGitFileStats && ctx.gitStatus?.fileStats) {
       const stats = ctx.gitStatus.fileStats;
       const parts: string[] = [];
-      
+
       if (stats.modified > 0) parts.push(`!${stats.modified}`);
       if (stats.added > 0) parts.push(`+${stats.added}`);
       if (stats.deleted > 0) parts.push(`✘${stats.deleted}`);
       if (stats.untracked > 0) parts.push(`?${stats.untracked}`);
-      
+
       if (parts.length > 0) {
         branchText += ` ${parts.join(' ')}`;
       }

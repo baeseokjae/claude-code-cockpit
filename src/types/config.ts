@@ -23,6 +23,9 @@ export interface CockpitConfig {
     showGitFileStats: boolean;
     showAllBranches: boolean;
     showAllBranchesDepth: number;
+    showLines: boolean;
+    showCacheMetrics: boolean;
+    showGitTag: boolean;
   };
 
   detailMode: boolean;

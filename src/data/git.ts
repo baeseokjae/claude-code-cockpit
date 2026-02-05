@@ -194,7 +194,16 @@ function scanSubRepos(basePath: string, depth: number, maxDepth: number): SubRep
   return subRepos;
 }
 
-export async function getGitStatus(cwd?: string, options?: { showAllBranches?: boolean; showAllBranchesDepth?: number }): Promise<GitStatus | null> {
+function getLatestTag(cwd?: string): string | null {
+  try {
+    const tag = execGit('git describe --tags --abbrev=0', cwd).trim();
+    return tag || null;
+  } catch {
+    return null;
+  }
+}
+
+export async function getGitStatus(cwd?: string, options?: { showAllBranches?: boolean; showAllBranchesDepth?: number; includeTag?: boolean }): Promise<GitStatus | null> {
   try {
     const branch = execGit('git rev-parse --abbrev-ref HEAD', cwd).trim();
 
@@ -241,6 +250,16 @@ export async function getGitStatus(cwd?: string, options?: { showAllBranches?: b
       }
     }
 
+    // Get latest tag if enabled
+    let tag: string | undefined;
+    if (options?.includeTag) {
+      const latestTag = getLatestTag(cwd);
+      if (latestTag) {
+        tag = latestTag;
+        debug(`found tag: ${tag}`);
+      }
+    }
+
     return {
       branch,
       isDirty,
@@ -249,6 +268,7 @@ export async function getGitStatus(cwd?: string, options?: { showAllBranches?: b
       remoteUrl,
       fileStats,
       subRepos,
+      tag,
     };
   } catch (error) {
     debug('failed to get git status:', error);

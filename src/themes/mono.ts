@@ -10,6 +10,7 @@ import { createProgressBar, formatPercent } from '../render/utils.js';
 import { formatTokenSpeed } from '../data/speed-tracker.js';
 import { getModelName, getContextPercent, getAbsoluteTokens } from '../input/stdin.js';
 import { hyperlink, fileUrl, githubBranchUrl } from '../render/links.js';
+import { formatLinesDisplay, formatCacheDisplay } from './helpers.js';
 
 /**
  * Mono theme - No colors, ASCII only
@@ -71,8 +72,11 @@ export const monoTheme: Theme = {
 
     const projectGit = formatProjectGit(ctx);
 
+    const linesText = formatLinesDisplay(ctx, this.palette, this.icons, 'compact');
+    const linesDisplay = linesText ? ` ${linesText}` : '';
+
     // Text only, no colors
-    return [`[${model}]${sessionText} ${percentStr}${projectGit} | ${duration}`];
+    return [`[${model}]${sessionText} ${percentStr}${projectGit}${linesDisplay} | ${duration}`];
   },
 
   renderCompact(ctx: RenderContext): string[] {
@@ -81,6 +85,15 @@ export const monoTheme: Theme = {
     const model = getModelName(ctx.stdin);
     const percent = getContextPercent(ctx.stdin);
     const percentStr = percent !== null ? formatPercent(percent) : '??%';
+
+    // Context display (absolute tokens or percentage)
+    const absoluteTokens = getAbsoluteTokens(ctx.stdin);
+    let contextStr = '';
+    if (ctx.config.display.showAbsoluteTokens && absoluteTokens) {
+      contextStr = `${Math.round(absoluteTokens.used / 1000)}k/${Math.round(absoluteTokens.total / 1000)}k`;
+    } else {
+      contextStr = percentStr;
+    }
 
     const sessionName = ctx.config.display.showSessionName
       ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
@@ -100,7 +113,18 @@ export const monoTheme: Theme = {
     // Warning marker
     const warning = percent !== null && percent >= 75 ? ' !' : '';
 
-    lines.push(`[${model}]${sessionText} [${progressBar}] ${percentStr}${warning}${projectGit}${usage} | ${duration}`);
+    // Token speed (Mono style: no color)
+    const speed = ctx.config.display.showTokenSpeed && ctx.tokenSpeed
+      ? ` | ${formatTokenSpeed(ctx.tokenSpeed, 'output')}`
+      : '';
+
+    const linesText = formatLinesDisplay(ctx, this.palette, this.icons, 'compact');
+    const linesDisplay = linesText ? '  ' + linesText : '';
+
+    const cacheText = formatCacheDisplay(ctx, this.palette, this.icons, 'compact');
+    const cacheDisplay = cacheText ? '  ' + cacheText : '';
+
+    lines.push(`[${model}]${sessionText} [${progressBar}] ${contextStr}${warning}${projectGit}${linesDisplay}${cacheDisplay}${usage} | ${duration}${speed}`);
 
     // Activity line
     const activityParts: string[] = [];
@@ -118,6 +142,11 @@ export const monoTheme: Theme = {
     if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
       const todos = summarizeTodos(ctx);
       if (todos) activityParts.push(todos);
+    }
+
+    if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
+      const skills = summarizeSkills(ctx);
+      if (skills) activityParts.push(skills);
     }
 
     if (activityParts.length > 0) {
@@ -156,7 +185,7 @@ export const monoTheme: Theme = {
       tokensStr = tokens ? `${Math.round((tokens.input_tokens || 0) / 1000)}k/${Math.round((ctx.stdin.context_window?.context_window_size || 200000) / 1000)}k` : '';
     }
 
-    const cost = ctx.stdin.cost?.total_cost_usd;
+    const cost = ctx.config.display.showCost ? ctx.stdin.cost?.total_cost_usd : undefined;
     const costStr = cost ? `$${cost.toFixed(2)}` : '';
 
     // Usage (Mono style: no color)
@@ -171,6 +200,12 @@ export const monoTheme: Theme = {
       ? formatTokenSpeed(ctx.tokenSpeed, 'output')
       : '';
 
+    const linesText = formatLinesDisplay(ctx, this.palette, this.icons, 'compact');
+    const linesDisplay = linesText ? '  ' + linesText : '';
+
+    const cacheText = formatCacheDisplay(ctx, this.palette, this.icons, 'full');
+    const cacheDisplay = cacheText ? '  ' + cacheText : '';
+
     // Warning
     let warningStr = '';
     if (percent !== null && percent >= 90) {
@@ -179,16 +214,18 @@ export const monoTheme: Theme = {
       warningStr = ' [WARNING]';
     }
 
-    const parts = [`${bold(model)}${sessionStr}`, `[${progressBar}]`, `${percentStr}${warningStr}`, `(${tokensStr})`, costStr, usageStr, duration, speedStr].filter(Boolean);
+    const parts = [`${bold(model)}${sessionStr}`, `[${progressBar}]`, `${percentStr}${warningStr}`, `(${tokensStr})`, costStr, linesDisplay, cacheDisplay, usageStr, duration, speedStr].filter(Boolean);
     lines.push(`  ${parts.join('  ')}`);
 
     // Line 2
     const projectGit = formatProjectGit(ctx);
 
     const configParts: string[] = [];
-    if (ctx.configCounts.claudeMdCount > 0) configParts.push(`${ctx.configCounts.claudeMdCount}md`);
-    if (ctx.configCounts.rulesCount > 0) configParts.push(`${ctx.configCounts.rulesCount}rules`);
-    if (ctx.configCounts.mcpCount > 0) configParts.push(`${ctx.configCounts.mcpCount}mcp`);
+    if (ctx.config.display.showConfigCounts) {
+      if (ctx.configCounts.claudeMdCount > 0) configParts.push(`${ctx.configCounts.claudeMdCount}md`);
+      if (ctx.configCounts.rulesCount > 0) configParts.push(`${ctx.configCounts.rulesCount}rules`);
+      if (ctx.configCounts.mcpCount > 0) configParts.push(`${ctx.configCounts.mcpCount}mcp`);
+    }
 
     lines.push(`  ${projectGit}  ${dim(configParts.join(' '))}`);
 
@@ -208,6 +245,11 @@ export const monoTheme: Theme = {
     // Todos
     if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
       lines.push('  ' + renderTodoLine(ctx));
+    }
+
+    // Skills
+    if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
+      lines.push('  ' + renderSkillsLine(ctx));
     }
 
     return lines;
@@ -295,12 +337,37 @@ function renderTodoLine(ctx: RenderContext): string {
   return `● Todos: + All done (${total}/${total})`;
 }
 
+function summarizeSkills(ctx: RenderContext): string {
+  const skillItems = ctx.transcript.skills
+    .slice(0, 3)
+    .map((s) => {
+      const marker = s.status === 'running' ? '~' : '+';
+      return `${s.name}${marker}`;
+    })
+    .join(' ');
+
+  return '● ' + skillItems;
+}
+
+function renderSkillsLine(ctx: RenderContext): string {
+  const skills = ctx.transcript.skills
+    .slice(0, 5)
+    .map((skill) => {
+      const marker = skill.status === 'running' ? '~' : skill.status === 'error' ? 'x' : '+';
+      const args = skill.args ? ` ${skill.args}` : '';
+      return `${skill.name}${marker}${args}`;
+    })
+    .join('  ');
+
+  return '● Skills: ' + skills;
+}
+
 /**
  * Format project and git with parentheses and clickable links (Mono style: no colors)
  */
 function formatProjectGit(ctx: RenderContext): string {
   const project = ctx.stdin.cwd ? ctx.stdin.cwd.split('/').pop() : null;
-  const git = ctx.gitStatus?.branch || '';
+  const git = ctx.config.display.showGit ? (ctx.gitStatus?.branch || '') : '';
   const dirty = ctx.gitStatus?.isDirty ? '*' : '';
 
   if (!project && !git) return '';
@@ -315,7 +382,11 @@ function formatProjectGit(ctx: RenderContext): string {
 
   // Git branch with GitHub link (if available)
   if (git) {
-    const branchText = `${git}${dirty}`;
+    let branchText = `${git}`;
+    if (ctx.gitStatus?.tag) {
+      branchText += ` ${ctx.gitStatus.tag}`;
+    }
+    branchText += dirty;
 
     if (ctx.gitStatus?.remoteUrl) {
       const branchUrl = githubBranchUrl(ctx.gitStatus.remoteUrl, git);
