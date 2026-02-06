@@ -8,19 +8,35 @@ Advanced HUD system for Claude Code featuring 5 themes, skill tracking, and deta
 
 ## ✨ Features
 
+### Core Features
 - 🎨 **5 Themes**: Aurora, Neon, Mono, Zen, Retro
 - 🔧 **Tool Tracking**: Monitor Read, Edit, Bash, Grep, and all tool activity
+- 📈 **Tool Statistics**: Overall tool success/failure rate (✓87% ✗13%)
 - 🤖 **Agent Tracking**: Real-time Task subagent monitoring
 - ✅ **Todo Progress**: Track TodoWrite task status
 - ⚡ **Skill Tracking**: Monitor /commit, /review-pr and other skill invocations
 - 📊 **Git Status**: Branch name and dirty indicator
+- 🎯 **Git Activity**: Count commits and PRs created during session
 - 📝 **Lines Widget**: Track code additions/removals (+152 -48)
 - 💾 **Cache Metrics**: Cache hit rate and estimated savings display
 - 🏷️ **Git Tag**: Latest release tag next to branch name
+- ⚠️ **Bash Error Tracking**: Failed commands with exit codes
 - 💰 **Cost Estimation**: Token-based cost calculation per model
 - 🚨 **Smart Alerts**: Context/cost/session warnings
 - 📱 **Responsive Layout**: Auto-adjusts to terminal width
 - 🚀 **Zero Dependencies**: Uses only Node.js built-in modules
+
+### Advanced Features (v2.0)
+- 💡 **Strategic Compact Suggestion**: Threshold-based `/compact` mode suggestion (e.g., `⚠️ 75 calls try /compact`)
+- 🔍 **Rule Violations Detection**: Detect hardcoded secrets, console.log, large files, debug statements
+- 🔄 **Workflow Phase Detection**: Auto-detect PLAN/IMPLEMENT/REVIEW phases with confidence scoring
+- 🧪 **Test Coverage Analysis**: Framework-agnostic coverage display (vitest, jest, mocha, ava)
+- 📊 **Pass@k Metrics**: AI code generation quality (Pass@1: 78%, Pass@3: 92%)
+- 🌳 **Git Worktree Support**: Track multiple worktrees with status (`3 worktrees (1 dirty)`)
+- 🔌 **MCP Status**: Per-server tool usage statistics (`MCP: 3 servers (45 calls)`)
+- 🛡️ **Security Dashboard**: Integrated security scoring (0-100) with issue severity
+- 📚 **Learning Tracker**: Session pattern analysis and improvement suggestions
+- 🔗 **Instance Sync**: Multi-instance synchronization (basic structure)
 
 ## 🚀 Installation
 
@@ -159,6 +175,35 @@ Ultra-minimal design. Calm tones inspired by traditional paper and ink.
 - **Used by all commands** - All `/claude-code-cockpit:*` commands read this file
 - **Comprehensive data** - Includes tools, agents, todos, usage statistics, git status
 
+### Advanced Analysis Features (v2.0)
+
+#### Workflow Phase Detection
+- **Automatic phase detection** - Analyzes tool patterns to detect PLAN/IMPLEMENT/REVIEW phases
+- **Confidence scoring** - Shows confidence percentage for detected phase
+- **Tool pattern analysis** - Uses recent 20 tool calls to determine phase
+- **Todo status integration** - Considers todo completion for phase determination
+
+#### Test Coverage Analysis
+- **Framework auto-detection** - Supports vitest, jest, mocha, ava
+- **Coverage metrics** - Displays statements, branches, functions, lines
+- **Color coding** - Green (80%+), Yellow (60-79%), Red (<60%)
+
+#### Pass@k Metrics
+- **AI quality measurement** - Tracks code generation success rates
+- **Multiple k values** - Pass@1 (first try), Pass@3 (within 3 tries), Pass@5 (within 5 tries)
+- **Average attempts** - Shows average attempts needed for success
+- **Recent success rate** - Tracks success of last 10 attempts
+
+#### Security Dashboard
+- **Security scoring** - Overall score (0-100) with sub-scores for secrets, code quality, dependencies
+- **Issue severity** - Critical (🔴), High (🟠), Medium (🟡), Low (🔵)
+- **Recommendations** - Actionable suggestions for each security issue
+
+#### Learning Tracker
+- **Pattern detection** - Identifies Read-Edit-Write patterns, retry patterns
+- **Error analysis** - Tracks consecutive error streaks
+- **Improvement suggestions** - Provides actionable recommendations based on patterns
+
 ## ⚙️ Configuration
 
 After installation, run `/claude-code-cockpit:configure` to set theme and display options, or use environment variables.
@@ -202,15 +247,36 @@ export COCKPIT_PATH_LEVELS=2
     "showLines": true,
     "showCacheMetrics": true,
     "showGitTag": true,
+    "showGitActivity": true,
+    "showToolStats": true,
+    "showBashErrors": true,
+    "showCompactSuggestion": true,
+    "showViolations": true,
+    "showMcpImpact": true,
+    "showWorkflowPhase": true,
+    "showTestCoverage": true,
+    "showPassAtK": true,
+    "showGitWorktrees": false,
+    "showPerformanceMetrics": false,
+    "showMcpStatus": true,
+    "showSecurityDashboard": true,
+    "showLearningTracker": false,
+    "showInstanceSync": false,
     "sevenDayThreshold": 80
   },
   "usage": {
     "enabled": true,
     "cacheMinutes": 10
   },
+  "notifications": {
+    "enabled": false,
+    "compactWarningThreshold": 75,
+    "compactSuggestionEnabled": true,
+    "compactSuggestionThreshold": 50
+  },
   "performance": {
     "maxTools": 20,
-    "maxAgents": 10
+    "maxAgents": 20
   }
 }
 ```
@@ -246,8 +312,34 @@ export COCKPIT_PATH_LEVELS=2
 #### Configuration Counts
 - `showConfigCounts` (default: true) - Show count of .claude.md, rules, MCP servers, hooks
 
+#### Activity Tracking
+- `showGitActivity` (default: true) - Show commits and PRs created during session
+- `showToolStats` (default: true) - Show overall tool success/failure rate
+- `showBashErrors` (default: true) - Show failed bash commands with exit codes
+
+#### Advanced Analysis (v2.0)
+- `showCompactSuggestion` (default: true) - Show /compact suggestion when tool calls exceed threshold
+- `showViolations` (default: true) - Show detected code violations (secrets, console.log, etc.)
+- `showMcpImpact` (default: true) - Show MCP server configuration and tool count
+- `showWorkflowPhase` (default: true) - Show current workflow phase (PLAN/IMPLEMENT/REVIEW)
+- `showTestCoverage` (default: true) - Show test coverage percentage
+- `showPassAtK` (default: true) - Show Pass@k code generation quality metrics
+- `showGitWorktrees` (default: false) - Show git worktree status
+- `showPerformanceMetrics` (default: false) - Show build/test performance metrics
+- `showMcpStatus` (default: true) - Show MCP server usage statistics
+- `showSecurityDashboard` (default: true) - Show security score and issues
+- `showLearningTracker` (default: false) - Show detected patterns and suggestions
+- `showInstanceSync` (default: false) - Show multi-instance sync status
+
 #### Usage Warnings
 - `sevenDayThreshold` (default: 80) - Percentage threshold for showing 7-day usage (0-100)
+
+### Notification Options
+
+- `enabled` (default: false) - Enable desktop notifications
+- `compactWarningThreshold` (default: 75) - Context percentage for compact warning
+- `compactSuggestionEnabled` (default: true) - Enable /compact suggestions
+- `compactSuggestionThreshold` (default: 50) - Tool call count to trigger /compact suggestion
 
 ### Usage Options
 
@@ -315,6 +407,7 @@ claude-code-cockpit/
 Please check out these previous works that helped inspire the creation of claude-code-cockpit. 🙏
 
 - [jarrodwatts/claude-hud](https://github.com/jarrodwatts/claude-hud) – A terminal-based HUD plugin for Claude Code.
+- [affaan-m/everything-claude-code](https://github.com/affaan-m/everything-claude-code) – Comprehensive Claude Code enhancement collection (v2.0 features).
 - Terminal powerline tools for status bar.
 
 ## 📄 License

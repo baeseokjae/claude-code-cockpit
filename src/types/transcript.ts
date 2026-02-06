@@ -42,6 +42,9 @@ export interface TranscriptData {
   agents: AgentEntry[];
   todos: TodoItem[];
   skills: SkillEntry[];
+  gitActivity?: GitActivity;
+  toolStats?: ToolStats;
+  bashErrors?: BashError[];
 }
 
 export interface SkillEntry {
@@ -52,6 +55,34 @@ export interface SkillEntry {
   startTime: Date;
   endTime?: Date;
   error?: string;
+}
+
+/**
+ * Git activity tracking (commits and PRs created in this session)
+ */
+export interface GitActivity {
+  commits: number;
+  pullRequests: number;
+}
+
+/**
+ * Tool execution statistics
+ */
+export interface ToolStats {
+  total: number;
+  success: number;
+  error: number;
+  successRate: number; // 0-100
+}
+
+/**
+ * Bash command error details
+ */
+export interface BashError {
+  command: string;
+  exitCode: number;
+  output: string;
+  timestamp: Date;
 }
 
 export interface TranscriptEntry {

@@ -205,3 +205,358 @@ export function formatGitTagDisplay(
 
   return hex(palette.mauve, ctx.gitStatus.tag);
 }
+
+// ============================================
+// Git Activity Display Helper
+// ============================================
+
+export function formatGitActivityDisplay(
+  ctx: RenderContext,
+  palette: ColorPalette
+): string | null {
+  if (!ctx.config.display.showGitActivity || !ctx.gitActivity) {
+    return null;
+  }
+
+  const { commits, pullRequests } = ctx.gitActivity;
+
+  if (commits === 0 && pullRequests === 0) {
+    return null;
+  }
+
+  const parts: string[] = [];
+  if (commits > 0) {
+    parts.push(hex(palette.green, `+${commits} commit${commits > 1 ? 's' : ''}`));
+  }
+  if (pullRequests > 0) {
+    parts.push(hex(palette.blue, `+${pullRequests} PR${pullRequests > 1 ? 's' : ''}`));
+  }
+
+  return parts.join('  ');
+}
+
+// ============================================
+// Tool Stats Display Helper
+// ============================================
+
+export function formatToolStatsDisplay(
+  ctx: RenderContext,
+  palette: ColorPalette
+): string | null {
+  if (!ctx.config.display.showToolStats || !ctx.toolStats) {
+    return null;
+  }
+
+  const { total, success, error } = ctx.toolStats;
+
+  if (total === 0) {
+    return null;
+  }
+
+  return hex(palette.text, 'Tools: ') +
+         hex(palette.text, `${total}`) + ' ' +
+         `(${hex(palette.green, `✓${success}`)} ${hex(palette.red, `✗${error}`)})`;
+}
+
+// ============================================
+// Bash Errors Display Helper
+// ============================================
+
+export function formatBashErrorsDisplay(
+  ctx: RenderContext,
+  palette: ColorPalette,
+  icons: IconSet
+): string | null {
+  if (!ctx.config.display.showBashErrors || !ctx.bashErrors || ctx.bashErrors.length === 0) {
+    return null;
+  }
+
+  const count = ctx.bashErrors.length;
+  const exitCodes = [...new Set(ctx.bashErrors.map(e => e.exitCode))];
+  const codesStr = exitCodes.slice(0, 2).join(', ');
+
+  return hex(palette.red, icons.error) + ' ' +
+         hex(palette.red, `Bash: ${count} error${count > 1 ? 's' : ''}`) +
+         hex(palette.muted, ` (${codesStr}${exitCodes.length > 2 ? '...' : ''})`);
+}
+
+// ============================================
+// Compact Suggestion Display Helper
+// ============================================
+
+export function formatCompactSuggestionDisplay(
+  ctx: RenderContext,
+  palette: ColorPalette,
+  icons: IconSet
+): string | null {
+  if (!ctx.compactSuggestion?.shouldSuggest) {
+    return null;
+  }
+
+  const { totalToolCalls } = ctx.compactSuggestion;
+  return hex(palette.yellow, icons.warning) + ' ' +
+         hex(palette.yellow, `${totalToolCalls} calls`) + ' ' +
+         hex(palette.muted, 'try /compact');
+}
+
+// ============================================
+// Violations Display Helper
+// ============================================
+
+export function formatViolationsDisplay(
+  ctx: RenderContext,
+  palette: ColorPalette,
+  icons: IconSet
+): string | null {
+  if (!ctx.violations || ctx.violations.total === 0) {
+    return null;
+  }
+
+  const { total, byType } = ctx.violations;
+  const parts: string[] = [];
+
+  const consoleCount = byType.get('console_log') || 0;
+  const secretCount = byType.get('hardcoded_secret') || 0;
+  const largeFileCount = byType.get('large_file') || 0;
+
+  if (secretCount > 0) {
+    parts.push(hex(palette.red, `${icons.error} ${secretCount} secret${secretCount > 1 ? 's' : ''}`));
+  }
+
+  if (consoleCount > 0) {
+    parts.push(hex(palette.yellow, `${icons.warning} ${consoleCount} console.log`));
+  }
+
+  if (largeFileCount > 0) {
+    parts.push(hex(palette.yellow, `${icons.warning} ${largeFileCount} large file${largeFileCount > 1 ? 's' : ''}`));
+  }
+
+  if (parts.length === 0 && total > 0) {
+    parts.push(hex(palette.yellow, `${icons.warning} ${total} violation${total > 1 ? 's' : ''}`));
+  }
+
+  return parts.join(' ');
+}
+
+// ============================================
+// Workflow Phase Display Helper
+// ============================================
+
+export function formatWorkflowPhaseDisplay(
+  ctx: RenderContext,
+  palette: ColorPalette
+): string | null {
+  if (!ctx.workflowState || ctx.workflowState.currentPhase === 'UNKNOWN') {
+    return null;
+  }
+
+  const { currentPhase, confidence } = ctx.workflowState;
+
+  const phaseColors: Record<string, string> = {
+    'PLAN': palette.blue,
+    'IMPLEMENT': palette.green,
+    'REVIEW': palette.mauve,
+  };
+
+  const color = phaseColors[currentPhase] || palette.muted;
+  const confidenceStr = confidence >= 70 ? '' : ` (${confidence}%)`;
+
+  return hex(color, `[${currentPhase}]`) + hex(palette.muted, confidenceStr);
+}
+
+// ============================================
+// Test Coverage Display Helper
+// ============================================
+
+export function formatTestCoverageDisplay(
+  ctx: RenderContext,
+  palette: ColorPalette,
+  icons: IconSet
+): string | null {
+  if (!ctx.testCoverage || !ctx.testCoverage.coverage?.hasData) {
+    return null;
+  }
+
+  const { overall } = ctx.testCoverage.coverage;
+  const avgCoverage = Math.round((overall.statements + overall.branches + overall.functions + overall.lines) / 4);
+
+  const color = avgCoverage >= 80 ? palette.green :
+                avgCoverage >= 60 ? palette.yellow :
+                palette.red;
+
+  return hex(palette.teal, icons.success) + ' ' + hex(color, `${avgCoverage}%`);
+}
+
+// ============================================
+// Pass@k Display Helper
+// ============================================
+
+export function formatPassAtKDisplay(
+  ctx: RenderContext,
+  palette: ColorPalette
+): string | null {
+  if (!ctx.passAtK || !ctx.passAtK.hasData || !ctx.passAtK.metrics) {
+    return null;
+  }
+
+  const { passAt1 } = ctx.passAtK.metrics;
+
+  const color = passAt1 >= 80 ? palette.green :
+                passAt1 >= 60 ? palette.yellow :
+                palette.red;
+
+  return hex(palette.text, 'Pass@1: ') + hex(color, `${passAt1}%`);
+}
+
+// ============================================
+// Git Worktrees Display Helper
+// ============================================
+
+export function formatGitWorktreesDisplay(
+  ctx: RenderContext,
+  palette: ColorPalette
+): string | null {
+  if (!ctx.gitStatus?.worktrees || ctx.gitStatus.worktrees.length <= 1) {
+    return null;
+  }
+
+  const count = ctx.gitStatus.worktrees.length;
+  const dirtyCount = ctx.gitStatus.worktrees.filter(w => w.isDirty).length;
+
+  if (dirtyCount > 0) {
+    return hex(palette.yellow, `${count} worktrees`) + ' ' +
+           hex(palette.red, `(${dirtyCount} dirty)`);
+  }
+
+  return hex(palette.text, `${count} worktrees`);
+}
+
+// ============================================
+// Performance Metrics Display Helper
+// ============================================
+
+export function formatPerformanceMetricsDisplay(
+  ctx: RenderContext,
+  palette: ColorPalette
+): string | null {
+  if (!ctx.performanceMetrics || !ctx.performanceMetrics.hasData) {
+    return null;
+  }
+
+  const parts: string[] = [];
+
+  if (ctx.performanceMetrics.build.hasBuildScript && ctx.performanceMetrics.build.lastBuildTime) {
+    const timeS = Math.round(ctx.performanceMetrics.build.lastBuildTime / 1000);
+    parts.push(hex(palette.text, `Build: ${timeS}s`));
+  }
+
+  if (ctx.performanceMetrics.test.hasTestScript && ctx.performanceMetrics.test.lastTestTime) {
+    const timeS = Math.round(ctx.performanceMetrics.test.lastTestTime / 1000);
+    const status = ctx.performanceMetrics.test.lastTestStatus;
+    const color = status === 'pass' ? palette.green :
+                  status === 'fail' ? palette.red :
+                  palette.muted;
+    parts.push(hex(color, `Test: ${timeS}s`));
+  }
+
+  return parts.length > 0 ? parts.join(' ') : null;
+}
+
+// ============================================
+// MCP Status Display Helper
+// ============================================
+
+export function formatMcpStatusDisplay(
+  ctx: RenderContext,
+  palette: ColorPalette
+): string | null {
+  if (!ctx.mcpStatus || !ctx.mcpStatus.hasServers) {
+    return null;
+  }
+
+  const { serverCount, totalToolCalls } = ctx.mcpStatus;
+
+  if (totalToolCalls === 0) {
+    return hex(palette.muted, `${serverCount} MCP servers`);
+  }
+
+  return hex(palette.teal, `MCP: ${serverCount} servers`) + ' ' +
+         hex(palette.text, `(${totalToolCalls} calls)`);
+}
+
+// ============================================
+// Security Dashboard Display Helper
+// ============================================
+
+export function formatSecurityDashboardDisplay(
+  ctx: RenderContext,
+  palette: ColorPalette,
+  icons: IconSet
+): string | null {
+  if (!ctx.securityDashboard || !ctx.securityDashboard.hasIssues) {
+    return null;
+  }
+
+  const { score, criticalCount, highCount } = ctx.securityDashboard;
+
+  const scoreColor = score.overall >= 80 ? palette.green :
+                     score.overall >= 60 ? palette.yellow :
+                     palette.red;
+
+  if (criticalCount > 0) {
+    return hex(palette.red, icons.error) + ' ' +
+           hex(palette.red, `${criticalCount} critical`) + ' ' +
+           hex(scoreColor, `(${score.overall})`);
+  }
+
+  if (highCount > 0) {
+    return hex(palette.yellow, icons.warning) + ' ' +
+           hex(palette.yellow, `${highCount} high`) + ' ' +
+           hex(scoreColor, `(${score.overall})`);
+  }
+
+  return hex(scoreColor, `Security: ${score.overall}`);
+}
+
+// ============================================
+// Learning Tracker Display Helper
+// ============================================
+
+export function formatLearningTrackerDisplay(
+  ctx: RenderContext,
+  palette: ColorPalette
+): string | null {
+  if (!ctx.learningTracker || !ctx.learningTracker.hasLearnings) {
+    return null;
+  }
+
+  const { patterns, improvements } = ctx.learningTracker;
+
+  if (patterns.length > 0) {
+    return hex(palette.blue, `${patterns.length} patterns`) + ' ' +
+           hex(palette.muted, `learned`);
+  }
+
+  if (improvements.length > 0) {
+    return hex(palette.yellow, `${improvements.length} suggestions`);
+  }
+
+  return null;
+}
+
+// ============================================
+// Instance Sync Display Helper
+// ============================================
+
+export function formatInstanceSyncDisplay(
+  ctx: RenderContext,
+  palette: ColorPalette
+): string | null {
+  if (!ctx.instanceSync || !ctx.instanceSync.hasMultipleInstances) {
+    return null;
+  }
+
+  const { instanceCount } = ctx.instanceSync;
+
+  return hex(palette.mauve, `${instanceCount} instances`);
+}

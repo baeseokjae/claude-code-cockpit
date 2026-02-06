@@ -21,6 +21,9 @@ import {
   MAX_AGENTS_DISPLAY,
   MAX_SKILLS_DISPLAY,
 } from '../utils/constants.js';
+import { extractGitActivity } from '../data/git-activity.js';
+import { calculateToolStats } from '../data/tool-stats.js';
+import { extractBashErrors } from '../data/bash-errors.js';
 
 const debug = createDebug('transcript');
 
@@ -80,11 +83,20 @@ export async function parseTranscript(
 
   debug(`parsed: ${tools.length} tools, ${agents.length} agents, ${skills.length} skills, ${currentTodos.length} todos`);
 
+  // Extract additional analytics from tools
+  const allTools = Array.from(toolsMap.values());
+  const gitActivity = extractGitActivity(allTools);
+  const toolStats = calculateToolStats(allTools);
+  const bashErrors = extractBashErrors(allTools);
+
   return {
     tools,
     agents,
     todos: currentTodos,
     skills,
+    gitActivity: gitActivity || undefined,
+    toolStats: toolStats || undefined,
+    bashErrors: bashErrors || undefined,
   };
 }
 
@@ -96,6 +108,12 @@ function processEntry(
   currentTodos: TodoItem[]
 ): void {
   const { timestamp, message } = entry;
+
+  // Guard: skip entries without message.content
+  if (!message?.content || !Array.isArray(message.content)) {
+    return;
+  }
+
   const content = message.content;
 
   for (const block of content) {
@@ -121,7 +139,7 @@ function handleToolUse(
     const agent: AgentEntry = {
       id,
       type: (input.subagent_type as string) || 'unknown',
-      model: extractModelFromPrompt(input.prompt as string),
+      model: extractModelFromPrompt(input.prompt as string, input),
       description: (input.description as string) || (input.prompt as string)?.substring(0, 50),
       status: 'running',
       startTime,
@@ -320,7 +338,24 @@ function extractTarget(toolName: string, input: Record<string, unknown>): string
   return undefined;
 }
 
-function extractModelFromPrompt(prompt: string): string | undefined {
+function extractModelFromPrompt(prompt: string, input?: Record<string, unknown>): string | undefined {
+  // First check explicit model field in input
+  if (input?.model) {
+    const modelStr = String(input.model).toLowerCase();
+    if (modelStr.includes('opus')) return 'opus';
+    if (modelStr.includes('sonnet')) return 'sonnet';
+    if (modelStr.includes('haiku')) return 'haiku';
+  }
+
+  // Check subagent_model field (new API)
+  if (input?.subagent_model) {
+    const modelStr = String(input.subagent_model).toLowerCase();
+    if (modelStr.includes('opus')) return 'opus';
+    if (modelStr.includes('sonnet')) return 'sonnet';
+    if (modelStr.includes('haiku')) return 'haiku';
+  }
+
+  // Fallback to prompt analysis
   if (!prompt) return undefined;
 
   const lower = prompt.toLowerCase();

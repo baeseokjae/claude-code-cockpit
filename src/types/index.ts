@@ -18,9 +18,12 @@ export type {
   ToolUseBlock,
   ToolResultBlock,
   TextBlock,
+  GitActivity,
+  ToolStats,
+  BashError,
 } from './transcript.js';
 
-export type { GitStatus, FileStats, SubRepoStatus } from './git.js';
+export type { GitStatus, FileStats, SubRepoStatus, WorktreeInfo } from './git.js';
 
 export type { UsageData } from './usage.js';
 

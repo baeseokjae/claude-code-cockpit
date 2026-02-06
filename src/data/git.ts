@@ -5,7 +5,7 @@
 import { execSync } from 'node:child_process';
 import { readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import type { GitStatus, FileStats, SubRepoStatus } from '../types/index.js';
+import type { GitStatus, FileStats, SubRepoStatus, WorktreeInfo } from '../types/index.js';
 import { createDebug } from '../utils/debug.js';
 
 const debug = createDebug('git');
@@ -203,7 +203,58 @@ function getLatestTag(cwd?: string): string | null {
   }
 }
 
-export async function getGitStatus(cwd?: string, options?: { showAllBranches?: boolean; showAllBranchesDepth?: number; includeTag?: boolean }): Promise<GitStatus | null> {
+/**
+ * Get list of git worktrees
+ */
+function getWorktrees(cwd?: string): WorktreeInfo[] {
+  try {
+    const output = execGit('git worktree list --porcelain', cwd);
+    const worktrees: WorktreeInfo[] = [];
+
+    // Parse porcelain output
+    let currentWorktree: Partial<WorktreeInfo> = {};
+
+    for (const line of output.split('\n')) {
+      if (line.startsWith('worktree ')) {
+        const path = line.substring(9).trim();
+        currentWorktree.path = path;
+      } else if (line.startsWith('branch ')) {
+        const branch = line.substring(7).replace('refs/heads/', '').trim();
+        currentWorktree.branch = branch;
+      } else if (line.startsWith('HEAD ')) {
+        const commit = line.substring(5).trim();
+        currentWorktree.commit = commit;
+      } else if (line === '') {
+        // Empty line marks end of worktree entry
+        if (currentWorktree.path && currentWorktree.branch && currentWorktree.commit) {
+          // Check if worktree is dirty
+          let isDirty = false;
+          try {
+            const status = execGit('git status --porcelain', currentWorktree.path);
+            isDirty = status.trim().length > 0;
+          } catch {
+            isDirty = false;
+          }
+
+          worktrees.push({
+            path: currentWorktree.path,
+            branch: currentWorktree.branch,
+            commit: currentWorktree.commit.substring(0, 8),
+            isDirty,
+            isMain: worktrees.length === 0, // First worktree is main
+          });
+        }
+        currentWorktree = {};
+      }
+    }
+
+    return worktrees;
+  } catch {
+    return [];
+  }
+}
+
+export async function getGitStatus(cwd?: string, options?: { showAllBranches?: boolean; showAllBranchesDepth?: number; includeTag?: boolean; includeWorktrees?: boolean }): Promise<GitStatus | null> {
   try {
     const branch = execGit('git rev-parse --abbrev-ref HEAD', cwd).trim();
 
@@ -260,6 +311,16 @@ export async function getGitStatus(cwd?: string, options?: { showAllBranches?: b
       }
     }
 
+    // Get worktrees if enabled
+    let worktrees: WorktreeInfo[] | undefined;
+    if (options?.includeWorktrees) {
+      const worktreeList = getWorktrees(cwd);
+      if (worktreeList.length > 0) {
+        worktrees = worktreeList;
+        debug(`found ${worktrees.length} worktrees`);
+      }
+    }
+
     return {
       branch,
       isDirty,
@@ -269,6 +330,7 @@ export async function getGitStatus(cwd?: string, options?: { showAllBranches?: b
       fileStats,
       subRepos,
       tag,
+      worktrees,
     };
   } catch (error) {
     debug('failed to get git status:', error);

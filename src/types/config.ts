@@ -26,6 +26,21 @@ export interface CockpitConfig {
     showLines: boolean;
     showCacheMetrics: boolean;
     showGitTag: boolean;
+    showGitActivity: boolean;
+    showToolStats: boolean;
+    showBashErrors: boolean;
+    showCompactSuggestion: boolean;
+    showViolations: boolean;
+    showMcpImpact: boolean;
+    showWorkflowPhase: boolean;
+    showTestCoverage: boolean;
+    showPassAtK: boolean;
+    showGitWorktrees: boolean;
+    showPerformanceMetrics: boolean;
+    showMcpStatus: boolean;
+    showSecurityDashboard: boolean;
+    showLearningTracker: boolean;
+    showInstanceSync: boolean;
   };
 
   detailMode: boolean;
@@ -41,6 +56,8 @@ export interface CockpitConfig {
   notifications: {
     enabled: boolean;
     compactWarningThreshold: number;
+    compactSuggestionEnabled: boolean;
+    compactSuggestionThreshold: number;
   };
 
   performance: {

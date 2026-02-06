@@ -16,6 +16,17 @@ import { calculateTokenSpeed } from './data/speed-tracker.js';
 import { calculateSessionDuration } from './data/session-time.js';
 import { getLinesData } from './data/lines.js';
 import { calculateCacheMetrics } from './data/cache-metrics.js';
+import { calculateCompactSuggestion } from './data/compact-suggestion.js';
+import { extractViolations } from './data/rule-violations.js';
+import { readMcpConfig } from './input/mcp-reader.js';
+import { detectWorkflowPhase } from './data/workflow-phase.js';
+import { getTestCoverageSummary } from './data/test-coverage.js';
+import { getPassAtKSummary } from './data/pass-at-k.js';
+import { getPerformanceMetrics } from './data/performance-metrics.js';
+import { analyzeMcpStatus } from './data/mcp-status.js';
+import { createSecurityDashboard } from './data/security-dashboard.js';
+import { createLearningTracker } from './data/learning-tracker.js';
+import { getInstanceSync } from './data/instance-sync.js';
 import { loadConfig } from './config/loader.js';
 import { loadTheme } from './themes/index.js';
 import { writeOutput } from './output/writer.js';
@@ -74,6 +85,7 @@ export async function main(deps: MainDeps = defaultDeps): Promise<void> {
       showAllBranches: config.display.showAllBranches,
       showAllBranchesDepth: config.display.showAllBranchesDepth,
       includeTag: config.display.showGitTag,
+      includeWorktrees: config.display.showGitWorktrees,
     });
 
     const durationMs = stdin.cost?.total_duration_ms ||
@@ -90,6 +102,53 @@ export async function main(deps: MainDeps = defaultDeps): Promise<void> {
     const linesData = getLinesData(stdin);
     const cacheMetrics = calculateCacheMetrics(stdin);
 
+    const compactSuggestion = config.display.showCompactSuggestion
+      ? calculateCompactSuggestion(
+          transcript.tools,
+          config.notifications.compactSuggestionThreshold
+        )
+      : null;
+
+    const violations = config.display.showViolations
+      ? extractViolations(transcript.tools)
+      : null;
+
+    const mcpInfo = config.display.showMcpImpact
+      ? readMcpConfig(cwd || undefined)
+      : null;
+
+    const workflowState = config.display.showWorkflowPhase
+      ? detectWorkflowPhase(transcript.tools, transcript.agents, transcript.todos)
+      : null;
+
+    const testCoverage = config.display.showTestCoverage
+      ? getTestCoverageSummary(cwd || undefined)
+      : null;
+
+    const passAtK = config.display.showPassAtK
+      ? getPassAtKSummary(transcript.tools)
+      : null;
+
+    const performanceMetrics = config.display.showPerformanceMetrics
+      ? getPerformanceMetrics(cwd || undefined)
+      : null;
+
+    const mcpStatus = config.display.showMcpStatus
+      ? analyzeMcpStatus(transcript.tools, mcpInfo)
+      : null;
+
+    const securityDashboard = config.display.showSecurityDashboard
+      ? createSecurityDashboard(violations)
+      : null;
+
+    const learningTracker = config.display.showLearningTracker
+      ? createLearningTracker(transcript.tools, transcript.bashErrors || null)
+      : null;
+
+    const instanceSync = config.display.showInstanceSync
+      ? getInstanceSync(stdin.session_id, cwd || undefined, gitStatus?.branch)
+      : null;
+
     const ctx: RenderContext = {
       stdin,
       transcript,
@@ -101,6 +160,20 @@ export async function main(deps: MainDeps = defaultDeps): Promise<void> {
       extraLabel,
       linesData,
       cacheMetrics,
+      gitActivity: transcript.gitActivity || null,
+      toolStats: transcript.toolStats || null,
+      bashErrors: transcript.bashErrors || null,
+      compactSuggestion,
+      violations,
+      mcpInfo,
+      workflowState,
+      testCoverage,
+      passAtK,
+      performanceMetrics,
+      mcpStatus,
+      securityDashboard,
+      learningTracker,
+      instanceSync,
       sessionDuration,
       theme,
       detailMode: config.detailMode,

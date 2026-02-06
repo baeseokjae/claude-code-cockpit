@@ -18,7 +18,24 @@ import { formatResetTime } from '../data/usage-api.js';
 import { formatTokenSpeed } from '../data/speed-tracker.js';
 import { getModelName, getContextPercent, getAbsoluteTokens } from '../input/stdin.js';
 import { hyperlink, fileUrl, githubBranchUrl } from '../render/links.js';
-import { formatLinesDisplay, formatCacheDisplay } from './helpers.js';
+import {
+  formatLinesDisplay,
+  formatCacheDisplay,
+  formatGitActivityDisplay,
+  formatToolStatsDisplay,
+  formatBashErrorsDisplay,
+  formatCompactSuggestionDisplay,
+  formatViolationsDisplay,
+  formatWorkflowPhaseDisplay,
+  formatTestCoverageDisplay,
+  formatPassAtKDisplay,
+  formatGitWorktreesDisplay,
+  formatPerformanceMetricsDisplay,
+  formatMcpStatusDisplay,
+  formatSecurityDashboardDisplay,
+  formatLearningTrackerDisplay,
+  formatInstanceSyncDisplay,
+} from './helpers.js';
 
 /**
  * Neon theme
@@ -170,6 +187,61 @@ export const neonTheme: Theme = {
       if (skillsSummary) activityParts.push(skillsSummary);
     }
 
+    // New features: Git activity, Tool stats, Bash errors
+    const gitActivityText = formatGitActivityDisplay(ctx, this.palette);
+    if (gitActivityText) activityParts.push(gitActivityText);
+
+    const toolStatsText = formatToolStatsDisplay(ctx, this.palette);
+    if (toolStatsText) activityParts.push(toolStatsText);
+
+    const bashErrorsText = formatBashErrorsDisplay(ctx, this.palette, this.icons);
+    if (bashErrorsText) activityParts.push(bashErrorsText);
+
+
+      // Violations
+      const violationsText = formatViolationsDisplay(ctx, this.palette, this.icons);
+      if (violationsText) activityParts.push(violationsText);
+
+      // Compact suggestion
+      const compactSuggestionText = formatCompactSuggestionDisplay(ctx, this.palette, this.icons);
+      if (compactSuggestionText) activityParts.push(compactSuggestionText);
+
+      // Workflow phase
+      const workflowPhaseText = formatWorkflowPhaseDisplay(ctx, this.palette);
+      if (workflowPhaseText) activityParts.push(workflowPhaseText);
+
+      // Test coverage
+      const testCoverageText = formatTestCoverageDisplay(ctx, this.palette, this.icons);
+      if (testCoverageText) activityParts.push(testCoverageText);
+
+      // Pass@k
+      const passAtKText = formatPassAtKDisplay(ctx, this.palette);
+      if (passAtKText) activityParts.push(passAtKText);
+
+      // Git worktrees
+      const worktreesText = formatGitWorktreesDisplay(ctx, this.palette);
+      if (worktreesText) activityParts.push(worktreesText);
+
+      // Performance
+      const perfText = formatPerformanceMetricsDisplay(ctx, this.palette);
+      if (perfText) activityParts.push(perfText);
+
+      // MCP Status
+      const mcpStatusText = formatMcpStatusDisplay(ctx, this.palette);
+      if (mcpStatusText) activityParts.push(mcpStatusText);
+
+      // Security Dashboard
+      const securityText = formatSecurityDashboardDisplay(ctx, this.palette, this.icons);
+      if (securityText) activityParts.push(securityText);
+
+      // Learning Tracker
+      const learningText = formatLearningTrackerDisplay(ctx, this.palette);
+      if (learningText) activityParts.push(learningText);
+
+      // Instance Sync
+      const instanceSyncText = formatInstanceSyncDisplay(ctx, this.palette);
+      if (instanceSyncText) activityParts.push(instanceSyncText);
+
     if (activityParts.length > 0) {
       lines.push(activityParts.join('  ' + hex(this.palette.muted, this.chars.separator) + '  '));
     }
@@ -293,6 +365,16 @@ export const neonTheme: Theme = {
       const skillsLine = renderSkillsLine(ctx, this.icons, this.palette);
       if (skillsLine) lines.push('  ' + skillsLine);
     }
+
+    // New features: Git activity, Tool stats, Bash errors
+    const gitActivityText = formatGitActivityDisplay(ctx, this.palette);
+    if (gitActivityText) lines.push('  ' + gitActivityText);
+
+    const toolStatsText = formatToolStatsDisplay(ctx, this.palette);
+    if (toolStatsText) lines.push('  ' + toolStatsText);
+
+    const bashErrorsText = formatBashErrorsDisplay(ctx, this.palette, this.icons);
+    if (bashErrorsText) lines.push('  ' + bashErrorsText);
 
     return lines;
   },

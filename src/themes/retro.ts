@@ -10,7 +10,24 @@ import { createProgressBar, formatPercent } from '../render/utils.js';
 import { formatTokenSpeed } from '../data/speed-tracker.js';
 import { getModelName, getContextPercent, getAbsoluteTokens } from '../input/stdin.js';
 import { hyperlink, fileUrl, githubBranchUrl } from '../render/links.js';
-import { formatLinesDisplay, formatCacheDisplay } from './helpers.js';
+import {
+  formatLinesDisplay,
+  formatCacheDisplay,
+  formatGitActivityDisplay,
+  formatToolStatsDisplay,
+  formatBashErrorsDisplay,
+  formatCompactSuggestionDisplay,
+  formatViolationsDisplay,
+  formatWorkflowPhaseDisplay,
+  formatTestCoverageDisplay,
+  formatPassAtKDisplay,
+  formatGitWorktreesDisplay,
+  formatPerformanceMetricsDisplay,
+  formatMcpStatusDisplay,
+  formatSecurityDashboardDisplay,
+  formatLearningTrackerDisplay,
+  formatInstanceSyncDisplay,
+} from './helpers.js';
 
 /**
  * Retro theme - CRT phosphor monitor
@@ -152,6 +169,61 @@ export const retroTheme: Theme = {
       activityParts.push(summarizeSkills(ctx, this.palette));
     }
 
+    // New features: Git activity, Tool stats, Bash errors
+    const gitActivityText = formatGitActivityDisplay(ctx, this.palette);
+    if (gitActivityText) activityParts.push(gitActivityText);
+
+    const toolStatsText = formatToolStatsDisplay(ctx, this.palette);
+    if (toolStatsText) activityParts.push(toolStatsText);
+
+    const bashErrorsText = formatBashErrorsDisplay(ctx, this.palette, this.icons);
+    if (bashErrorsText) activityParts.push(bashErrorsText);
+
+
+      // Violations
+      const violationsText = formatViolationsDisplay(ctx, this.palette, this.icons);
+      if (violationsText) activityParts.push(violationsText);
+
+      // Compact suggestion
+      const compactSuggestionText = formatCompactSuggestionDisplay(ctx, this.palette, this.icons);
+      if (compactSuggestionText) activityParts.push(compactSuggestionText);
+
+      // Workflow phase
+      const workflowPhaseText = formatWorkflowPhaseDisplay(ctx, this.palette);
+      if (workflowPhaseText) activityParts.push(workflowPhaseText);
+
+      // Test coverage
+      const testCoverageText = formatTestCoverageDisplay(ctx, this.palette, this.icons);
+      if (testCoverageText) activityParts.push(testCoverageText);
+
+      // Pass@k
+      const passAtKText = formatPassAtKDisplay(ctx, this.palette);
+      if (passAtKText) activityParts.push(passAtKText);
+
+      // Git worktrees
+      const worktreesText = formatGitWorktreesDisplay(ctx, this.palette);
+      if (worktreesText) activityParts.push(worktreesText);
+
+      // Performance
+      const perfText = formatPerformanceMetricsDisplay(ctx, this.palette);
+      if (perfText) activityParts.push(perfText);
+
+      // MCP Status
+      const mcpStatusText = formatMcpStatusDisplay(ctx, this.palette);
+      if (mcpStatusText) activityParts.push(mcpStatusText);
+
+      // Security Dashboard
+      const securityText = formatSecurityDashboardDisplay(ctx, this.palette, this.icons);
+      if (securityText) activityParts.push(securityText);
+
+      // Learning Tracker
+      const learningText = formatLearningTrackerDisplay(ctx, this.palette);
+      if (learningText) activityParts.push(learningText);
+
+      // Instance Sync
+      const instanceSyncText = formatInstanceSyncDisplay(ctx, this.palette);
+      if (instanceSyncText) activityParts.push(instanceSyncText);
+
     if (activityParts.length > 0) {
       lines.push(hex(dimColor, activityParts.join(' | ')));
     }
@@ -256,6 +328,25 @@ export const retroTheme: Theme = {
     if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
       const skillsLine = ` SKILLS: ${summarizeSkills(ctx, this.palette)}`;
       lines.push(hex(color, '║') + hex(color, skillsLine) + ' '.repeat(Math.max(0, innerWidth - skillsLine.length)) + hex(color, '║'));
+    }
+
+    // New features: Git activity, Tool stats, Bash errors
+    const gitActivityText = formatGitActivityDisplay(ctx, this.palette);
+    if (gitActivityText) {
+      const activityLine = ` GIT: ${gitActivityText}`;
+      lines.push(hex(color, '║') + hex(color, activityLine) + ' '.repeat(Math.max(0, innerWidth - activityLine.length)) + hex(color, '║'));
+    }
+
+    const toolStatsText = formatToolStatsDisplay(ctx, this.palette);
+    if (toolStatsText) {
+      const statsLine = ` ${toolStatsText}`;
+      lines.push(hex(color, '║') + hex(color, statsLine) + ' '.repeat(Math.max(0, innerWidth - statsLine.length)) + hex(color, '║'));
+    }
+
+    const bashErrorsText = formatBashErrorsDisplay(ctx, this.palette, this.icons);
+    if (bashErrorsText) {
+      const errorsLine = ` ${bashErrorsText}`;
+      lines.push(hex(color, '║') + hex(color, errorsLine) + ' '.repeat(Math.max(0, innerWidth - errorsLine.length)) + hex(color, '║'));
     }
 
     // Footer

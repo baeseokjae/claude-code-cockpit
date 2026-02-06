@@ -3,7 +3,7 @@
  */
 
 import type { StdinData } from './stdin.js';
-import type { TranscriptData } from './transcript.js';
+import type { TranscriptData, GitActivity, ToolStats, BashError } from './transcript.js';
 import type { GitStatus } from './git.js';
 import type { UsageData } from './usage.js';
 import type { CockpitConfig, ConfigCounts } from './config.js';
@@ -11,6 +11,17 @@ import type { Theme } from './theme.js';
 import type { TokenSpeed } from '../data/speed-tracker.js';
 import type { LinesData } from './lines.js';
 import type { CacheMetrics } from './cache-metrics.js';
+import type { CompactSuggestion } from '../data/compact-suggestion.js';
+import type { ViolationSummary } from './violations.js';
+import type { McpToolInfo } from '../input/mcp-reader.js';
+import type { WorkflowState } from './workflow.js';
+import type { CoverageSummary } from './test-coverage.js';
+import type { PassAtKSummary } from './pass-at-k.js';
+import type { PerformanceMetrics } from './performance.js';
+import type { McpStatus } from './mcp-status.js';
+import type { SecurityDashboard } from './security.js';
+import type { LearningTracker } from './learning.js';
+import type { InstanceSync } from './instance-sync.js';
 
 export interface RenderContext {
   stdin: StdinData;
@@ -26,6 +37,32 @@ export interface RenderContext {
 
   linesData: LinesData | null;
   cacheMetrics: CacheMetrics | null;
+
+  // New features from transcript analysis
+  gitActivity: GitActivity | null;
+  toolStats: ToolStats | null;
+  bashErrors: BashError[] | null;
+
+  // Strategic compact suggestion
+  compactSuggestion: CompactSuggestion | null;
+
+  // Rule violations and MCP impact
+  violations: ViolationSummary | null;
+  mcpInfo: McpToolInfo | null;
+
+  // Workflow phase tracking
+  workflowState: WorkflowState | null;
+
+  // Phase 4 features
+  testCoverage: CoverageSummary | null;
+  passAtK: PassAtKSummary | null;
+  performanceMetrics: PerformanceMetrics | null;
+
+  // Phase 5 features
+  mcpStatus: McpStatus | null;
+  securityDashboard: SecurityDashboard | null;
+  learningTracker: LearningTracker | null;
+  instanceSync: InstanceSync | null;
 
   sessionDuration: string;
 

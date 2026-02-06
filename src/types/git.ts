@@ -12,6 +12,7 @@ export interface GitStatus {
   fileStats?: FileStats;
   subRepos?: SubRepoStatus[];
   tag?: string;
+  worktrees?: WorktreeInfo[];
 }
 
 export interface SubRepoStatus {
@@ -26,4 +27,12 @@ export interface FileStats {
   deleted: number;
   renamed: number;
   untracked: number;
+}
+
+export interface WorktreeInfo {
+  path: string;
+  branch: string;
+  commit: string;
+  isDirty: boolean;
+  isMain: boolean;
 }

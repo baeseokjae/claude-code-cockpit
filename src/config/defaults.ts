@@ -26,6 +26,21 @@ export const DEFAULT_CONFIG: CockpitConfig = {
     showLines: true,
     showCacheMetrics: true,
     showGitTag: true,
+    showGitActivity: true,
+    showToolStats: true,
+    showBashErrors: true,
+    showCompactSuggestion: true,
+    showViolations: true,
+    showMcpImpact: true,
+    showWorkflowPhase: true,
+    showTestCoverage: true,
+    showPassAtK: true,
+    showGitWorktrees: true,
+    showPerformanceMetrics: true,
+    showMcpStatus: true,
+    showSecurityDashboard: true,
+    showLearningTracker: true,
+    showInstanceSync: true,
   },
 
   detailMode: false,
@@ -42,6 +57,8 @@ export const DEFAULT_CONFIG: CockpitConfig = {
   notifications: {
     enabled: false,
     compactWarningThreshold: 75,
+    compactSuggestionEnabled: true,
+    compactSuggestionThreshold: 50,
   },
 
   performance: {
