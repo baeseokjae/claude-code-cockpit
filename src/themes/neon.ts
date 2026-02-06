@@ -376,6 +376,39 @@ export const neonTheme: Theme = {
     const bashErrorsText = formatBashErrorsDisplay(ctx, this.palette, this.icons);
     if (bashErrorsText) lines.push('  ' + bashErrorsText);
 
+    const violationsText = formatViolationsDisplay(ctx, this.palette, this.icons);
+    if (violationsText) lines.push('  ' + violationsText);
+
+    const compactSuggestionText = formatCompactSuggestionDisplay(ctx, this.palette, this.icons);
+    if (compactSuggestionText) lines.push('  ' + compactSuggestionText);
+
+    const workflowPhaseText = formatWorkflowPhaseDisplay(ctx, this.palette);
+    if (workflowPhaseText) lines.push('  ' + workflowPhaseText);
+
+    const testCoverageText = formatTestCoverageDisplay(ctx, this.palette, this.icons);
+    if (testCoverageText) lines.push('  ' + testCoverageText);
+
+    const passAtKText = formatPassAtKDisplay(ctx, this.palette);
+    if (passAtKText) lines.push('  ' + passAtKText);
+
+    const worktreesText = formatGitWorktreesDisplay(ctx, this.palette);
+    if (worktreesText) lines.push('  ' + worktreesText);
+
+    const perfText = formatPerformanceMetricsDisplay(ctx, this.palette);
+    if (perfText) lines.push('  ' + perfText);
+
+    const mcpStatusText = formatMcpStatusDisplay(ctx, this.palette);
+    if (mcpStatusText) lines.push('  ' + mcpStatusText);
+
+    const securityText = formatSecurityDashboardDisplay(ctx, this.palette, this.icons);
+    if (securityText) lines.push('  ' + securityText);
+
+    const learningText = formatLearningTrackerDisplay(ctx, this.palette);
+    if (learningText) lines.push('  ' + learningText);
+
+    const instanceSyncText = formatInstanceSyncDisplay(ctx, this.palette);
+    if (instanceSyncText) lines.push('  ' + instanceSyncText);
+
     return lines;
   },
 };

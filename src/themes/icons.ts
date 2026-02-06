@@ -66,8 +66,8 @@ export const FALLBACK_ICONS: IconSet = {
   warning: '!',
   cost: '$',
 
-  lines: '±',
-  cache: '$',
+  lines: 'Δ',
+  cache: '⊕',
   tag: '@',
 
   categoryTools: '●',

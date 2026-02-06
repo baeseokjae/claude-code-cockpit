@@ -349,6 +349,72 @@ export const retroTheme: Theme = {
       lines.push(hex(color, '║') + hex(color, errorsLine) + ' '.repeat(Math.max(0, innerWidth - errorsLine.length)) + hex(color, '║'));
     }
 
+    const violationsText = formatViolationsDisplay(ctx, this.palette, this.icons);
+    if (violationsText) {
+      const vLine = ` ${violationsText}`;
+      lines.push(hex(color, '║') + hex(color, vLine) + ' '.repeat(Math.max(0, innerWidth - vLine.length)) + hex(color, '║'));
+    }
+
+    const compactSuggestionText = formatCompactSuggestionDisplay(ctx, this.palette, this.icons);
+    if (compactSuggestionText) {
+      const sLine = ` ${compactSuggestionText}`;
+      lines.push(hex(color, '║') + hex(color, sLine) + ' '.repeat(Math.max(0, innerWidth - sLine.length)) + hex(color, '║'));
+    }
+
+    const workflowPhaseText = formatWorkflowPhaseDisplay(ctx, this.palette);
+    if (workflowPhaseText) {
+      const wLine = ` ${workflowPhaseText}`;
+      lines.push(hex(color, '║') + hex(color, wLine) + ' '.repeat(Math.max(0, innerWidth - wLine.length)) + hex(color, '║'));
+    }
+
+    const testCoverageText = formatTestCoverageDisplay(ctx, this.palette, this.icons);
+    if (testCoverageText) {
+      const tLine = ` ${testCoverageText}`;
+      lines.push(hex(color, '║') + hex(color, tLine) + ' '.repeat(Math.max(0, innerWidth - tLine.length)) + hex(color, '║'));
+    }
+
+    const passAtKText = formatPassAtKDisplay(ctx, this.palette);
+    if (passAtKText) {
+      const pLine = ` ${passAtKText}`;
+      lines.push(hex(color, '║') + hex(color, pLine) + ' '.repeat(Math.max(0, innerWidth - pLine.length)) + hex(color, '║'));
+    }
+
+    const worktreesText = formatGitWorktreesDisplay(ctx, this.palette);
+    if (worktreesText) {
+      const wtLine = ` ${worktreesText}`;
+      lines.push(hex(color, '║') + hex(color, wtLine) + ' '.repeat(Math.max(0, innerWidth - wtLine.length)) + hex(color, '║'));
+    }
+
+    const perfText = formatPerformanceMetricsDisplay(ctx, this.palette);
+    if (perfText) {
+      const pfLine = ` ${perfText}`;
+      lines.push(hex(color, '║') + hex(color, pfLine) + ' '.repeat(Math.max(0, innerWidth - pfLine.length)) + hex(color, '║'));
+    }
+
+    const mcpStatusText = formatMcpStatusDisplay(ctx, this.palette);
+    if (mcpStatusText) {
+      const mLine = ` ${mcpStatusText}`;
+      lines.push(hex(color, '║') + hex(color, mLine) + ' '.repeat(Math.max(0, innerWidth - mLine.length)) + hex(color, '║'));
+    }
+
+    const securityText = formatSecurityDashboardDisplay(ctx, this.palette, this.icons);
+    if (securityText) {
+      const secLine = ` ${securityText}`;
+      lines.push(hex(color, '║') + hex(color, secLine) + ' '.repeat(Math.max(0, innerWidth - secLine.length)) + hex(color, '║'));
+    }
+
+    const learningText = formatLearningTrackerDisplay(ctx, this.palette);
+    if (learningText) {
+      const lLine = ` ${learningText}`;
+      lines.push(hex(color, '║') + hex(color, lLine) + ' '.repeat(Math.max(0, innerWidth - lLine.length)) + hex(color, '║'));
+    }
+
+    const instanceSyncText = formatInstanceSyncDisplay(ctx, this.palette);
+    if (instanceSyncText) {
+      const iLine = ` ${instanceSyncText}`;
+      lines.push(hex(color, '║') + hex(color, iLine) + ' '.repeat(Math.max(0, innerWidth - iLine.length)) + hex(color, '║'));
+    }
+
     // Footer
     lines.push(hex(color, '╚' + '═'.repeat(innerWidth) + '╝'));
 

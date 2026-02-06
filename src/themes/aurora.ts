@@ -201,6 +201,55 @@ export const auroraTheme: Theme = {
         const usageSummary = formatUsageSummaryLine(ctx.usageData, this.palette);
         lines.push('  ' + usageSummary);
       }
+
+      // Advanced feature widgets
+      const advancedParts: string[] = [];
+
+      const gitActivityText = formatGitActivityDisplay(ctx, this.palette);
+      if (gitActivityText) advancedParts.push(gitActivityText);
+
+      const toolStatsText = formatToolStatsDisplay(ctx, this.palette);
+      if (toolStatsText) advancedParts.push(toolStatsText);
+
+      const bashErrorsText = formatBashErrorsDisplay(ctx, this.palette, this.icons);
+      if (bashErrorsText) advancedParts.push(bashErrorsText);
+
+      const violationsText = formatViolationsDisplay(ctx, this.palette, this.icons);
+      if (violationsText) advancedParts.push(violationsText);
+
+      const compactSuggestionText = formatCompactSuggestionDisplay(ctx, this.palette, this.icons);
+      if (compactSuggestionText) advancedParts.push(compactSuggestionText);
+
+      const workflowPhaseText = formatWorkflowPhaseDisplay(ctx, this.palette);
+      if (workflowPhaseText) advancedParts.push(workflowPhaseText);
+
+      const testCoverageText = formatTestCoverageDisplay(ctx, this.palette, this.icons);
+      if (testCoverageText) advancedParts.push(testCoverageText);
+
+      const passAtKText = formatPassAtKDisplay(ctx, this.palette);
+      if (passAtKText) advancedParts.push(passAtKText);
+
+      const worktreesText = formatGitWorktreesDisplay(ctx, this.palette);
+      if (worktreesText) advancedParts.push(worktreesText);
+
+      const perfText = formatPerformanceMetricsDisplay(ctx, this.palette);
+      if (perfText) advancedParts.push(perfText);
+
+      const mcpStatusText = formatMcpStatusDisplay(ctx, this.palette);
+      if (mcpStatusText) advancedParts.push(mcpStatusText);
+
+      const securityText = formatSecurityDashboardDisplay(ctx, this.palette, this.icons);
+      if (securityText) advancedParts.push(securityText);
+
+      const learningText = formatLearningTrackerDisplay(ctx, this.palette);
+      if (learningText) advancedParts.push(learningText);
+
+      const instanceSyncText = formatInstanceSyncDisplay(ctx, this.palette);
+      if (instanceSyncText) advancedParts.push(instanceSyncText);
+
+      if (advancedParts.length > 0) {
+        lines.push('  ' + advancedParts.join('  ' + hex(this.palette.muted, this.chars.separator) + '  '));
+      }
     } else {
       // Compact mode: summary line
       const activityParts: string[] = [];
@@ -403,6 +452,55 @@ export const auroraTheme: Theme = {
       if (ctx.config.display.showUsage && ctx.usageData) {
         const usageSummary = formatUsageSummaryLine(ctx.usageData, this.palette);
         lines.push('  ' + usageSummary);
+      }
+
+      // Advanced feature widgets
+      const advancedParts: string[] = [];
+
+      const gitActivityText = formatGitActivityDisplay(ctx, this.palette);
+      if (gitActivityText) advancedParts.push(gitActivityText);
+
+      const toolStatsText = formatToolStatsDisplay(ctx, this.palette);
+      if (toolStatsText) advancedParts.push(toolStatsText);
+
+      const bashErrorsText = formatBashErrorsDisplay(ctx, this.palette, this.icons);
+      if (bashErrorsText) advancedParts.push(bashErrorsText);
+
+      const violationsText = formatViolationsDisplay(ctx, this.palette, this.icons);
+      if (violationsText) advancedParts.push(violationsText);
+
+      const compactSuggestionText = formatCompactSuggestionDisplay(ctx, this.palette, this.icons);
+      if (compactSuggestionText) advancedParts.push(compactSuggestionText);
+
+      const workflowPhaseText = formatWorkflowPhaseDisplay(ctx, this.palette);
+      if (workflowPhaseText) advancedParts.push(workflowPhaseText);
+
+      const testCoverageText = formatTestCoverageDisplay(ctx, this.palette, this.icons);
+      if (testCoverageText) advancedParts.push(testCoverageText);
+
+      const passAtKText = formatPassAtKDisplay(ctx, this.palette);
+      if (passAtKText) advancedParts.push(passAtKText);
+
+      const worktreesText = formatGitWorktreesDisplay(ctx, this.palette);
+      if (worktreesText) advancedParts.push(worktreesText);
+
+      const perfText = formatPerformanceMetricsDisplay(ctx, this.palette);
+      if (perfText) advancedParts.push(perfText);
+
+      const mcpStatusText = formatMcpStatusDisplay(ctx, this.palette);
+      if (mcpStatusText) advancedParts.push(mcpStatusText);
+
+      const securityText = formatSecurityDashboardDisplay(ctx, this.palette, this.icons);
+      if (securityText) advancedParts.push(securityText);
+
+      const learningText = formatLearningTrackerDisplay(ctx, this.palette);
+      if (learningText) advancedParts.push(learningText);
+
+      const instanceSyncText = formatInstanceSyncDisplay(ctx, this.palette);
+      if (instanceSyncText) advancedParts.push(instanceSyncText);
+
+      if (advancedParts.length > 0) {
+        lines.push('  ' + advancedParts.join('  ' + hex(this.palette.muted, this.chars.separator) + '  '));
       }
     } else {
       // Default mode: compact display
