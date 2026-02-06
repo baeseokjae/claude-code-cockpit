@@ -556,7 +556,12 @@ export function formatInstanceSyncDisplay(
     return null;
   }
 
-  const { instanceCount } = ctx.instanceSync;
+  const { instanceCount, conflictCount } = ctx.instanceSync;
+
+  if (conflictCount > 0) {
+    return hex(palette.mauve, `${instanceCount} instances`) + ' ' +
+           hex(palette.red, `(${conflictCount} conflict${conflictCount > 1 ? 's' : ''}!)`);
+  }
 
   return hex(palette.mauve, `${instanceCount} instances`);
 }

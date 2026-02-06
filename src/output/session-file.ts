@@ -438,16 +438,31 @@ function generateSessionMarkdown(ctx: RenderContext): string {
     md += `## Instance Sync\n\n`;
     md += `- **Multiple Instances**: Yes\n`;
     md += `- **Instance Count**: ${ctx.instanceSync.instanceCount}\n`;
-    md += `- **Sync Enabled**: ${ctx.instanceSync.syncEnabled ? 'Yes' : 'No'}\n\n`;
+    md += `- **Sync Enabled**: ${ctx.instanceSync.syncEnabled ? 'Yes' : 'No'}\n`;
+    md += `- **Conflicts**: ${ctx.instanceSync.conflictCount}\n\n`;
 
     if (ctx.instanceSync.status.instances.length > 0) {
       md += `### Active Instances\n\n`;
       ctx.instanceSync.status.instances.forEach((instance, idx) => {
-        md += `#### ${idx + 1}. ${instance.hostname}\n\n`;
+        const isCurrent = instance.sessionId === ctx.instanceSync!.status.currentInstance.sessionId;
+        const marker = isCurrent ? ' [CURRENT]' : '';
+        md += `#### ${idx + 1}. ${instance.hostname}${marker}\n\n`;
         md += `- **Session**: ${instance.sessionId}\n`;
         md += `- **Project**: ${instance.projectPath}\n`;
         md += `- **Branch**: ${instance.branch}\n`;
         md += `- **Last Active**: ${instance.lastActive.toISOString()}\n`;
+        md += `\n`;
+      });
+    }
+
+    if (ctx.instanceSync.status.conflicts.length > 0) {
+      md += `### Conflicts\n\n`;
+      ctx.instanceSync.status.conflicts.forEach((conflict, idx) => {
+        md += `#### ${idx + 1}. ${conflict.projectPath} @ ${conflict.branch}\n\n`;
+        md += `**${conflict.instances.length} instances** working on the same project and branch:\n\n`;
+        conflict.instances.forEach((inst) => {
+          md += `- Session \`${inst.sessionId}\` on ${inst.hostname}\n`;
+        });
         md += `\n`;
       });
     }
