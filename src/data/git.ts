@@ -16,6 +16,7 @@ function execGit(cmd: string, cwd?: string): string {
       cwd: cwd || process.cwd(),
       encoding: 'utf8',
       stdio: ['pipe', 'pipe', 'ignore'],
+      timeout: 5000,
     });
     return result;
   } catch {

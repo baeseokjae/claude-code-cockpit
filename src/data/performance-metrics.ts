@@ -84,9 +84,9 @@ export function getPerformanceMetrics(cwd?: string): PerformanceMetrics | null {
   const build = getBuildMetrics(cwd);
   const test = getTestMetrics(cwd);
 
-  const hasData = build.hasBuildScript || test.hasTestScript;
+  const hasScripts = build.hasBuildScript || test.hasTestScript;
 
-  if (!hasData) {
+  if (!hasScripts) {
     return null;
   }
 
@@ -95,6 +95,6 @@ export function getPerformanceMetrics(cwd?: string): PerformanceMetrics | null {
   return {
     build,
     test,
-    hasData,
+    hasData: false, // Script detection only — no actual metrics tracking implemented
   };
 }

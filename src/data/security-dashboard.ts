@@ -87,7 +87,7 @@ function calculateSecurityScore(issues: SecurityIssue[]): SecurityScore {
       overall: 100,
       secrets: 100,
       codeQuality: 100,
-      dependencies: 100,
+      dependencies: -1, // Not measured
     };
   }
 
@@ -110,9 +110,9 @@ function calculateSecurityScore(issues: SecurityIssue[]): SecurityScore {
 
   const secrets = Math.max(0, 100 - secretsDeduction);
   const codeQuality = Math.max(0, 100 - codeQualityDeduction);
-  const dependencies = 100; // Placeholder (would check package vulnerabilities)
+  const dependencies = -1; // Not measured (would require npm audit)
 
-  const overall = Math.round((secrets + codeQuality + dependencies) / 3);
+  const overall = Math.round((secrets + codeQuality) / 2);
 
   return {
     overall,

@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { formatSessionDuration } from '../src/data/time.js';
+import { formatSessionDuration, formatElapsed } from '../src/data/time.js';
 
 describe('formatSessionDuration', () => {
   it('should format 0ms as 0s', () => {
@@ -38,5 +38,30 @@ describe('formatSessionDuration', () => {
   it('should round down partial seconds', () => {
     expect(formatSessionDuration(5500)).toBe('5s');
     expect(formatSessionDuration(5999)).toBe('5s');
+  });
+});
+
+describe('formatElapsed', () => {
+  it('should format elapsed time with explicit endTime', () => {
+    const start = new Date('2024-01-01T00:00:00Z');
+    const end = new Date('2024-01-01T00:05:30Z');
+    expect(formatElapsed(start, end)).toBe('5m 30s');
+  });
+
+  it('should return "0s" when start equals end', () => {
+    const time = new Date('2024-01-01T00:00:00Z');
+    expect(formatElapsed(time, time)).toBe('0s');
+  });
+
+  it('should handle multi-hour difference', () => {
+    const start = new Date('2024-01-01T00:00:00Z');
+    const end = new Date('2024-01-01T02:30:00Z');
+    expect(formatElapsed(start, end)).toBe('2h 30m');
+  });
+
+  it('should handle seconds only', () => {
+    const start = new Date('2024-01-01T00:00:00Z');
+    const end = new Date('2024-01-01T00:00:45Z');
+    expect(formatElapsed(start, end)).toBe('45s');
   });
 });

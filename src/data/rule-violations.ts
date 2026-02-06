@@ -54,17 +54,18 @@ export function extractViolations(tools: ToolEntry[]): ViolationSummary {
     for (const [type, patterns] of Object.entries(PATTERNS)) {
       const violationType = type as ViolationType;
       for (const pattern of patterns) {
-        const matches = textToCheck.match(pattern);
-        if (matches) {
-          for (const match of matches) {
-            violations.push({
-              type: violationType,
-              file: filePath,
-              message: `Found ${type.replace('_', ' ')}: ${match.substring(0, 30)}...`,
-              severity: violationType === 'hardcoded_secret' ? 'error' : 'warning',
-            });
-            byType.set(violationType, (byType.get(violationType) || 0) + 1);
-          }
+        pattern.lastIndex = 0; // Reset regex state
+        let match: RegExpExecArray | null;
+        while ((match = pattern.exec(textToCheck)) !== null) {
+          const line = textToCheck.substring(0, match.index).split('\n').length;
+          violations.push({
+            type: violationType,
+            file: filePath,
+            line,
+            message: `Found ${type.replace('_', ' ')}: ${match[0].substring(0, 30)}...`,
+            severity: violationType === 'hardcoded_secret' ? 'error' : 'warning',
+          });
+          byType.set(violationType, (byType.get(violationType) || 0) + 1);
         }
       }
     }

@@ -19,7 +19,7 @@ export interface SecurityScore {
   overall: number; // 0-100
   secrets: number;
   codeQuality: number;
-  dependencies: number;
+  dependencies: number; // 0-100 or -1 if not measured
 }
 
 export interface SecurityDashboard {

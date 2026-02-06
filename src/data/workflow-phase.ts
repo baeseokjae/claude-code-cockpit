@@ -21,7 +21,7 @@ interface ToolWindow {
 
 export function detectWorkflowPhase(
   tools: ToolEntry[],
-  _agents: AgentEntry[],
+  agents: AgentEntry[],
   todos: TodoItem[]
 ): WorkflowState {
   if (tools.length === 0) {
@@ -34,11 +34,46 @@ export function detectWorkflowPhase(
     };
   }
 
-  // Analyze recent tools (last 20)
+  // Build phase history by analyzing tool windows
+  const phaseHistory: WorkflowState['phaseHistory'] = [];
+  const windowSize = 5;
+  let prevPhase: WorkflowPhase | null = null;
+  let phaseStart: Date | null = null;
+
+  for (let i = 0; i <= tools.length - windowSize; i += windowSize) {
+    const windowTools = tools.slice(i, i + windowSize);
+    const window = countToolTypes(windowTools);
+    const phase = determinePhase(window, i + windowSize >= tools.length ? todos : []);
+
+    if (phase !== prevPhase && prevPhase !== null && phaseStart) {
+      const endTime = windowTools[0]?.startTime || new Date();
+      phaseHistory.push({
+        phase: prevPhase,
+        startTime: phaseStart,
+        endTime,
+        duration: endTime.getTime() - phaseStart.getTime(),
+      });
+    }
+
+    if (phase !== prevPhase) {
+      phaseStart = windowTools[0]?.startTime || new Date();
+    }
+    prevPhase = phase;
+  }
+
+  // Keep only last 10 phase transitions
+  const trimmedHistory = phaseHistory.slice(-10);
+
+  // Analyze recent tools (last 20) for current phase
   const recentTools = tools.slice(-20);
   const window = countToolTypes(recentTools);
 
-  // Determine phase based on tool distribution
+  // Bias toward IMPLEMENT if agents are running
+  const hasRunningAgents = agents.some(a => a.status === 'running');
+  if (hasRunningAgents) {
+    window.implementation += 3;
+  }
+
   const currentPhase = determinePhase(window, todos);
   const confidence = calculateConfidence(window);
 
@@ -54,7 +89,7 @@ export function detectWorkflowPhase(
     currentPhase,
     phaseStartTime,
     phaseDuration,
-    phaseHistory: [], // Could be expanded to track full history
+    phaseHistory: trimmedHistory,
     confidence,
   };
 }
