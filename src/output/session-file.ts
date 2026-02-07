@@ -439,6 +439,7 @@ function generateSessionMarkdown(ctx: RenderContext): string {
     md += `- **Multiple Instances**: Yes\n`;
     md += `- **Instance Count**: ${ctx.instanceSync.instanceCount}\n`;
     md += `- **Sync Enabled**: ${ctx.instanceSync.syncEnabled ? 'Yes' : 'No'}\n`;
+    md += `- **Active Team**: ${ctx.instanceSync.hasActiveTeam ? 'Yes' : 'No'}\n`;
     md += `- **Conflicts**: ${ctx.instanceSync.conflictCount}\n\n`;
 
     if (ctx.instanceSync.status.instances.length > 0) {

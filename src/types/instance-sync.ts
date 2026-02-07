@@ -44,5 +44,7 @@ export interface InstanceSync {
   syncEnabled: boolean;
   instanceCount: number;
   conflictCount: number;
+  /** True when instances are detected as team agents (same host, active team) */
+  hasActiveTeam: boolean;
   status: SyncStatus;
 }

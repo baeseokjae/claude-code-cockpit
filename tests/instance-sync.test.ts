@@ -12,10 +12,11 @@ vi.mock('node:fs', () => ({
   writeFileSync: vi.fn(),
   mkdirSync: vi.fn(),
   renameSync: vi.fn(),
+  readdirSync: vi.fn(),
 }));
 
 // Import after mocking
-import { getInstanceSync, cleanStaleInstances, detectConflicts, deserializeInstance } from '../src/data/instance-sync.js';
+import { getInstanceSync, cleanStaleInstances, detectConflicts, deserializeInstance, getActiveTeamSize } from '../src/data/instance-sync.js';
 import * as fs from 'node:fs';
 
 // ============================================
@@ -181,6 +182,90 @@ describe('detectConflicts', () => {
     const paths = result.map((c) => c.projectPath).sort();
     expect(paths).toEqual(['/proj1', '/proj2']);
   });
+
+  it('should suppress conflict for same-hostname instances when team is active', () => {
+    const inst1 = createInstance({ instanceId: 'current', hostname: 'mac', projectPath: '/proj', branch: 'main' });
+    const inst2 = createInstance({ instanceId: 'other', hostname: 'mac', projectPath: '/proj', branch: 'main' });
+    const result = detectConflicts([inst1, inst2], 'current', /* activeTeamSize */ 2);
+    expect(result).toEqual([]);
+  });
+
+  it('should still detect conflict for different-hostname instances even with active team', () => {
+    const inst1 = createInstance({ instanceId: 'current', hostname: 'mac-1', projectPath: '/proj', branch: 'main' });
+    const inst2 = createInstance({ instanceId: 'other', hostname: 'mac-2', projectPath: '/proj', branch: 'main' });
+    const result = detectConflicts([inst1, inst2], 'current', /* activeTeamSize */ 2);
+    expect(result).toHaveLength(1);
+  });
+
+  it('should not suppress conflict when activeTeamSize is 0', () => {
+    const inst1 = createInstance({ instanceId: 'current', hostname: 'mac', projectPath: '/proj', branch: 'main' });
+    const inst2 = createInstance({ instanceId: 'other', hostname: 'mac', projectPath: '/proj', branch: 'main' });
+    const result = detectConflicts([inst1, inst2], 'current', /* activeTeamSize */ 0);
+    expect(result).toHaveLength(1);
+  });
+});
+
+// ============================================
+// Team detection tests
+// ============================================
+
+describe('getActiveTeamSize', () => {
+  beforeEach(() => {
+    vi.mocked(fs.readdirSync).mockReset();
+    vi.mocked(fs.readFileSync).mockReset();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('should return 0 when teams directory does not exist', () => {
+    vi.mocked(fs.readdirSync).mockImplementation(() => { throw new Error('ENOENT'); });
+    expect(getActiveTeamSize()).toBe(0);
+  });
+
+  it('should return member count from team config', () => {
+    vi.mocked(fs.readdirSync).mockReturnValue([
+      { name: 'my-team', isDirectory: () => true } as any,
+    ] as any);
+    vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({
+      members: [
+        { name: 'researcher', agentId: 'a1', agentType: 'general' },
+        { name: 'coder', agentId: 'a2', agentType: 'general' },
+      ],
+    }));
+    expect(getActiveTeamSize()).toBe(2);
+  });
+
+  it('should sum members across multiple teams', () => {
+    vi.mocked(fs.readdirSync).mockReturnValue([
+      { name: 'team-a', isDirectory: () => true } as any,
+      { name: 'team-b', isDirectory: () => true } as any,
+    ] as any);
+    vi.mocked(fs.readFileSync)
+      .mockReturnValueOnce(JSON.stringify({ members: [{ name: 'a1' }] }))
+      .mockReturnValueOnce(JSON.stringify({ members: [{ name: 'b1' }, { name: 'b2' }] }));
+    expect(getActiveTeamSize()).toBe(3);
+  });
+
+  it('should skip non-directory entries', () => {
+    vi.mocked(fs.readdirSync).mockReturnValue([
+      { name: 'config.json', isDirectory: () => false } as any,
+      { name: 'my-team', isDirectory: () => true } as any,
+    ] as any);
+    vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({
+      members: [{ name: 'agent1' }],
+    }));
+    expect(getActiveTeamSize()).toBe(1);
+  });
+
+  it('should handle malformed config gracefully', () => {
+    vi.mocked(fs.readdirSync).mockReturnValue([
+      { name: 'broken-team', isDirectory: () => true } as any,
+    ] as any);
+    vi.mocked(fs.readFileSync).mockReturnValue('not valid json');
+    expect(getActiveTeamSize()).toBe(0);
+  });
 });
 
 // ============================================
@@ -201,6 +286,9 @@ describe('getInstanceSync', () => {
     vi.mocked(fs.writeFileSync).mockReset();
     vi.mocked(fs.mkdirSync).mockReset();
     vi.mocked(fs.renameSync).mockReset();
+    // Default: no active teams (readdirSync throws ENOENT for teams dir)
+    vi.mocked(fs.readdirSync).mockReset();
+    vi.mocked(fs.readdirSync).mockImplementation(() => { throw new Error('ENOENT'); });
   });
 
   afterEach(() => {

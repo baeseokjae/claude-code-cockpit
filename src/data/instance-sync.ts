@@ -4,7 +4,7 @@
  * Designed for short-lived processes (statusline plugin, runs every ~1-2s).
  */
 
-import { readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, renameSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir, hostname } from 'node:os';
 import type {
@@ -20,6 +20,7 @@ const debug = createDebug('instance-sync');
 
 const INSTANCES_DIR = join(homedir(), '.claude');
 const INSTANCES_FILE = join(INSTANCES_DIR, 'cockpit-instances.json');
+const TEAMS_DIR = join(homedir(), '.claude', 'teams');
 const STALE_THRESHOLD_MS = 15_000; // 15 seconds
 const READ_CACHE_MS = 3_000; // re-read file at most every 3 seconds
 
@@ -50,9 +51,37 @@ export function cleanStaleInstances(
   });
 }
 
+/**
+ * Detect active Claude Code teams by reading team config files.
+ * Scans ~/.claude/teams/{name}/config.json for member counts.
+ * Returns total member count across all teams (0 if no teams).
+ */
+export function getActiveTeamSize(): number {
+  try {
+    const entries = readdirSync(TEAMS_DIR, { withFileTypes: true });
+    let total = 0;
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      try {
+        const raw = readFileSync(join(TEAMS_DIR, entry.name, 'config.json'), 'utf8');
+        const config = JSON.parse(raw);
+        if (Array.isArray(config.members)) {
+          total += config.members.length;
+        }
+      } catch {
+        // skip invalid or unreadable configs
+      }
+    }
+    return total;
+  } catch {
+    return 0;
+  }
+}
+
 export function detectConflicts(
   instances: InstanceInfoSerialized[],
   currentInstanceId: string,
+  activeTeamSize: number = 0,
 ): InstanceConflict[] {
   const groups = new Map<string, InstanceInfoSerialized[]>();
 
@@ -66,6 +95,17 @@ export function detectConflicts(
   const conflicts: InstanceConflict[] = [];
   for (const [, group] of groups) {
     if (group.length > 1 && group.some((i) => i.instanceId === currentInstanceId)) {
+      // If an active team exists and all instances in the group share the
+      // same hostname, they are most likely parent + child team agents
+      // running on the same machine — not a real conflict.
+      if (activeTeamSize > 0) {
+        const hostnames = new Set(group.map((i) => i.hostname));
+        if (hostnames.size === 1) {
+          debug(`suppressing conflict for team instances on ${group[0].hostname}`);
+          continue;
+        }
+      }
+
       conflicts.push({
         instances: group.map(deserializeInstance),
         projectPath: group[0].projectPath,
@@ -164,7 +204,8 @@ export function getInstanceSync(
   };
 
   const allInstances = cleanAndRegister(currentSerialized);
-  const conflicts = detectConflicts(allInstances, instanceId);
+  const activeTeamSize = getActiveTeamSize();
+  const conflicts = detectConflicts(allInstances, instanceId, activeTeamSize);
   const currentInstance = deserializeInstance(currentSerialized);
   const instanceCount = allInstances.length;
 
@@ -176,13 +217,14 @@ export function getInstanceSync(
     conflicts,
   };
 
-  debug('instance sync:', { instanceId, total: instanceCount, conflicts: conflicts.length });
+  debug('instance sync:', { instanceId, total: instanceCount, conflicts: conflicts.length, activeTeamSize });
 
   return {
     hasMultipleInstances: instanceCount > 1,
     syncEnabled: true,
     instanceCount,
     conflictCount: conflicts.length,
+    hasActiveTeam: activeTeamSize > 0 && instanceCount > 1,
     status,
   };
 }
