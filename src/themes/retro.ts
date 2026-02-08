@@ -6,7 +6,7 @@ import type { Theme, RenderContext } from '../types/index.js';
 import { RETRO_PALETTE } from './palettes/retro.js';
 import { FALLBACK_ICONS } from './icons.js';
 import { hex, bold } from '../render/colors.js';
-import { createProgressBar, formatPercent } from '../render/utils.js';
+import { createProgressBar, formatPercent, visualLength } from '../render/utils.js';
 import { formatTokenSpeed } from '../data/speed-tracker.js';
 import { getModelName, getContextPercent, getAbsoluteTokens } from '../input/stdin.js';
 import { hyperlink, fileUrl, githubBranchUrl } from '../render/links.js';
@@ -267,7 +267,7 @@ export const retroTheme: Theme = {
     const warning = percent !== null && percent >= 90 ? bold(' [!CRITICAL ALERT!]') : percent !== null && percent >= 75 ? ' [WARNING]' : '';
 
     const line1 = ` MODEL: ${model}${sessionText}  MEM: [${progressBar}] ${contextStr}${warning}`;
-    lines.push(hex(color, '║') + hex(warningColor, line1) + ' '.repeat(Math.max(0, innerWidth - line1.length)) + hex(color, '║'));
+    lines.push(hex(color, '║') + hex(warningColor, line1) + ' '.repeat(Math.max(0, innerWidth - visualLength(line1))) + hex(color, '║'));
 
     // Project info
     const projectGit = formatProjectGit(ctx);
@@ -287,7 +287,7 @@ export const retroTheme: Theme = {
     const cacheDisplay = cacheText ? '  ' + cacheText : '';
 
     const line2 = ` ${projectGit}${linesDisplay}${cacheDisplay}  TIME: ${duration}  COST: ${costStr}${speedStr}`;
-    lines.push(hex(color, '║') + hex(dimColor, line2) + ' '.repeat(Math.max(0, innerWidth - line2.length)) + hex(color, '║'));
+    lines.push(hex(color, '║') + hex(dimColor, line2) + ' '.repeat(Math.max(0, innerWidth - visualLength(line2))) + hex(color, '║'));
 
     // Separator
     lines.push(hex(color, '╠' + '═'.repeat(innerWidth) + '╣'));
@@ -303,116 +303,116 @@ export const retroTheme: Theme = {
 
     if (configs.length > 0) {
       const configLine = ` CONFIG: ${configs.join('  ')}`;
-      lines.push(hex(color, '║') + hex(dimColor, configLine) + ' '.repeat(Math.max(0, innerWidth - configLine.length)) + hex(color, '║'));
+      lines.push(hex(color, '║') + hex(dimColor, configLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(configLine))) + hex(color, '║'));
     }
 
     // Tools
     if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
       const toolsLine = ` TOOLS: ${summarizeTools(ctx, this.palette)}`;
-      lines.push(hex(color, '║') + hex(color, toolsLine) + ' '.repeat(Math.max(0, innerWidth - toolsLine.length)) + hex(color, '║'));
+      lines.push(hex(color, '║') + hex(color, toolsLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(toolsLine))) + hex(color, '║'));
     }
 
     // Agents
     if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
       const agentsLine = ` AGENTS: ${summarizeAgents(ctx, this.palette)}`;
-      lines.push(hex(color, '║') + hex(color, agentsLine) + ' '.repeat(Math.max(0, innerWidth - agentsLine.length)) + hex(color, '║'));
+      lines.push(hex(color, '║') + hex(color, agentsLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(agentsLine))) + hex(color, '║'));
     }
 
     // Todos
     if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
       const todosLine = ` TASKS: ${summarizeTodos(ctx, this.palette)}`;
-      lines.push(hex(color, '║') + hex(color, todosLine) + ' '.repeat(Math.max(0, innerWidth - todosLine.length)) + hex(color, '║'));
+      lines.push(hex(color, '║') + hex(color, todosLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(todosLine))) + hex(color, '║'));
     }
 
     // Skills
     if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
       const skillsLine = ` SKILLS: ${summarizeSkills(ctx, this.palette)}`;
-      lines.push(hex(color, '║') + hex(color, skillsLine) + ' '.repeat(Math.max(0, innerWidth - skillsLine.length)) + hex(color, '║'));
+      lines.push(hex(color, '║') + hex(color, skillsLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(skillsLine))) + hex(color, '║'));
     }
 
     // New features: Git activity, Tool stats, Bash errors
     const gitActivityText = formatGitActivityDisplay(ctx, this.palette);
     if (gitActivityText) {
       const activityLine = ` GIT: ${gitActivityText}`;
-      lines.push(hex(color, '║') + hex(color, activityLine) + ' '.repeat(Math.max(0, innerWidth - activityLine.length)) + hex(color, '║'));
+      lines.push(hex(color, '║') + hex(color, activityLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(activityLine))) + hex(color, '║'));
     }
 
     const toolStatsText = formatToolStatsDisplay(ctx, this.palette);
     if (toolStatsText) {
       const statsLine = ` ${toolStatsText}`;
-      lines.push(hex(color, '║') + hex(color, statsLine) + ' '.repeat(Math.max(0, innerWidth - statsLine.length)) + hex(color, '║'));
+      lines.push(hex(color, '║') + hex(color, statsLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(statsLine))) + hex(color, '║'));
     }
 
     const bashErrorsText = formatBashErrorsDisplay(ctx, this.palette, this.icons);
     if (bashErrorsText) {
       const errorsLine = ` ${bashErrorsText}`;
-      lines.push(hex(color, '║') + hex(color, errorsLine) + ' '.repeat(Math.max(0, innerWidth - errorsLine.length)) + hex(color, '║'));
+      lines.push(hex(color, '║') + hex(color, errorsLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(errorsLine))) + hex(color, '║'));
     }
 
     const violationsText = formatViolationsDisplay(ctx, this.palette, this.icons);
     if (violationsText) {
       const vLine = ` ${violationsText}`;
-      lines.push(hex(color, '║') + hex(color, vLine) + ' '.repeat(Math.max(0, innerWidth - vLine.length)) + hex(color, '║'));
+      lines.push(hex(color, '║') + hex(color, vLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(vLine))) + hex(color, '║'));
     }
 
     const compactSuggestionText = formatCompactSuggestionDisplay(ctx, this.palette, this.icons);
     if (compactSuggestionText) {
       const sLine = ` ${compactSuggestionText}`;
-      lines.push(hex(color, '║') + hex(color, sLine) + ' '.repeat(Math.max(0, innerWidth - sLine.length)) + hex(color, '║'));
+      lines.push(hex(color, '║') + hex(color, sLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(sLine))) + hex(color, '║'));
     }
 
     const workflowPhaseText = formatWorkflowPhaseDisplay(ctx, this.palette);
     if (workflowPhaseText) {
       const wLine = ` ${workflowPhaseText}`;
-      lines.push(hex(color, '║') + hex(color, wLine) + ' '.repeat(Math.max(0, innerWidth - wLine.length)) + hex(color, '║'));
+      lines.push(hex(color, '║') + hex(color, wLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(wLine))) + hex(color, '║'));
     }
 
     const testCoverageText = formatTestCoverageDisplay(ctx, this.palette, this.icons);
     if (testCoverageText) {
       const tLine = ` ${testCoverageText}`;
-      lines.push(hex(color, '║') + hex(color, tLine) + ' '.repeat(Math.max(0, innerWidth - tLine.length)) + hex(color, '║'));
+      lines.push(hex(color, '║') + hex(color, tLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(tLine))) + hex(color, '║'));
     }
 
     const passAtKText = formatPassAtKDisplay(ctx, this.palette);
     if (passAtKText) {
       const pLine = ` ${passAtKText}`;
-      lines.push(hex(color, '║') + hex(color, pLine) + ' '.repeat(Math.max(0, innerWidth - pLine.length)) + hex(color, '║'));
+      lines.push(hex(color, '║') + hex(color, pLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(pLine))) + hex(color, '║'));
     }
 
     const worktreesText = formatGitWorktreesDisplay(ctx, this.palette);
     if (worktreesText) {
       const wtLine = ` ${worktreesText}`;
-      lines.push(hex(color, '║') + hex(color, wtLine) + ' '.repeat(Math.max(0, innerWidth - wtLine.length)) + hex(color, '║'));
+      lines.push(hex(color, '║') + hex(color, wtLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(wtLine))) + hex(color, '║'));
     }
 
     const perfText = formatPerformanceMetricsDisplay(ctx, this.palette);
     if (perfText) {
       const pfLine = ` ${perfText}`;
-      lines.push(hex(color, '║') + hex(color, pfLine) + ' '.repeat(Math.max(0, innerWidth - pfLine.length)) + hex(color, '║'));
+      lines.push(hex(color, '║') + hex(color, pfLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(pfLine))) + hex(color, '║'));
     }
 
     const mcpStatusText = formatMcpStatusDisplay(ctx, this.palette);
     if (mcpStatusText) {
       const mLine = ` ${mcpStatusText}`;
-      lines.push(hex(color, '║') + hex(color, mLine) + ' '.repeat(Math.max(0, innerWidth - mLine.length)) + hex(color, '║'));
+      lines.push(hex(color, '║') + hex(color, mLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(mLine))) + hex(color, '║'));
     }
 
     const securityText = formatSecurityDashboardDisplay(ctx, this.palette, this.icons);
     if (securityText) {
       const secLine = ` ${securityText}`;
-      lines.push(hex(color, '║') + hex(color, secLine) + ' '.repeat(Math.max(0, innerWidth - secLine.length)) + hex(color, '║'));
+      lines.push(hex(color, '║') + hex(color, secLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(secLine))) + hex(color, '║'));
     }
 
     const learningText = formatLearningTrackerDisplay(ctx, this.palette);
     if (learningText) {
       const lLine = ` ${learningText}`;
-      lines.push(hex(color, '║') + hex(color, lLine) + ' '.repeat(Math.max(0, innerWidth - lLine.length)) + hex(color, '║'));
+      lines.push(hex(color, '║') + hex(color, lLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(lLine))) + hex(color, '║'));
     }
 
     const instanceSyncText = formatInstanceSyncDisplay(ctx, this.palette);
     if (instanceSyncText) {
       const iLine = ` ${instanceSyncText}`;
-      lines.push(hex(color, '║') + hex(color, iLine) + ' '.repeat(Math.max(0, innerWidth - iLine.length)) + hex(color, '║'));
+      lines.push(hex(color, '║') + hex(color, iLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(iLine))) + hex(color, '║'));
     }
 
     // Footer

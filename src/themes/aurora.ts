@@ -16,7 +16,7 @@ import type { Theme, RenderContext, IconSet, ColorPalette } from '../types/index
 import { AURORA_PALETTE } from './palettes/aurora.js';
 import { getIcons } from './icons.js';
 import { hex } from '../render/colors.js';
-import { createProgressBar, formatPercent } from '../render/utils.js';
+import { createProgressBar, formatPercent, visualLength } from '../render/utils.js';
 import { formatCount } from '../render/superscript.js';
 import { formatUsageCompact, formatUsageFull } from '../render/usage.js';
 import { formatResetTime } from '../data/usage-api.js';
@@ -403,7 +403,7 @@ export const auroraTheme: Theme = {
     const cacheDisplay = cacheText ? '  ' + cacheText : '';
 
     const line1Content = `  ${modelText}${sessionText}   ${progressText} ${percentText}  ${tokensText}${costText}${linesDisplay}${cacheDisplay}${usageText}   ${durationText}${speedText}`;
-    lines.push(this.chars.boxVertical + line1Content + ' '.repeat(Math.max(0, width - 2 - line1Content.length)) + this.chars.boxVertical);
+    lines.push(this.chars.boxVertical + line1Content + ' '.repeat(Math.max(0, width - 2 - visualLength(line1Content))) + this.chars.boxVertical);
 
     // Middle border
     const middleBorder = hex(this.palette.overlay, this.chars.boxHorizontal.repeat(width));
@@ -425,7 +425,7 @@ export const auroraTheme: Theme = {
     const configText = configParts.length > 0 ? hex(this.palette.muted, `  ${configParts.join('  ')}`) : '';
 
     const line2Content = `  ${projectGit}${configText}`;
-    lines.push(this.chars.boxVertical + line2Content + ' '.repeat(Math.max(0, width - 2 - line2Content.length)) + this.chars.boxVertical);
+    lines.push(this.chars.boxVertical + line2Content + ' '.repeat(Math.max(0, width - 2 - visualLength(line2Content))) + this.chars.boxVertical);
 
     // Box bottom
     const bottomBorder = this.chars.boxCornerBL + this.chars.boxHorizontal.repeat(width - 2) + this.chars.boxCornerBR;

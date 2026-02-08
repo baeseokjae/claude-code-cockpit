@@ -31,9 +31,9 @@ export const NERD_ICONS: IconSet = {
   warning: '',
   cost: '$',
 
-  lines: '📊',
-  cache: '💾',
-  tag: '🏷️',
+  lines: '',
+  cache: '',
+  tag: '',
 
   categoryTools: '◆',
   categoryAgents: '●',
