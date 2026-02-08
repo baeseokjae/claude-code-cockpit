@@ -4,7 +4,7 @@
  */
 
 import type { RenderContext, ColorPalette, IconSet } from '../types/index.js';
-import { fileUrl, githubBranchUrl } from '../render/links.js';
+import { fileUrl, githubBranchUrl, hyperlink } from '../render/links.js';
 import { hex } from '../render/colors.js';
 import { formatLines, formatLinesCompact } from '../data/lines.js';
 import { formatCacheHitRate, formatCacheSavings } from '../data/cache-metrics.js';
@@ -15,6 +15,11 @@ import { formatCacheHitRate, formatCacheSavings } from '../data/cache-metrics.js
 
 export interface TextTransform {
   case: 'none' | 'upper' | 'lower';
+}
+
+export interface ActivityWidget {
+  text: string;
+  category: 'critical' | 'warning' | 'info' | 'analytics';
 }
 
 // ============================================
@@ -144,6 +149,136 @@ export function extractProjectGitData(ctx: RenderContext): ProjectGitResult {
   const subRepos = ctx.gitStatus?.subRepos || [];
 
   return { project, projectUrl, branch, branchUrl, dirty, subRepos };
+}
+
+// ============================================
+// Project/Git Formatting
+// ============================================
+
+export interface FormatProjectGitOptions {
+  transform?: TextTransform;
+  branchColor?: string;
+  showFileStats?: boolean;
+  prefix?: string;
+  projectPrefix?: string;
+  branchPrefix?: string;
+  subrepoStyle?: 'full' | 'minimal';
+}
+
+/**
+ * Format project and git information with theme-specific options
+ */
+export function formatProjectGit(
+  ctx: RenderContext,
+  palette: ColorPalette | null,
+  _icons: IconSet | null,
+  options: FormatProjectGitOptions = {}
+): string {
+  const {
+    transform = { case: 'none' },
+    branchColor,
+    showFileStats = false,
+    prefix = '',
+    projectPrefix = '',
+    branchPrefix = '',
+    subrepoStyle = 'full',
+  } = options;
+
+  const project = ctx.stdin.cwd ? ctx.stdin.cwd.split('/').pop() : null;
+  const git = ctx.config.display.showGit ? (ctx.gitStatus?.branch || '') : '';
+  const dirty = ctx.gitStatus?.isDirty ? '*' : '';
+
+  if (!project && !git) return '';
+
+  let result = prefix;
+
+  // Project name with file:// link
+  if (project && ctx.stdin.cwd) {
+    const projectName = applyTextTransform(project, transform);
+    const projectLink = hyperlink(fileUrl(ctx.stdin.cwd), projectName);
+
+    if (palette) {
+      result += hex(palette.teal, projectPrefix + projectLink);
+    } else {
+      result += projectPrefix + projectLink;
+    }
+  }
+
+  // Git branch with GitHub link (if available)
+  if (git) {
+    let branchText = applyTextTransform(git, transform);
+
+    // Add tag if available
+    if (ctx.gitStatus?.tag) {
+      const tagText = applyTextTransform(ctx.gitStatus.tag, transform);
+      branchText += ` ${tagText}`;
+    }
+
+    branchText += dirty;
+
+    // Add file stats if enabled (Aurora feature)
+    if (showFileStats && ctx.config.display.showGitFileStats && ctx.gitStatus?.fileStats) {
+      const stats = ctx.gitStatus.fileStats;
+      const parts: string[] = [];
+
+      if (stats.modified > 0) parts.push(`!${stats.modified}`);
+      if (stats.added > 0) parts.push(`+${stats.added}`);
+      if (stats.deleted > 0) parts.push(`✘${stats.deleted}`);
+      if (stats.untracked > 0) parts.push(`?${stats.untracked}`);
+
+      if (parts.length > 0) {
+        branchText += ` ${parts.join(' ')}`;
+      }
+    }
+
+    if (ctx.gitStatus?.remoteUrl) {
+      const branchUrl = githubBranchUrl(ctx.gitStatus.remoteUrl, ctx.gitStatus.branch || git);
+      const branchLink = hyperlink(branchUrl, branchText);
+
+      if (palette) {
+        const color = branchColor || palette.teal;
+        result += hex(color, `${branchPrefix ? '  ' + branchPrefix : ''} (${branchLink})`);
+      } else {
+        result += `${branchPrefix ? '  ' + branchPrefix : ''} (${branchLink})`;
+      }
+    } else {
+      if (palette) {
+        const color = branchColor || palette.teal;
+        result += hex(color, `${branchPrefix ? '  ' + branchPrefix : ''} (${branchText})`);
+      } else {
+        result += `${branchPrefix ? '  ' + branchPrefix : ''} (${branchText})`;
+      }
+    }
+  }
+
+  // Subdirectory repos (monorepo support)
+  if (ctx.config.display.showAllBranches && ctx.gitStatus?.subRepos && ctx.gitStatus.subRepos.length > 0) {
+    const limit = subrepoStyle === 'minimal' ? 2 : 3;
+    const subItems = ctx.gitStatus.subRepos.slice(0, limit).map((sub) => {
+      const subDirty = sub.isDirty ? '*' : '';
+      const path = applyTextTransform(sub.path, transform);
+      const branch = applyTextTransform(sub.branch, transform);
+
+      if (subrepoStyle === 'minimal') {
+        return `${path}:${branch}${subDirty}`;
+      }
+      return `${path}(${branch}${subDirty})`;
+    });
+
+    const remaining = ctx.gitStatus.subRepos.length - limit;
+    const moreText = remaining > 0 ? ` +${remaining}` : '';
+
+    const label = subrepoStyle === 'minimal' ? '' :
+                  transform.case === 'upper' ? 'SUBS: ' : 'sub: ';
+
+    if (palette) {
+      result += hex(palette.muted, `  ${label}${subItems.join(' ')}${moreText}`);
+    } else {
+      result += ` ${label}${subItems.join(' ')}${moreText}`;
+    }
+  }
+
+  return result;
 }
 
 // ============================================
@@ -569,4 +704,114 @@ export function formatInstanceSyncDisplay(
   }
 
   return hex(palette.mauve, `${instanceCount} instances`);
+}
+
+// ============================================
+// Collect Activity Widgets (Common Function)
+// ============================================
+
+export function collectActivityWidgets(
+  ctx: RenderContext,
+  palette: ColorPalette,
+  icons: IconSet
+): ActivityWidget[] {
+  const widgets: ActivityWidget[] = [];
+
+  // Critical (always show)
+  const bashErrorsText = formatBashErrorsDisplay(ctx, palette, icons);
+  if (bashErrorsText) widgets.push({ text: bashErrorsText, category: 'critical' });
+
+  const violationsText = formatViolationsDisplay(ctx, palette, icons);
+  if (violationsText) widgets.push({ text: violationsText, category: 'critical' });
+
+  // Warning (conditional)
+  const compactText = formatCompactSuggestionDisplay(ctx, palette, icons);
+  if (compactText) widgets.push({ text: compactText, category: 'warning' });
+
+  // Info (config-based)
+  if (ctx.config.display.showGitActivity) {
+    const t = formatGitActivityDisplay(ctx, palette);
+    if (t) widgets.push({ text: t, category: 'info' });
+  }
+
+  if (ctx.config.display.showToolStats) {
+    const t = formatToolStatsDisplay(ctx, palette);
+    if (t) widgets.push({ text: t, category: 'info' });
+  }
+
+  if (ctx.config.display.showWorkflowPhase) {
+    const t = formatWorkflowPhaseDisplay(ctx, palette);
+    if (t) widgets.push({ text: t, category: 'info' });
+  }
+
+  if (ctx.config.display.showGitWorktrees) {
+    const t = formatGitWorktreesDisplay(ctx, palette);
+    if (t) widgets.push({ text: t, category: 'info' });
+  }
+
+  if (ctx.config.display.showMcpStatus) {
+    const t = formatMcpStatusDisplay(ctx, palette);
+    if (t) widgets.push({ text: t, category: 'info' });
+  }
+
+  // Analytics (detail mode preferred)
+  if (ctx.config.display.showTestCoverage) {
+    const t = formatTestCoverageDisplay(ctx, palette, icons);
+    if (t) widgets.push({ text: t, category: 'analytics' });
+  }
+
+  if (ctx.config.display.showPassAtK) {
+    const t = formatPassAtKDisplay(ctx, palette);
+    if (t) widgets.push({ text: t, category: 'analytics' });
+  }
+
+  if (ctx.config.display.showPerformanceMetrics) {
+    const t = formatPerformanceMetricsDisplay(ctx, palette);
+    if (t) widgets.push({ text: t, category: 'analytics' });
+  }
+
+  if (ctx.config.display.showSecurityDashboard) {
+    const t = formatSecurityDashboardDisplay(ctx, palette, icons);
+    if (t) widgets.push({ text: t, category: 'analytics' });
+  }
+
+  if (ctx.config.display.showLearningTracker) {
+    const t = formatLearningTrackerDisplay(ctx, palette);
+    if (t) widgets.push({ text: t, category: 'analytics' });
+  }
+
+  if (ctx.config.display.showInstanceSync) {
+    const t = formatInstanceSyncDisplay(ctx, palette);
+    if (t) widgets.push({ text: t, category: 'analytics' });
+  }
+
+  return widgets;
+}
+
+// ============================================
+// Conditional Display Model
+// ============================================
+
+export function hasAbnormalState(ctx: RenderContext): boolean {
+  return (ctx.bashErrors && ctx.bashErrors.length > 0) ||
+         (ctx.violations && ctx.violations.total > 0) ||
+         (ctx.transcript.tools.some(t => t.status === 'error'));
+}
+
+export function getVisibleWidgets(
+  widgets: ActivityWidget[],
+  detailMode: boolean,
+  hasAbnormalState: boolean
+): ActivityWidget[] {
+  if (detailMode) return widgets;
+
+  if (hasAbnormalState) {
+    // Show critical, warning, and info (exclude analytics)
+    return widgets.filter(w => w.category !== 'analytics');
+  }
+
+  // Normal state: only critical and warning
+  return widgets.filter(w =>
+    w.category === 'critical' || w.category === 'warning'
+  );
 }

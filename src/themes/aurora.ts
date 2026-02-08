@@ -22,24 +22,14 @@ import { formatUsageCompact, formatUsageFull } from '../render/usage.js';
 import { formatResetTime } from '../data/usage-api.js';
 import { formatTokenSpeed } from '../data/speed-tracker.js';
 import { getModelName, getContextPercent, getAbsoluteTokens } from '../input/stdin.js';
-import { hyperlink, fileUrl, githubBranchUrl } from '../render/links.js';
 import {
   formatLinesDisplay,
   formatCacheDisplay,
-  formatGitActivityDisplay,
-  formatToolStatsDisplay,
-  formatBashErrorsDisplay,
-  formatCompactSuggestionDisplay,
-  formatViolationsDisplay,
-  formatWorkflowPhaseDisplay,
-  formatTestCoverageDisplay,
-  formatPassAtKDisplay,
-  formatGitWorktreesDisplay,
-  formatPerformanceMetricsDisplay,
-  formatMcpStatusDisplay,
-  formatSecurityDashboardDisplay,
-  formatLearningTrackerDisplay,
-  formatInstanceSyncDisplay,
+  collectActivityWidgets,
+  getVisibleWidgets,
+  hasAbnormalState,
+  getPercentColor,
+  formatProjectGit,
 } from './helpers.js';
 
 export const auroraTheme: Theme = {
@@ -104,7 +94,7 @@ export const auroraTheme: Theme = {
     const percentText = hex(percentColor, percentStr);
 
     // Project and git with parentheses and links
-    const projectGit = formatProjectGit(ctx, this.palette, this.icons);
+    const projectGit = formatProjectGit(ctx, this.palette, this.icons, { showFileStats: true });
 
     const durationText = hex(this.palette.muted, ` ${duration}`);
 
@@ -148,7 +138,7 @@ export const auroraTheme: Theme = {
     }
 
     // Project and git with parentheses and links
-    const projectGit = formatProjectGit(ctx, this.palette, this.icons);
+    const projectGit = formatProjectGit(ctx, this.palette, this.icons, { showFileStats: true });
 
     // Duration
     const duration = ctx.sessionDuration;
@@ -172,8 +162,16 @@ export const auroraTheme: Theme = {
     const cacheText = formatCacheDisplay(ctx, this.palette, this.icons, 'compact');
     const cacheDisplay = cacheText ? '  ' + cacheText : '';
 
+    // Line 1 with logical grouping
+    const separator = hex(this.palette.muted, ' │ ');
+    const group1 = `${modelText}${sessionText}`;
+    const group2 = `${progressText} ${contextText}`;
+    const group3 = projectGit;
+    const group4 = `${linesDisplay}${cacheDisplay}${speedText}`;
+    const group5 = `${durationText}${usageText}`;
+
     lines.push(
-      `${modelText}${sessionText}  ${progressText} ${contextText}  ${projectGit}${linesDisplay}${cacheDisplay}${usageText}  ${durationText}${speedText}`
+      `${group1}${separator}${group2}${separator}${group3}${separator}${group4.trimStart()}${separator}${group5}`
     );
 
     // Line 2+: Activity (detailMode or compact)
@@ -203,49 +201,10 @@ export const auroraTheme: Theme = {
       }
 
       // Advanced feature widgets
-      const advancedParts: string[] = [];
-
-      const gitActivityText = formatGitActivityDisplay(ctx, this.palette);
-      if (gitActivityText) advancedParts.push(gitActivityText);
-
-      const toolStatsText = formatToolStatsDisplay(ctx, this.palette);
-      if (toolStatsText) advancedParts.push(toolStatsText);
-
-      const bashErrorsText = formatBashErrorsDisplay(ctx, this.palette, this.icons);
-      if (bashErrorsText) advancedParts.push(bashErrorsText);
-
-      const violationsText = formatViolationsDisplay(ctx, this.palette, this.icons);
-      if (violationsText) advancedParts.push(violationsText);
-
-      const compactSuggestionText = formatCompactSuggestionDisplay(ctx, this.palette, this.icons);
-      if (compactSuggestionText) advancedParts.push(compactSuggestionText);
-
-      const workflowPhaseText = formatWorkflowPhaseDisplay(ctx, this.palette);
-      if (workflowPhaseText) advancedParts.push(workflowPhaseText);
-
-      const testCoverageText = formatTestCoverageDisplay(ctx, this.palette, this.icons);
-      if (testCoverageText) advancedParts.push(testCoverageText);
-
-      const passAtKText = formatPassAtKDisplay(ctx, this.palette);
-      if (passAtKText) advancedParts.push(passAtKText);
-
-      const worktreesText = formatGitWorktreesDisplay(ctx, this.palette);
-      if (worktreesText) advancedParts.push(worktreesText);
-
-      const perfText = formatPerformanceMetricsDisplay(ctx, this.palette);
-      if (perfText) advancedParts.push(perfText);
-
-      const mcpStatusText = formatMcpStatusDisplay(ctx, this.palette);
-      if (mcpStatusText) advancedParts.push(mcpStatusText);
-
-      const securityText = formatSecurityDashboardDisplay(ctx, this.palette, this.icons);
-      if (securityText) advancedParts.push(securityText);
-
-      const learningText = formatLearningTrackerDisplay(ctx, this.palette);
-      if (learningText) advancedParts.push(learningText);
-
-      const instanceSyncText = formatInstanceSyncDisplay(ctx, this.palette);
-      if (instanceSyncText) advancedParts.push(instanceSyncText);
+      const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
+      const abnormal = hasAbnormalState(ctx);
+      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+      const advancedParts = visible.map(w => w.text);
 
       if (advancedParts.length > 0) {
         lines.push('  ' + advancedParts.join('  ' + hex(this.palette.muted, this.chars.separator) + '  '));
@@ -274,59 +233,11 @@ export const auroraTheme: Theme = {
         if (skillsSummary) activityParts.push(skillsSummary);
       }
 
-      // New features: Git activity, Tool stats, Bash errors
-      const gitActivityText = formatGitActivityDisplay(ctx, this.palette);
-      if (gitActivityText) activityParts.push(gitActivityText);
-
-      const toolStatsText = formatToolStatsDisplay(ctx, this.palette);
-      if (toolStatsText) activityParts.push(toolStatsText);
-
-      const bashErrorsText = formatBashErrorsDisplay(ctx, this.palette, this.icons);
-      if (bashErrorsText) activityParts.push(bashErrorsText);
-
-      // Violations
-      const violationsText = formatViolationsDisplay(ctx, this.palette, this.icons);
-      if (violationsText) activityParts.push(violationsText);
-
-      // Compact suggestion
-      const compactSuggestionText = formatCompactSuggestionDisplay(ctx, this.palette, this.icons);
-      if (compactSuggestionText) activityParts.push(compactSuggestionText);
-
-      // Workflow phase
-      const workflowPhaseText = formatWorkflowPhaseDisplay(ctx, this.palette);
-      if (workflowPhaseText) activityParts.push(workflowPhaseText);
-
-      // Test coverage
-      const testCoverageText = formatTestCoverageDisplay(ctx, this.palette, this.icons);
-      if (testCoverageText) activityParts.push(testCoverageText);
-
-      // Pass@k
-      const passAtKText = formatPassAtKDisplay(ctx, this.palette);
-      if (passAtKText) activityParts.push(passAtKText);
-
-      // Git worktrees
-      const worktreesText = formatGitWorktreesDisplay(ctx, this.palette);
-      if (worktreesText) activityParts.push(worktreesText);
-
-      // Performance
-      const perfText = formatPerformanceMetricsDisplay(ctx, this.palette);
-      if (perfText) activityParts.push(perfText);
-
-      // MCP Status
-      const mcpStatusText = formatMcpStatusDisplay(ctx, this.palette);
-      if (mcpStatusText) activityParts.push(mcpStatusText);
-
-      // Security Dashboard
-      const securityText = formatSecurityDashboardDisplay(ctx, this.palette, this.icons);
-      if (securityText) activityParts.push(securityText);
-
-      // Learning Tracker
-      const learningText = formatLearningTrackerDisplay(ctx, this.palette);
-      if (learningText) activityParts.push(learningText);
-
-      // Instance Sync
-      const instanceSyncText = formatInstanceSyncDisplay(ctx, this.palette);
-      if (instanceSyncText) activityParts.push(instanceSyncText);
+      // New features: Activity widgets
+      const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
+      const abnormal = hasAbnormalState(ctx);
+      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+      activityParts.push(...visible.map(w => w.text));
 
       if (activityParts.length > 0) {
         lines.push(activityParts.join('  ' + hex(this.palette.muted, this.chars.separator) + '  '));
@@ -358,7 +269,7 @@ export const auroraTheme: Theme = {
     const sessionText = sessionName ? hex(this.palette.muted, ` [${sessionName}]`) : '';
 
     // Project and git with parentheses and links (for line 2)
-    const projectGit = formatProjectGit(ctx, this.palette, this.icons);
+    const projectGit = formatProjectGit(ctx, this.palette, this.icons, { showFileStats: true });
 
     const progressBar = createProgressBar(percent || 0, 10, this.chars.progressFilled, this.chars.progressEmpty);
     const progressColor = getPercentColor(percent, this.palette);
@@ -455,49 +366,10 @@ export const auroraTheme: Theme = {
       }
 
       // Advanced feature widgets
-      const advancedParts: string[] = [];
-
-      const gitActivityText = formatGitActivityDisplay(ctx, this.palette);
-      if (gitActivityText) advancedParts.push(gitActivityText);
-
-      const toolStatsText = formatToolStatsDisplay(ctx, this.palette);
-      if (toolStatsText) advancedParts.push(toolStatsText);
-
-      const bashErrorsText = formatBashErrorsDisplay(ctx, this.palette, this.icons);
-      if (bashErrorsText) advancedParts.push(bashErrorsText);
-
-      const violationsText = formatViolationsDisplay(ctx, this.palette, this.icons);
-      if (violationsText) advancedParts.push(violationsText);
-
-      const compactSuggestionText = formatCompactSuggestionDisplay(ctx, this.palette, this.icons);
-      if (compactSuggestionText) advancedParts.push(compactSuggestionText);
-
-      const workflowPhaseText = formatWorkflowPhaseDisplay(ctx, this.palette);
-      if (workflowPhaseText) advancedParts.push(workflowPhaseText);
-
-      const testCoverageText = formatTestCoverageDisplay(ctx, this.palette, this.icons);
-      if (testCoverageText) advancedParts.push(testCoverageText);
-
-      const passAtKText = formatPassAtKDisplay(ctx, this.palette);
-      if (passAtKText) advancedParts.push(passAtKText);
-
-      const worktreesText = formatGitWorktreesDisplay(ctx, this.palette);
-      if (worktreesText) advancedParts.push(worktreesText);
-
-      const perfText = formatPerformanceMetricsDisplay(ctx, this.palette);
-      if (perfText) advancedParts.push(perfText);
-
-      const mcpStatusText = formatMcpStatusDisplay(ctx, this.palette);
-      if (mcpStatusText) advancedParts.push(mcpStatusText);
-
-      const securityText = formatSecurityDashboardDisplay(ctx, this.palette, this.icons);
-      if (securityText) advancedParts.push(securityText);
-
-      const learningText = formatLearningTrackerDisplay(ctx, this.palette);
-      if (learningText) advancedParts.push(learningText);
-
-      const instanceSyncText = formatInstanceSyncDisplay(ctx, this.palette);
-      if (instanceSyncText) advancedParts.push(instanceSyncText);
+      const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
+      const abnormal = hasAbnormalState(ctx);
+      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+      const advancedParts = visible.map(w => w.text);
 
       if (advancedParts.length > 0) {
         lines.push('  ' + advancedParts.join('  ' + hex(this.palette.muted, this.chars.separator) + '  '));
@@ -529,63 +401,10 @@ export const auroraTheme: Theme = {
       }
 
       // Additional activity indicators
-      const activityParts: string[] = [];
-
-      // Git Activity
-      const gitActivityText = formatGitActivityDisplay(ctx, this.palette);
-      if (gitActivityText) activityParts.push(gitActivityText);
-
-      // Tool Stats
-      const toolStatsText = formatToolStatsDisplay(ctx, this.palette);
-      if (toolStatsText) activityParts.push(toolStatsText);
-
-      // Bash Errors
-      const bashErrorsText = formatBashErrorsDisplay(ctx, this.palette, this.icons);
-      if (bashErrorsText) activityParts.push(bashErrorsText);
-
-      // Violations
-      const violationsText = formatViolationsDisplay(ctx, this.palette, this.icons);
-      if (violationsText) activityParts.push(violationsText);
-
-      // Compact Suggestion
-      const compactSuggestionText = formatCompactSuggestionDisplay(ctx, this.palette, this.icons);
-      if (compactSuggestionText) activityParts.push(compactSuggestionText);
-
-      // Workflow Phase
-      const workflowPhaseText = formatWorkflowPhaseDisplay(ctx, this.palette);
-      if (workflowPhaseText) activityParts.push(workflowPhaseText);
-
-      // Test coverage
-      const testCoverageText = formatTestCoverageDisplay(ctx, this.palette, this.icons);
-      if (testCoverageText) activityParts.push(testCoverageText);
-
-      // Pass@k
-      const passAtKText = formatPassAtKDisplay(ctx, this.palette);
-      if (passAtKText) activityParts.push(passAtKText);
-
-      // Git worktrees
-      const worktreesText = formatGitWorktreesDisplay(ctx, this.palette);
-      if (worktreesText) activityParts.push(worktreesText);
-
-      // Performance
-      const perfText = formatPerformanceMetricsDisplay(ctx, this.palette);
-      if (perfText) activityParts.push(perfText);
-
-      // MCP Status
-      const mcpStatusText = formatMcpStatusDisplay(ctx, this.palette);
-      if (mcpStatusText) activityParts.push(mcpStatusText);
-
-      // Security Dashboard
-      const securityText = formatSecurityDashboardDisplay(ctx, this.palette, this.icons);
-      if (securityText) activityParts.push(securityText);
-
-      // Learning Tracker
-      const learningText = formatLearningTrackerDisplay(ctx, this.palette);
-      if (learningText) activityParts.push(learningText);
-
-      // Instance Sync
-      const instanceSyncText = formatInstanceSyncDisplay(ctx, this.palette);
-      if (instanceSyncText) activityParts.push(instanceSyncText);
+      const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
+      const abnormal = hasAbnormalState(ctx);
+      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+      const activityParts = visible.map(w => w.text);
 
       if (activityParts.length > 0) {
         lines.push('  ' + activityParts.join('  ' + hex(this.palette.muted, this.chars.separator) + '  '));
@@ -595,14 +414,6 @@ export const auroraTheme: Theme = {
     return lines;
   },
 };
-
-function getPercentColor(percent: number | null, palette: ColorPalette): string {
-  if (percent === null) return palette.text;
-  if (percent >= 90) return palette.progressCritical;
-  if (percent >= 75) return palette.progressHigh;
-  if (percent >= 50) return palette.progressMid;
-  return palette.progressLow;
-}
 
 function summarizeTools(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
   const toolCounts = new Map<string, number>();
@@ -809,71 +620,3 @@ function formatUsageSummaryLine(usageData: any, palette: ColorPalette): string {
   return hex(palette.muted, '● Usage: ') + parts.join('  ');
 }
 
-/**
- * Format project and git with parentheses and clickable links
- */
-function formatProjectGit(ctx: RenderContext, palette: ColorPalette, _icons: IconSet): string {
-  const project = ctx.stdin.cwd ? ctx.stdin.cwd.split('/').pop() : null;
-  const git = ctx.config.display.showGit ? (ctx.gitStatus?.branch || '') : '';
-  const dirty = ctx.gitStatus?.isDirty ? '*' : '';
-
-  if (!project && !git) return '';
-
-  let result = '';
-
-  // Project name with file:// link
-  if (project && ctx.stdin.cwd) {
-    const projectLink = hyperlink(fileUrl(ctx.stdin.cwd), project);
-    result += hex(palette.teal, projectLink);
-  }
-
-  // Git branch with GitHub link (if available)
-  if (git) {
-    let branchText = `${git}`;
-
-    // Add tag if available
-    if (ctx.gitStatus?.tag) {
-      branchText += ` ${ctx.gitStatus.tag}`;
-    }
-
-    branchText += dirty;
-
-    // Add file stats if enabled
-    if (ctx.config.display.showGitFileStats && ctx.gitStatus?.fileStats) {
-      const stats = ctx.gitStatus.fileStats;
-      const parts: string[] = [];
-
-      if (stats.modified > 0) parts.push(`!${stats.modified}`);
-      if (stats.added > 0) parts.push(`+${stats.added}`);
-      if (stats.deleted > 0) parts.push(`✘${stats.deleted}`);
-      if (stats.untracked > 0) parts.push(`?${stats.untracked}`);
-
-      if (parts.length > 0) {
-        branchText += ` ${parts.join(' ')}`;
-      }
-    }
-
-    if (ctx.gitStatus?.remoteUrl) {
-      const branchUrl = githubBranchUrl(ctx.gitStatus.remoteUrl, git);
-      const branchLink = hyperlink(branchUrl, branchText);
-      result += hex(palette.teal, ` (${branchLink})`);
-    } else {
-      result += hex(palette.teal, ` (${branchText})`);
-    }
-  }
-
-  // Subdirectory repos (monorepo support)
-  if (ctx.config.display.showAllBranches && ctx.gitStatus?.subRepos && ctx.gitStatus.subRepos.length > 0) {
-    const subItems = ctx.gitStatus.subRepos.slice(0, 3).map((sub) => {
-      const subDirty = sub.isDirty ? '*' : '';
-      return `${sub.path}(${sub.branch}${subDirty})`;
-    });
-
-    const remaining = ctx.gitStatus.subRepos.length - 3;
-    const moreText = remaining > 0 ? ` +${remaining}` : '';
-
-    result += hex(palette.muted, `  sub: ${subItems.join(' ')}${moreText}`);
-  }
-
-  return result;
-}

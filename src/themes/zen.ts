@@ -14,24 +14,13 @@ import { hex } from '../render/colors.js';
 import { formatPercent } from '../render/utils.js';
 import { formatTokenSpeed } from '../data/speed-tracker.js';
 import { getModelName, getContextPercent, getAbsoluteTokens } from '../input/stdin.js';
-import { hyperlink, fileUrl, githubBranchUrl } from '../render/links.js';
 import {
   formatLinesDisplay,
   formatCacheDisplay,
-  formatGitActivityDisplay,
-  formatToolStatsDisplay,
-  formatBashErrorsDisplay,
-  formatCompactSuggestionDisplay,
-  formatViolationsDisplay,
-  formatWorkflowPhaseDisplay,
-  formatTestCoverageDisplay,
-  formatPassAtKDisplay,
-  formatGitWorktreesDisplay,
-  formatPerformanceMetricsDisplay,
-  formatMcpStatusDisplay,
-  formatSecurityDashboardDisplay,
-  formatLearningTrackerDisplay,
-  formatInstanceSyncDisplay,
+  collectActivityWidgets,
+  getVisibleWidgets,
+  hasAbnormalState,
+  formatProjectGit,
 } from './helpers.js';
 
 /**
@@ -127,7 +116,7 @@ export const zenTheme: Theme = {
       : null;
     const sessionText = sessionName ? `[${sessionName}] ` : '';
 
-    const projectGit = formatProjectGit(ctx);
+    const projectGit = formatProjectGit(ctx, null, null, { subrepoStyle: 'minimal' });
     const duration = ctx.sessionDuration;
 
     // Token speed (Zen style: minimal)
@@ -167,7 +156,7 @@ export const zenTheme: Theme = {
       : null;
     const sessionPart = sessionName ? `[${sessionName}]` : null;
 
-    const projectGit = formatProjectGit(ctx);
+    const projectGit = formatProjectGit(ctx, null, null, { subrepoStyle: 'minimal' });
     const duration = ctx.sessionDuration;
 
     // Usage (Zen style: minimal)
@@ -232,60 +221,11 @@ export const zenTheme: Theme = {
       }
     }
 
-    // New features: Git activity, Tool stats, Bash errors
-    const gitActivityText = formatGitActivityDisplay(ctx, this.palette);
-    if (gitActivityText) activityParts.push(gitActivityText);
-
-    const toolStatsText = formatToolStatsDisplay(ctx, this.palette);
-    if (toolStatsText) activityParts.push(toolStatsText);
-
-    const bashErrorsText = formatBashErrorsDisplay(ctx, this.palette, this.icons);
-    if (bashErrorsText) activityParts.push(bashErrorsText);
-
-
-      // Violations
-      const violationsText = formatViolationsDisplay(ctx, this.palette, this.icons);
-      if (violationsText) activityParts.push(violationsText);
-
-      // Compact suggestion
-      const compactSuggestionText = formatCompactSuggestionDisplay(ctx, this.palette, this.icons);
-      if (compactSuggestionText) activityParts.push(compactSuggestionText);
-
-      // Workflow phase
-      const workflowPhaseText = formatWorkflowPhaseDisplay(ctx, this.palette);
-      if (workflowPhaseText) activityParts.push(workflowPhaseText);
-
-      // Test coverage
-      const testCoverageText = formatTestCoverageDisplay(ctx, this.palette, this.icons);
-      if (testCoverageText) activityParts.push(testCoverageText);
-
-      // Pass@k
-      const passAtKText = formatPassAtKDisplay(ctx, this.palette);
-      if (passAtKText) activityParts.push(passAtKText);
-
-      // Git worktrees
-      const worktreesText = formatGitWorktreesDisplay(ctx, this.palette);
-      if (worktreesText) activityParts.push(worktreesText);
-
-      // Performance
-      const perfText = formatPerformanceMetricsDisplay(ctx, this.palette);
-      if (perfText) activityParts.push(perfText);
-
-      // MCP Status
-      const mcpStatusText = formatMcpStatusDisplay(ctx, this.palette);
-      if (mcpStatusText) activityParts.push(mcpStatusText);
-
-      // Security Dashboard
-      const securityText = formatSecurityDashboardDisplay(ctx, this.palette, this.icons);
-      if (securityText) activityParts.push(securityText);
-
-      // Learning Tracker
-      const learningText = formatLearningTrackerDisplay(ctx, this.palette);
-      if (learningText) activityParts.push(learningText);
-
-      // Instance Sync
-      const instanceSyncText = formatInstanceSyncDisplay(ctx, this.palette);
-      if (instanceSyncText) activityParts.push(instanceSyncText);
+    // Activity widgets
+    const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
+    const abnormal = hasAbnormalState(ctx);
+    const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+    activityParts.push(...visible.map(w => w.text));
 
     if (activityParts.length > 0) {
       lines.push(activityParts.join(hex(this.palette.muted, ' · ')));
@@ -295,53 +235,3 @@ export const zenTheme: Theme = {
   },
 };
 
-/**
- * Format project and git with parentheses and clickable links (Zen style: minimal)
- */
-function formatProjectGit(ctx: RenderContext): string {
-  const project = ctx.stdin.cwd ? ctx.stdin.cwd.split('/').pop() : null;
-  const git = ctx.config.display.showGit ? (ctx.gitStatus?.branch || '') : '';
-  const dirty = ctx.gitStatus?.isDirty ? '*' : '';
-
-  if (!project && !git) return '';
-
-  let result = '';
-
-  // Project name with file:// link
-  if (project && ctx.stdin.cwd) {
-    const projectLink = hyperlink(fileUrl(ctx.stdin.cwd), project);
-    result += projectLink;
-  }
-
-  // Git branch with GitHub link (if available)
-  if (git) {
-    let branchText = `${git}`;
-    if (ctx.gitStatus?.tag) {
-      branchText += ` ${ctx.gitStatus.tag}`;
-    }
-    branchText += dirty;
-
-    if (ctx.gitStatus?.remoteUrl) {
-      const branchUrl = githubBranchUrl(ctx.gitStatus.remoteUrl, git);
-      const branchLink = hyperlink(branchUrl, branchText);
-      result += ` (${branchLink})`;
-    } else {
-      result += ` (${branchText})`;
-    }
-  }
-
-  // Subdirectory repos (Zen style: minimal)
-  if (ctx.config.display.showAllBranches && ctx.gitStatus?.subRepos && ctx.gitStatus.subRepos.length > 0) {
-    const subItems = ctx.gitStatus.subRepos.slice(0, 2).map((sub) => {
-      const subDirty = sub.isDirty ? '*' : '';
-      return `${sub.path}:${sub.branch}${subDirty}`;
-    });
-
-    const remaining = ctx.gitStatus.subRepos.length - 2;
-    const moreText = remaining > 0 ? ` +${remaining}` : '';
-
-    result += ` ${subItems.join(' ')}${moreText}`;
-  }
-
-  return result;
-}

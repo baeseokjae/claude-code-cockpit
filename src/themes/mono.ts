@@ -9,24 +9,13 @@ import { dim, bold } from '../render/colors.js';
 import { createProgressBar, formatPercent } from '../render/utils.js';
 import { formatTokenSpeed } from '../data/speed-tracker.js';
 import { getModelName, getContextPercent, getAbsoluteTokens } from '../input/stdin.js';
-import { hyperlink, fileUrl, githubBranchUrl } from '../render/links.js';
 import {
   formatLinesDisplay,
   formatCacheDisplay,
-  formatGitActivityDisplay,
-  formatToolStatsDisplay,
-  formatBashErrorsDisplay,
-  formatCompactSuggestionDisplay,
-  formatViolationsDisplay,
-  formatWorkflowPhaseDisplay,
-  formatTestCoverageDisplay,
-  formatPassAtKDisplay,
-  formatGitWorktreesDisplay,
-  formatPerformanceMetricsDisplay,
-  formatMcpStatusDisplay,
-  formatSecurityDashboardDisplay,
-  formatLearningTrackerDisplay,
-  formatInstanceSyncDisplay,
+  collectActivityWidgets,
+  getVisibleWidgets,
+  hasAbnormalState,
+  formatProjectGit,
 } from './helpers.js';
 
 /**
@@ -87,7 +76,7 @@ export const monoTheme: Theme = {
       : null;
     const sessionText = sessionName ? ` [${sessionName}]` : '';
 
-    const projectGit = formatProjectGit(ctx);
+    const projectGit = formatProjectGit(ctx, null, null, { prefix: ' | ' });
 
     const linesText = formatLinesDisplay(ctx, this.palette, this.icons, 'compact');
     const linesDisplay = linesText ? ` ${linesText}` : '';
@@ -119,7 +108,7 @@ export const monoTheme: Theme = {
 
     const progressBar = createProgressBar(percent || 0, 10, this.chars.progressFilled, this.chars.progressEmpty);
 
-    const projectGit = formatProjectGit(ctx);
+    const projectGit = formatProjectGit(ctx, null, null, { prefix: ' | ' });
     const duration = ctx.sessionDuration;
 
     // Usage (Mono style: no color)
@@ -141,7 +130,14 @@ export const monoTheme: Theme = {
     const cacheText = formatCacheDisplay(ctx, this.palette, this.icons, 'compact');
     const cacheDisplay = cacheText ? '  ' + cacheText : '';
 
-    lines.push(`[${model}]${sessionText} [${progressBar}] ${contextStr}${warning}${projectGit}${linesDisplay}${cacheDisplay}${usage} | ${duration}${speed}`);
+    // Line 1 with logical grouping (Mono style uses | separator)
+    const group1 = `[${model}]${sessionText}`;
+    const group2 = `[${progressBar}] ${contextStr}${warning}`;
+    const group3 = projectGit;
+    const group4 = `${linesDisplay}${cacheDisplay}`;
+    const group5 = `${duration}${usage}${speed}`;
+
+    lines.push(`${group1} | ${group2} | ${group3} | ${group4.trimStart()} | ${group5}`);
 
     // Activity line
     const activityParts: string[] = [];
@@ -166,60 +162,11 @@ export const monoTheme: Theme = {
       if (skills) activityParts.push(skills);
     }
 
-    // New features: Git activity, Tool stats, Bash errors
-    const gitActivityText = formatGitActivityDisplay(ctx, this.palette);
-    if (gitActivityText) activityParts.push(gitActivityText);
-
-    const toolStatsText = formatToolStatsDisplay(ctx, this.palette);
-    if (toolStatsText) activityParts.push(toolStatsText);
-
-    const bashErrorsText = formatBashErrorsDisplay(ctx, this.palette, this.icons);
-    if (bashErrorsText) activityParts.push(bashErrorsText);
-
-
-      // Violations
-      const violationsText = formatViolationsDisplay(ctx, this.palette, this.icons);
-      if (violationsText) activityParts.push(violationsText);
-
-      // Compact suggestion
-      const compactSuggestionText = formatCompactSuggestionDisplay(ctx, this.palette, this.icons);
-      if (compactSuggestionText) activityParts.push(compactSuggestionText);
-
-      // Workflow phase
-      const workflowPhaseText = formatWorkflowPhaseDisplay(ctx, this.palette);
-      if (workflowPhaseText) activityParts.push(workflowPhaseText);
-
-      // Test coverage
-      const testCoverageText = formatTestCoverageDisplay(ctx, this.palette, this.icons);
-      if (testCoverageText) activityParts.push(testCoverageText);
-
-      // Pass@k
-      const passAtKText = formatPassAtKDisplay(ctx, this.palette);
-      if (passAtKText) activityParts.push(passAtKText);
-
-      // Git worktrees
-      const worktreesText = formatGitWorktreesDisplay(ctx, this.palette);
-      if (worktreesText) activityParts.push(worktreesText);
-
-      // Performance
-      const perfText = formatPerformanceMetricsDisplay(ctx, this.palette);
-      if (perfText) activityParts.push(perfText);
-
-      // MCP Status
-      const mcpStatusText = formatMcpStatusDisplay(ctx, this.palette);
-      if (mcpStatusText) activityParts.push(mcpStatusText);
-
-      // Security Dashboard
-      const securityText = formatSecurityDashboardDisplay(ctx, this.palette, this.icons);
-      if (securityText) activityParts.push(securityText);
-
-      // Learning Tracker
-      const learningText = formatLearningTrackerDisplay(ctx, this.palette);
-      if (learningText) activityParts.push(learningText);
-
-      // Instance Sync
-      const instanceSyncText = formatInstanceSyncDisplay(ctx, this.palette);
-      if (instanceSyncText) activityParts.push(instanceSyncText);
+    // Activity widgets
+    const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
+    const abnormal = hasAbnormalState(ctx);
+    const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+    activityParts.push(...visible.map(w => w.text));
 
     if (activityParts.length > 0) {
       lines.push(activityParts.join(' | '));
@@ -290,7 +237,7 @@ export const monoTheme: Theme = {
     lines.push(`  ${parts.join('  ')}`);
 
     // Line 2
-    const projectGit = formatProjectGit(ctx);
+    const projectGit = formatProjectGit(ctx, null, null, { prefix: ' | ' });
 
     const configParts: string[] = [];
     if (ctx.config.display.showConfigCounts) {
@@ -324,48 +271,11 @@ export const monoTheme: Theme = {
       lines.push('  ' + renderSkillsLine(ctx));
     }
 
-    // New features: Git activity, Tool stats, Bash errors
-    const gitActivityText = formatGitActivityDisplay(ctx, this.palette);
-    if (gitActivityText) lines.push('  ' + gitActivityText);
-
-    const toolStatsText = formatToolStatsDisplay(ctx, this.palette);
-    if (toolStatsText) lines.push('  ' + toolStatsText);
-
-    const bashErrorsText = formatBashErrorsDisplay(ctx, this.palette, this.icons);
-    if (bashErrorsText) lines.push('  ' + bashErrorsText);
-
-    const violationsText = formatViolationsDisplay(ctx, this.palette, this.icons);
-    if (violationsText) lines.push('  ' + violationsText);
-
-    const compactSuggestionText = formatCompactSuggestionDisplay(ctx, this.palette, this.icons);
-    if (compactSuggestionText) lines.push('  ' + compactSuggestionText);
-
-    const workflowPhaseText = formatWorkflowPhaseDisplay(ctx, this.palette);
-    if (workflowPhaseText) lines.push('  ' + workflowPhaseText);
-
-    const testCoverageText = formatTestCoverageDisplay(ctx, this.palette, this.icons);
-    if (testCoverageText) lines.push('  ' + testCoverageText);
-
-    const passAtKText = formatPassAtKDisplay(ctx, this.palette);
-    if (passAtKText) lines.push('  ' + passAtKText);
-
-    const worktreesText = formatGitWorktreesDisplay(ctx, this.palette);
-    if (worktreesText) lines.push('  ' + worktreesText);
-
-    const perfText = formatPerformanceMetricsDisplay(ctx, this.palette);
-    if (perfText) lines.push('  ' + perfText);
-
-    const mcpStatusText = formatMcpStatusDisplay(ctx, this.palette);
-    if (mcpStatusText) lines.push('  ' + mcpStatusText);
-
-    const securityText = formatSecurityDashboardDisplay(ctx, this.palette, this.icons);
-    if (securityText) lines.push('  ' + securityText);
-
-    const learningText = formatLearningTrackerDisplay(ctx, this.palette);
-    if (learningText) lines.push('  ' + learningText);
-
-    const instanceSyncText = formatInstanceSyncDisplay(ctx, this.palette);
-    if (instanceSyncText) lines.push('  ' + instanceSyncText);
+    // Activity widgets
+    const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
+    const abnormal = hasAbnormalState(ctx);
+    const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+    visible.forEach(w => lines.push('  ' + w.text));
 
     return lines;
   },
@@ -477,53 +387,3 @@ function renderSkillsLine(ctx: RenderContext): string {
   return '● Skills: ' + skills;
 }
 
-/**
- * Format project and git with parentheses and clickable links (Mono style: no colors)
- */
-function formatProjectGit(ctx: RenderContext): string {
-  const project = ctx.stdin.cwd ? ctx.stdin.cwd.split('/').pop() : null;
-  const git = ctx.config.display.showGit ? (ctx.gitStatus?.branch || '') : '';
-  const dirty = ctx.gitStatus?.isDirty ? '*' : '';
-
-  if (!project && !git) return '';
-
-  let result = ' | ';
-
-  // Project name with file:// link
-  if (project && ctx.stdin.cwd) {
-    const projectLink = hyperlink(fileUrl(ctx.stdin.cwd), project);
-    result += projectLink;
-  }
-
-  // Git branch with GitHub link (if available)
-  if (git) {
-    let branchText = `${git}`;
-    if (ctx.gitStatus?.tag) {
-      branchText += ` ${ctx.gitStatus.tag}`;
-    }
-    branchText += dirty;
-
-    if (ctx.gitStatus?.remoteUrl) {
-      const branchUrl = githubBranchUrl(ctx.gitStatus.remoteUrl, git);
-      const branchLink = hyperlink(branchUrl, branchText);
-      result += ` (${branchLink})`;
-    } else {
-      result += ` (${branchText})`;
-    }
-  }
-
-  // Subdirectory repos (Mono style: plain text)
-  if (ctx.config.display.showAllBranches && ctx.gitStatus?.subRepos && ctx.gitStatus.subRepos.length > 0) {
-    const subItems = ctx.gitStatus.subRepos.slice(0, 3).map((sub) => {
-      const subDirty = sub.isDirty ? '*' : '';
-      return `${sub.path}(${sub.branch}${subDirty})`;
-    });
-
-    const remaining = ctx.gitStatus.subRepos.length - 3;
-    const moreText = remaining > 0 ? ` +${remaining}` : '';
-
-    result += `  subs: ${subItems.join(' ')}${moreText}`;
-  }
-
-  return result;
-}

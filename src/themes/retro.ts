@@ -9,24 +9,13 @@ import { hex, bold } from '../render/colors.js';
 import { createProgressBar, formatPercent, visualLength } from '../render/utils.js';
 import { formatTokenSpeed } from '../data/speed-tracker.js';
 import { getModelName, getContextPercent, getAbsoluteTokens } from '../input/stdin.js';
-import { hyperlink, fileUrl, githubBranchUrl } from '../render/links.js';
 import {
   formatLinesDisplay,
   formatCacheDisplay,
-  formatGitActivityDisplay,
-  formatToolStatsDisplay,
-  formatBashErrorsDisplay,
-  formatCompactSuggestionDisplay,
-  formatViolationsDisplay,
-  formatWorkflowPhaseDisplay,
-  formatTestCoverageDisplay,
-  formatPassAtKDisplay,
-  formatGitWorktreesDisplay,
-  formatPerformanceMetricsDisplay,
-  formatMcpStatusDisplay,
-  formatSecurityDashboardDisplay,
-  formatLearningTrackerDisplay,
-  formatInstanceSyncDisplay,
+  collectActivityWidgets,
+  getVisibleWidgets,
+  hasAbnormalState,
+  formatProjectGit,
 } from './helpers.js';
 
 /**
@@ -96,7 +85,11 @@ export const retroTheme: Theme = {
       : null;
     const sessionText = sessionName ? ` [${sessionName}]` : '';
 
-    const projectGit = formatProjectGit(ctx);
+    const projectGit = formatProjectGit(ctx, null, null, {
+      transform: { case: 'upper' },
+      projectPrefix: 'DIR: ',
+      branchPrefix: 'BRANCH:',
+    });
 
     const linesText = formatLinesDisplay(ctx, this.palette, this.icons, 'compact');
     const linesDisplay = linesText ? ` ${linesText}` : '';
@@ -130,7 +123,11 @@ export const retroTheme: Theme = {
 
     const progressBar = createProgressBar(percent || 0, 10, this.chars.progressFilled, this.chars.progressEmpty);
 
-    const projectGit = formatProjectGit(ctx);
+    const projectGit = formatProjectGit(ctx, null, null, {
+      transform: { case: 'upper' },
+      projectPrefix: 'DIR: ',
+      branchPrefix: 'BRANCH:',
+    });
     const duration = ctx.sessionDuration;
 
     // Warning
@@ -148,7 +145,14 @@ export const retroTheme: Theme = {
     const cacheText = formatCacheDisplay(ctx, this.palette, this.icons, 'compact');
     const cacheDisplay = cacheText ? '  ' + cacheText : '';
 
-    lines.push(hex(color, `[${model}]${sessionText} `) + hex(warningColor, `[${progressBar}] ${contextStr}${warning}`) + hex(dimColor, `${projectGit}${linesDisplay}${cacheDisplay} | ${duration}${speed}`));
+    // Line 1 with logical grouping (Retro style uses | separator)
+    const group1 = `[${model}]${sessionText}`;
+    const group2 = `[${progressBar}] ${contextStr}${warning}`;
+    const group3 = projectGit;
+    const group4 = `${linesDisplay}${cacheDisplay}`;
+    const group5 = `${duration}${speed}`;
+
+    lines.push(hex(color, `${group1} | `) + hex(warningColor, `${group2} | `) + hex(dimColor, `${group3} | ${group4.trimStart()} | ${group5}`));
 
     // Activity
     const activityParts: string[] = [];
@@ -169,60 +173,11 @@ export const retroTheme: Theme = {
       activityParts.push(summarizeSkills(ctx, this.palette));
     }
 
-    // New features: Git activity, Tool stats, Bash errors
-    const gitActivityText = formatGitActivityDisplay(ctx, this.palette);
-    if (gitActivityText) activityParts.push(gitActivityText);
-
-    const toolStatsText = formatToolStatsDisplay(ctx, this.palette);
-    if (toolStatsText) activityParts.push(toolStatsText);
-
-    const bashErrorsText = formatBashErrorsDisplay(ctx, this.palette, this.icons);
-    if (bashErrorsText) activityParts.push(bashErrorsText);
-
-
-      // Violations
-      const violationsText = formatViolationsDisplay(ctx, this.palette, this.icons);
-      if (violationsText) activityParts.push(violationsText);
-
-      // Compact suggestion
-      const compactSuggestionText = formatCompactSuggestionDisplay(ctx, this.palette, this.icons);
-      if (compactSuggestionText) activityParts.push(compactSuggestionText);
-
-      // Workflow phase
-      const workflowPhaseText = formatWorkflowPhaseDisplay(ctx, this.palette);
-      if (workflowPhaseText) activityParts.push(workflowPhaseText);
-
-      // Test coverage
-      const testCoverageText = formatTestCoverageDisplay(ctx, this.palette, this.icons);
-      if (testCoverageText) activityParts.push(testCoverageText);
-
-      // Pass@k
-      const passAtKText = formatPassAtKDisplay(ctx, this.palette);
-      if (passAtKText) activityParts.push(passAtKText);
-
-      // Git worktrees
-      const worktreesText = formatGitWorktreesDisplay(ctx, this.palette);
-      if (worktreesText) activityParts.push(worktreesText);
-
-      // Performance
-      const perfText = formatPerformanceMetricsDisplay(ctx, this.palette);
-      if (perfText) activityParts.push(perfText);
-
-      // MCP Status
-      const mcpStatusText = formatMcpStatusDisplay(ctx, this.palette);
-      if (mcpStatusText) activityParts.push(mcpStatusText);
-
-      // Security Dashboard
-      const securityText = formatSecurityDashboardDisplay(ctx, this.palette, this.icons);
-      if (securityText) activityParts.push(securityText);
-
-      // Learning Tracker
-      const learningText = formatLearningTrackerDisplay(ctx, this.palette);
-      if (learningText) activityParts.push(learningText);
-
-      // Instance Sync
-      const instanceSyncText = formatInstanceSyncDisplay(ctx, this.palette);
-      if (instanceSyncText) activityParts.push(instanceSyncText);
+    // Activity widgets
+    const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
+    const abnormal = hasAbnormalState(ctx);
+    const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+    activityParts.push(...visible.map(w => w.text));
 
     if (activityParts.length > 0) {
       lines.push(hex(dimColor, activityParts.join(' | ')));
@@ -270,7 +225,11 @@ export const retroTheme: Theme = {
     lines.push(hex(color, '║') + hex(warningColor, line1) + ' '.repeat(Math.max(0, innerWidth - visualLength(line1))) + hex(color, '║'));
 
     // Project info
-    const projectGit = formatProjectGit(ctx);
+    const projectGit = formatProjectGit(ctx, null, null, {
+      transform: { case: 'upper' },
+      projectPrefix: 'DIR: ',
+      branchPrefix: 'BRANCH:',
+    });
     const duration = ctx.sessionDuration;
     const cost = ctx.config.display.showCost ? ctx.stdin.cost?.total_cost_usd : undefined;
     const costStr = cost ? `$${cost.toFixed(2)}` : (ctx.config.display.showCost ? '$0.00' : '');
@@ -330,90 +289,14 @@ export const retroTheme: Theme = {
       lines.push(hex(color, '║') + hex(color, skillsLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(skillsLine))) + hex(color, '║'));
     }
 
-    // New features: Git activity, Tool stats, Bash errors
-    const gitActivityText = formatGitActivityDisplay(ctx, this.palette);
-    if (gitActivityText) {
-      const activityLine = ` GIT: ${gitActivityText}`;
-      lines.push(hex(color, '║') + hex(color, activityLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(activityLine))) + hex(color, '║'));
-    }
-
-    const toolStatsText = formatToolStatsDisplay(ctx, this.palette);
-    if (toolStatsText) {
-      const statsLine = ` ${toolStatsText}`;
-      lines.push(hex(color, '║') + hex(color, statsLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(statsLine))) + hex(color, '║'));
-    }
-
-    const bashErrorsText = formatBashErrorsDisplay(ctx, this.palette, this.icons);
-    if (bashErrorsText) {
-      const errorsLine = ` ${bashErrorsText}`;
-      lines.push(hex(color, '║') + hex(color, errorsLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(errorsLine))) + hex(color, '║'));
-    }
-
-    const violationsText = formatViolationsDisplay(ctx, this.palette, this.icons);
-    if (violationsText) {
-      const vLine = ` ${violationsText}`;
-      lines.push(hex(color, '║') + hex(color, vLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(vLine))) + hex(color, '║'));
-    }
-
-    const compactSuggestionText = formatCompactSuggestionDisplay(ctx, this.palette, this.icons);
-    if (compactSuggestionText) {
-      const sLine = ` ${compactSuggestionText}`;
-      lines.push(hex(color, '║') + hex(color, sLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(sLine))) + hex(color, '║'));
-    }
-
-    const workflowPhaseText = formatWorkflowPhaseDisplay(ctx, this.palette);
-    if (workflowPhaseText) {
-      const wLine = ` ${workflowPhaseText}`;
-      lines.push(hex(color, '║') + hex(color, wLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(wLine))) + hex(color, '║'));
-    }
-
-    const testCoverageText = formatTestCoverageDisplay(ctx, this.palette, this.icons);
-    if (testCoverageText) {
-      const tLine = ` ${testCoverageText}`;
-      lines.push(hex(color, '║') + hex(color, tLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(tLine))) + hex(color, '║'));
-    }
-
-    const passAtKText = formatPassAtKDisplay(ctx, this.palette);
-    if (passAtKText) {
-      const pLine = ` ${passAtKText}`;
-      lines.push(hex(color, '║') + hex(color, pLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(pLine))) + hex(color, '║'));
-    }
-
-    const worktreesText = formatGitWorktreesDisplay(ctx, this.palette);
-    if (worktreesText) {
-      const wtLine = ` ${worktreesText}`;
-      lines.push(hex(color, '║') + hex(color, wtLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(wtLine))) + hex(color, '║'));
-    }
-
-    const perfText = formatPerformanceMetricsDisplay(ctx, this.palette);
-    if (perfText) {
-      const pfLine = ` ${perfText}`;
-      lines.push(hex(color, '║') + hex(color, pfLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(pfLine))) + hex(color, '║'));
-    }
-
-    const mcpStatusText = formatMcpStatusDisplay(ctx, this.palette);
-    if (mcpStatusText) {
-      const mLine = ` ${mcpStatusText}`;
-      lines.push(hex(color, '║') + hex(color, mLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(mLine))) + hex(color, '║'));
-    }
-
-    const securityText = formatSecurityDashboardDisplay(ctx, this.palette, this.icons);
-    if (securityText) {
-      const secLine = ` ${securityText}`;
-      lines.push(hex(color, '║') + hex(color, secLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(secLine))) + hex(color, '║'));
-    }
-
-    const learningText = formatLearningTrackerDisplay(ctx, this.palette);
-    if (learningText) {
-      const lLine = ` ${learningText}`;
-      lines.push(hex(color, '║') + hex(color, lLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(lLine))) + hex(color, '║'));
-    }
-
-    const instanceSyncText = formatInstanceSyncDisplay(ctx, this.palette);
-    if (instanceSyncText) {
-      const iLine = ` ${instanceSyncText}`;
-      lines.push(hex(color, '║') + hex(color, iLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(iLine))) + hex(color, '║'));
-    }
+    // Activity widgets
+    const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
+    const abnormal = hasAbnormalState(ctx);
+    const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+    visible.forEach(w => {
+      const widgetLine = ` ${w.text}`;
+      lines.push(hex(color, '║') + hex(color, widgetLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(widgetLine))) + hex(color, '║'));
+    });
 
     // Footer
     lines.push(hex(color, '╚' + '═'.repeat(innerWidth) + '╝'));
@@ -477,53 +360,3 @@ function summarizeSkills(ctx: RenderContext, _palette: typeof RETRO_PALETTE): st
   return '● ' + skillItems;
 }
 
-/**
- * Format project and git with parentheses and clickable links (Retro style: uppercase)
- */
-function formatProjectGit(ctx: RenderContext): string {
-  const project = ctx.stdin.cwd ? ctx.stdin.cwd.split('/').pop()?.toUpperCase() : null;
-  const git = ctx.config.display.showGit ? (ctx.gitStatus?.branch?.toUpperCase() || '') : '';
-  const dirty = ctx.gitStatus?.isDirty ? '*' : '';
-
-  if (!project && !git) return '';
-
-  let result = '';
-
-  // Project name with file:// link
-  if (project && ctx.stdin.cwd) {
-    const projectLink = hyperlink(fileUrl(ctx.stdin.cwd), project);
-    result += `DIR: ${projectLink}`;
-  }
-
-  // Git branch with GitHub link (if available)
-  if (git) {
-    let branchText = `${git}`;
-    if (ctx.gitStatus?.tag) {
-      branchText += ` ${ctx.gitStatus.tag}`;
-    }
-    branchText += dirty;
-
-    if (ctx.gitStatus?.remoteUrl) {
-      const branchUrl = githubBranchUrl(ctx.gitStatus.remoteUrl, ctx.gitStatus.branch || git);
-      const branchLink = hyperlink(branchUrl, branchText);
-      result += `  BRANCH: (${branchLink})`;
-    } else {
-      result += `  BRANCH: (${branchText})`;
-    }
-  }
-
-  // Subdirectory repos (Retro style: uppercase)
-  if (ctx.config.display.showAllBranches && ctx.gitStatus?.subRepos && ctx.gitStatus.subRepos.length > 0) {
-    const subItems = ctx.gitStatus.subRepos.slice(0, 3).map((sub) => {
-      const subDirty = sub.isDirty ? '*' : '';
-      return `${sub.path.toUpperCase()}(${sub.branch.toUpperCase()}${subDirty})`;
-    });
-
-    const remaining = ctx.gitStatus.subRepos.length - 3;
-    const moreText = remaining > 0 ? ` +${remaining}` : '';
-
-    result += `  SUBS: ${subItems.join(' ')}${moreText}`;
-  }
-
-  return result;
-}
