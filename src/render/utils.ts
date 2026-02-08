@@ -6,7 +6,51 @@ import { basename, dirname } from 'node:path';
 
 export function visualLength(text: string): number {
   const stripped = text.replace(/\x1b\[[0-9;]*m/g, '');
-  return stripped.length;
+  let width = 0;
+
+  for (const char of stripped) {
+    const cp = char.codePointAt(0);
+    if (cp === undefined) continue;
+
+    if (isFullWidth(cp)) {
+      width += 2;
+    } else {
+      width += 1;
+    }
+  }
+
+  return width;
+}
+
+function isFullWidth(cp: number): boolean {
+  return (
+    // CJK Unified Ideographs (한자)
+    (cp >= 0x4E00 && cp <= 0x9FFF) ||
+    // CJK Extension A
+    (cp >= 0x3400 && cp <= 0x4DBF) ||
+    // CJK Extension B
+    (cp >= 0x20000 && cp <= 0x2A6DF) ||
+    // CJK Compatibility Ideographs
+    (cp >= 0xF900 && cp <= 0xFAFF) ||
+    // Hangul Syllables (한글)
+    (cp >= 0xAC00 && cp <= 0xD7AF) ||
+    // Hangul Jamo
+    (cp >= 0x1100 && cp <= 0x11FF) ||
+    // Fullwidth Latin/Symbols
+    (cp >= 0xFF01 && cp <= 0xFF60) ||
+    // CJK Symbols and Punctuation
+    (cp >= 0x3000 && cp <= 0x303F) ||
+    // Hiragana (히라가나)
+    (cp >= 0x3040 && cp <= 0x309F) ||
+    // Katakana (가타카나)
+    (cp >= 0x30A0 && cp <= 0x30FF) ||
+    // Enclosed CJK
+    (cp >= 0x3200 && cp <= 0x32FF) ||
+    // CJK Compatibility
+    (cp >= 0x3300 && cp <= 0x33FF) ||
+    // Emoji (approximate - 표현 방식에 따라 다름)
+    (cp >= 0x1F300 && cp <= 0x1F9FF)
+  );
 }
 
 export function truncate(text: string, maxLength: number, ellipsis = '…'): string {

@@ -2,10 +2,13 @@
  * Configuration types
  */
 
+import type { PresetName } from '../config/presets.js';
+
 export type ThemeName = 'aurora' | 'neon' | 'mono' | 'zen' | 'retro';
 
 export interface CockpitConfig {
   theme: ThemeName;
+  preset?: PresetName;
 
   display: {
     showGit: boolean;

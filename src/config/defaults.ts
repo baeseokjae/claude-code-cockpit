@@ -3,9 +3,11 @@
  */
 
 import type { CockpitConfig } from '../types/index.js';
+import { PRESETS, type PresetName } from './presets.js';
 
 export const DEFAULT_CONFIG: CockpitConfig = {
   theme: 'aurora',
+  preset: undefined,
 
   display: {
     showGit: true,
@@ -66,3 +68,16 @@ export const DEFAULT_CONFIG: CockpitConfig = {
     maxAgents: 20,
   },
 };
+
+/**
+ * Get default display config, optionally applying a preset
+ */
+export function getDefaultDisplay(presetName?: PresetName): CockpitConfig['display'] {
+  const base = DEFAULT_CONFIG.display;
+
+  if (presetName && PRESETS[presetName]) {
+    return { ...base, ...PRESETS[presetName] };
+  }
+
+  return base;
+}

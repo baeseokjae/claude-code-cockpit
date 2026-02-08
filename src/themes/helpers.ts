@@ -20,6 +20,7 @@ export interface TextTransform {
 export interface ActivityWidget {
   text: string;
   category: 'critical' | 'warning' | 'info' | 'analytics';
+  priority: number; // 0-99 (낮을수록 우선순위 높음)
 }
 
 // ============================================
@@ -717,75 +718,92 @@ export function collectActivityWidgets(
 ): ActivityWidget[] {
   const widgets: ActivityWidget[] = [];
 
-  // Critical (always show)
+  // P0: Critical errors (priority 0-19)
   const bashErrorsText = formatBashErrorsDisplay(ctx, palette, icons);
-  if (bashErrorsText) widgets.push({ text: bashErrorsText, category: 'critical' });
+  if (bashErrorsText) {
+    const priority = ctx.bashErrors && ctx.bashErrors.length > 0 ? 0 : 10;
+    widgets.push({ text: bashErrorsText, category: 'critical', priority });
+  }
 
   const violationsText = formatViolationsDisplay(ctx, palette, icons);
-  if (violationsText) widgets.push({ text: violationsText, category: 'critical' });
+  if (violationsText) {
+    // secrets는 priority 5, 나머지는 15
+    const hasSecrets = (ctx.violations?.byType.get('hardcoded_secret') || 0) > 0;
+    const priority = hasSecrets ? 5 : 15;
+    widgets.push({ text: violationsText, category: 'critical', priority });
+  }
 
-  // Warning (conditional)
+  const securityText = formatSecurityDashboardDisplay(ctx, palette, icons);
+  if (securityText && ctx.config.display.showSecurityDashboard) {
+    const priority = (ctx.securityDashboard?.criticalCount || 0) > 0 ? 8 : 18;
+    widgets.push({ text: securityText, category: 'analytics', priority });
+  }
+
+  // P1: Warnings (priority 20-39)
   const compactText = formatCompactSuggestionDisplay(ctx, palette, icons);
-  if (compactText) widgets.push({ text: compactText, category: 'warning' });
+  if (compactText) {
+    widgets.push({ text: compactText, category: 'warning', priority: 25 });
+  }
 
-  // Info (config-based)
+  // P2: Info (priority 40-59)
   if (ctx.config.display.showGitActivity) {
     const t = formatGitActivityDisplay(ctx, palette);
-    if (t) widgets.push({ text: t, category: 'info' });
+    if (t) widgets.push({ text: t, category: 'info', priority: 45 });
   }
 
   if (ctx.config.display.showToolStats) {
     const t = formatToolStatsDisplay(ctx, palette);
-    if (t) widgets.push({ text: t, category: 'info' });
+    if (t) widgets.push({ text: t, category: 'info', priority: 50 });
   }
 
   if (ctx.config.display.showWorkflowPhase) {
     const t = formatWorkflowPhaseDisplay(ctx, palette);
-    if (t) widgets.push({ text: t, category: 'info' });
+    if (t) widgets.push({ text: t, category: 'info', priority: 65 });
   }
 
-  if (ctx.config.display.showGitWorktrees) {
-    const t = formatGitWorktreesDisplay(ctx, palette);
-    if (t) widgets.push({ text: t, category: 'info' });
-  }
-
-  if (ctx.config.display.showMcpStatus) {
-    const t = formatMcpStatusDisplay(ctx, palette);
-    if (t) widgets.push({ text: t, category: 'info' });
-  }
-
-  // Analytics (detail mode preferred)
+  // P3: Analytics (priority 60-79)
   if (ctx.config.display.showTestCoverage) {
     const t = formatTestCoverageDisplay(ctx, palette, icons);
-    if (t) widgets.push({ text: t, category: 'analytics' });
+    if (t) widgets.push({ text: t, category: 'analytics', priority: 60 });
   }
 
   if (ctx.config.display.showPassAtK) {
     const t = formatPassAtKDisplay(ctx, palette);
-    if (t) widgets.push({ text: t, category: 'analytics' });
+    if (t) widgets.push({ text: t, category: 'analytics', priority: 70 });
   }
 
   if (ctx.config.display.showPerformanceMetrics) {
     const t = formatPerformanceMetricsDisplay(ctx, palette);
-    if (t) widgets.push({ text: t, category: 'analytics' });
+    if (t) widgets.push({ text: t, category: 'analytics', priority: 75 });
   }
 
-  if (ctx.config.display.showSecurityDashboard) {
-    const t = formatSecurityDashboardDisplay(ctx, palette, icons);
-    if (t) widgets.push({ text: t, category: 'analytics' });
+  // P4: Low priority (priority 80-99)
+  if (ctx.config.display.showGitWorktrees) {
+    const t = formatGitWorktreesDisplay(ctx, palette);
+    if (t) widgets.push({ text: t, category: 'info', priority: 80 });
+  }
+
+  if (ctx.config.display.showMcpStatus) {
+    const t = formatMcpStatusDisplay(ctx, palette);
+    if (t) widgets.push({ text: t, category: 'info', priority: 85 });
   }
 
   if (ctx.config.display.showLearningTracker) {
     const t = formatLearningTrackerDisplay(ctx, palette);
-    if (t) widgets.push({ text: t, category: 'analytics' });
+    if (t) widgets.push({ text: t, category: 'analytics', priority: 90 });
   }
 
   if (ctx.config.display.showInstanceSync) {
     const t = formatInstanceSyncDisplay(ctx, palette);
-    if (t) widgets.push({ text: t, category: 'analytics' });
+    if (t) {
+      const hasConflict = (ctx.instanceSync?.conflictCount || 0) > 0;
+      const priority = hasConflict ? 35 : 95; // 충돌 시 P1으로 부스트
+      widgets.push({ text: t, category: 'analytics', priority });
+    }
   }
 
-  return widgets;
+  // 정렬: priority 낮은 순 (0이 최우선)
+  return widgets.sort((a, b) => a.priority - b.priority);
 }
 
 // ============================================

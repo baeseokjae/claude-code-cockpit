@@ -6,7 +6,8 @@ import { readFileSync, existsSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import type { CockpitConfig, ThemeName } from '../types/index.js';
-import { DEFAULT_CONFIG } from './defaults.js';
+import { DEFAULT_CONFIG, getDefaultDisplay } from './defaults.js';
+import { PRESETS, type PresetName } from './presets.js';
 import { createDebug } from '../utils/debug.js';
 
 const debug = createDebug('config');
@@ -50,6 +51,17 @@ export function loadConfig(): CockpitConfig {
     try {
       const fileContent = readFileSync(configPath, 'utf8');
       const fileConfig = JSON.parse(fileContent) as Partial<CockpitConfig>;
+
+      // Preset 적용 순서:
+      // 1. DEFAULT_CONFIG
+      // 2. Preset (있으면)
+      // 3. User config overrides
+
+      if (fileConfig.preset && PRESETS[fileConfig.preset]) {
+        debug('applying preset:', fileConfig.preset);
+        config.display = getDefaultDisplay(fileConfig.preset);
+      }
+
       config = deepMerge(config, fileConfig);
       debug('loaded config from file:', configPath);
     } catch (error) {
@@ -69,6 +81,16 @@ function applyEnvOverrides(config: CockpitConfig): CockpitConfig {
     if (['aurora', 'neon', 'mono', 'zen', 'retro'].includes(theme)) {
       config.theme = theme;
       debug('env override: theme =', theme);
+    }
+  }
+
+  // Preset override
+  if (process.env.COCKPIT_PRESET) {
+    const preset = process.env.COCKPIT_PRESET as PresetName;
+    if (['minimal', 'developer', 'full'].includes(preset)) {
+      config.preset = preset;
+      config.display = getDefaultDisplay(preset);
+      debug('env override: preset =', preset);
     }
   }
 

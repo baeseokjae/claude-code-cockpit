@@ -5,7 +5,7 @@
 import type { Theme, RenderContext } from '../types/index.js';
 import { MONO_PALETTE } from './palettes/mono.js';
 import { FALLBACK_ICONS } from './icons.js';
-import { dim, bold } from '../render/colors.js';
+import { dim, bold, underline } from '../render/colors.js';
 import { createProgressBar, formatPercent } from '../render/utils.js';
 import { formatTokenSpeed } from '../data/speed-tracker.js';
 import { getModelName, getContextPercent, getAbsoluteTokens } from '../input/stdin.js';
@@ -117,7 +117,7 @@ export const monoTheme: Theme = {
       : '';
 
     // Warning marker
-    const warning = percent !== null && percent >= 75 ? ' !' : '';
+    const warning = percent !== null && percent >= 75 ? dim(' !') : '';
 
     // Token speed (Mono style: no color)
     const speed = ctx.config.display.showTokenSpeed && ctx.tokenSpeed
@@ -228,9 +228,9 @@ export const monoTheme: Theme = {
     // Warning
     let warningStr = '';
     if (percent !== null && percent >= 90) {
-      warningStr = bold(' [CRITICAL]');
+      warningStr = underline(bold(' [CRITICAL]'));
     } else if (percent !== null && percent >= 75) {
-      warningStr = ' [WARNING]';
+      warningStr = dim(' [WARNING]');
     }
 
     const parts = [`${bold(model)}${sessionStr}`, `[${progressBar}]`, `${percentStr}${warningStr}`, `(${tokensStr})`, costStr, linesDisplay, cacheDisplay, usageStr, duration, speedStr].filter(Boolean);
@@ -292,8 +292,10 @@ function summarizeTools(ctx: RenderContext): string {
 
   const parts: string[] = [];
   for (const [name, count] of toolCounts) {
-    const marker = running === name ? '~' : '+';
-    parts.push(`${name}${marker}${count > 1 ? count : ''}`);
+    const isRunning = running === name;
+    const marker = isRunning ? '~' : '+';
+    const text = `${name}${marker}${count > 1 ? count : ''}`;
+    parts.push(isRunning ? bold(text) : text);
   }
 
   return '● ' + parts.join(' ');
@@ -329,7 +331,14 @@ function renderToolsLine(ctx: RenderContext): string {
     .map((t) => {
       const marker = t.status === 'running' ? '~' : t.status === 'error' ? 'x' : '+';
       const target = t.target ? ` ${t.target.split('/').pop()}` : '';
-      return `${t.name}${marker}${target}`;
+      const text = `${t.name}${marker}${target}`;
+
+      if (t.status === 'error') {
+        return underline(text);
+      } else if (t.status === 'running') {
+        return bold(text);
+      }
+      return text;
     })
     .join('  ');
 
@@ -343,7 +352,14 @@ function renderAgentsLine(ctx: RenderContext): string {
       const marker = agent.status === 'running' ? '~' : agent.status === 'error' ? 'x' : '+';
       const model = agent.model ? `[${agent.model}]` : '';
       const desc = agent.description ? ` ${agent.description.substring(0, 30)}` : '';
-      return `${agent.type}${marker} ${model}${desc}`;
+      const text = `${agent.type}${marker} ${model}${desc}`;
+
+      if (agent.status === 'error') {
+        return underline(text);
+      } else if (agent.status === 'running') {
+        return bold(text);
+      }
+      return text;
     })
     .join('  ');
 

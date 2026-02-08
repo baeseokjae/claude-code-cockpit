@@ -5,7 +5,7 @@
 import type { Theme, RenderContext } from '../types/index.js';
 import { RETRO_PALETTE } from './palettes/retro.js';
 import { FALLBACK_ICONS } from './icons.js';
-import { hex, bold } from '../render/colors.js';
+import { hex, bold, dim, underline } from '../render/colors.js';
 import { createProgressBar, formatPercent, visualLength } from '../render/utils.js';
 import { formatTokenSpeed } from '../data/speed-tracker.js';
 import { getModelName, getContextPercent, getAbsoluteTokens } from '../input/stdin.js';
@@ -132,7 +132,11 @@ export const retroTheme: Theme = {
 
     // Warning
     const warningColor = percent !== null && percent >= 75 ? this.palette.red : color;
-    const warning = percent !== null && percent >= 90 ? ' [!ALERT!]' : percent !== null && percent >= 75 ? ' [WARN]' : '';
+    const warning = percent !== null && percent >= 90
+      ? underline(bold(' [!ALERT!]'))
+      : percent !== null && percent >= 75
+      ? dim(' [WARN]')
+      : '';
 
     // Token speed (Retro style: uppercase)
     const speed = ctx.config.display.showTokenSpeed && ctx.tokenSpeed
@@ -219,7 +223,11 @@ export const retroTheme: Theme = {
     const sessionText = sessionName ? ` [${sessionName}]` : '';
 
     const warningColor = percent !== null && percent >= 75 ? this.palette.red : color;
-    const warning = percent !== null && percent >= 90 ? bold(' [!CRITICAL ALERT!]') : percent !== null && percent >= 75 ? ' [WARNING]' : '';
+    const warning = percent !== null && percent >= 90
+      ? underline(bold(' [!CRITICAL ALERT!]'))
+      : percent !== null && percent >= 75
+      ? dim(' [WARNING]')
+      : '';
 
     const line1 = ` MODEL: ${model}${sessionText}  MEM: [${progressBar}] ${contextStr}${warning}`;
     lines.push(hex(color, '║') + hex(warningColor, line1) + ' '.repeat(Math.max(0, innerWidth - visualLength(line1))) + hex(color, '║'));
@@ -318,7 +326,8 @@ function summarizeTools(ctx: RenderContext, _palette: typeof RETRO_PALETTE): str
   for (const [name, count] of toolCounts) {
     const isRunning = running === name;
     const marker = isRunning ? '~' : '+';
-    parts.push(`${name.toUpperCase()}${marker}${count > 1 ? count : ''}`);
+    const text = `${name.toUpperCase()}${marker}${count > 1 ? count : ''}`;
+    parts.push(isRunning ? bold(text) : text);
   }
 
   return '● ' + parts.join(' ');
