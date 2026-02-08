@@ -15,7 +15,7 @@ export const AURORA_PALETTE: ColorPalette = {
   // Text - Cool gray with subtle blue
   text: '#d4dae6',       // primary text
   subtext: '#a8b1c4',    // secondary text
-  muted: '#6b7488',      // muted text
+  muted: '#8891a5',      // muted text
 
   // Accents - Muted jewel tones
   blue: '#6aa3d9',       // info, model name

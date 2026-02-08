@@ -7,6 +7,7 @@ import { readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import type { GitStatus, FileStats, SubRepoStatus, WorktreeInfo } from '../types/index.js';
 import { createDebug } from '../utils/debug.js';
+import { getCached, setCache } from '../utils/cache.js';
 
 const debug = createDebug('git');
 
@@ -256,6 +257,10 @@ function getWorktrees(cwd?: string): WorktreeInfo[] {
 }
 
 export async function getGitStatus(cwd?: string, options?: { showAllBranches?: boolean; showAllBranchesDepth?: number; includeTag?: boolean; includeWorktrees?: boolean }): Promise<GitStatus | null> {
+  const cacheKey = `git-status-${cwd || process.cwd()}`;
+  const cached = getCached<GitStatus>(cacheKey);
+  if (cached) return cached;
+
   try {
     const branch = execGit('git rev-parse --abbrev-ref HEAD', cwd).trim();
 
@@ -322,7 +327,7 @@ export async function getGitStatus(cwd?: string, options?: { showAllBranches?: b
       }
     }
 
-    return {
+    const result: GitStatus = {
       branch,
       isDirty,
       ahead,
@@ -333,6 +338,8 @@ export async function getGitStatus(cwd?: string, options?: { showAllBranches?: b
       tag,
       worktrees,
     };
+    setCache(cacheKey, result, 5000);
+    return result;
   } catch (error) {
     debug('failed to get git status:', error);
     return null;

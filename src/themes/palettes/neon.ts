@@ -11,7 +11,7 @@ export const NEON_PALETTE: ColorPalette = {
 
   text: '#ffffff',
   subtext: '#b8b8d0',
-  muted: '#606080',
+  muted: '#7a7a9e',
 
   blue: '#00d4ff',
   green: '#39ff14',

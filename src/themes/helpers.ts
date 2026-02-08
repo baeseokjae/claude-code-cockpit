@@ -10,6 +10,97 @@ import { formatLines, formatLinesCompact } from '../data/lines.js';
 import { formatCacheHitRate, formatCacheSavings } from '../data/cache-metrics.js';
 
 // ============================================
+// Detail Summary Types & Functions
+// ============================================
+
+export interface DetailSummaryOptions {
+  palette: ColorPalette;
+  icons: IconSet;
+  transform?: TextTransform;
+  useColor?: boolean;
+}
+
+export function formatDetailToolsSummary(
+  tools: RenderContext['transcript']['tools'],
+  options: DetailSummaryOptions
+): string | null {
+  if (tools.length === 0) return null;
+  const { palette, icons } = options;
+  const counts = new Map<string, number>();
+  for (const tool of tools) {
+    counts.set(tool.name, (counts.get(tool.name) || 0) + 1);
+  }
+  const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  const items = sorted.slice(0, 5).map(([name, count]) => {
+    const displayName = options.transform?.case === 'upper' ? name.toUpperCase() : name;
+    return options.useColor !== false
+      ? hex(palette.text, `${displayName} x${count}`)
+      : `${displayName} x${count}`;
+  });
+  const label = options.useColor !== false
+    ? hex(palette.categoryTools, icons.categoryTools + ' Tools: ')
+    : icons.categoryTools + ' Tools: ';
+  return label + items.join('  ') +
+    (options.useColor !== false
+      ? hex(palette.muted, ` (${tools.length})`)
+      : ` (${tools.length})`);
+}
+
+export function formatDetailAgentsSummary(
+  agents: RenderContext['transcript']['agents'],
+  options: DetailSummaryOptions
+): string | null {
+  if (agents.length === 0) return null;
+  const { palette, icons } = options;
+  const counts = new Map<string, number>();
+  for (const agent of agents) {
+    counts.set(agent.type, (counts.get(agent.type) || 0) + 1);
+  }
+  const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  const items = sorted.slice(0, 3).map(([type, count]) => {
+    const displayType = options.transform?.case === 'upper' ? type.toUpperCase() : type;
+    return options.useColor !== false
+      ? hex(palette.text, `${displayType} x${count}`)
+      : `${displayType} x${count}`;
+  });
+  const label = options.useColor !== false
+    ? hex(palette.categoryAgents, icons.categoryAgents + ' Agents: ')
+    : icons.categoryAgents + ' Agents: ';
+  return label + items.join('  ') +
+    (options.useColor !== false
+      ? hex(palette.muted, ` (${agents.length})`)
+      : ` (${agents.length})`);
+}
+
+export function formatDetailTodosSummary(
+  todos: RenderContext['transcript']['todos'],
+  options: DetailSummaryOptions
+): string | null {
+  if (todos.length === 0) return null;
+  const { palette, icons } = options;
+  const total = todos.length;
+  const completed = todos.filter((t: any) => t.status === 'completed').length;
+  const inProgress = todos.find((t: any) => t.status === 'in_progress');
+  const label = options.useColor !== false
+    ? hex(palette.categoryTodos, icons.categoryTodos + ' Todos: ')
+    : icons.categoryTodos + ' Todos: ';
+  if (inProgress) {
+    const content = inProgress.content.substring(0, 20) + (inProgress.content.length > 20 ? '...' : '');
+    return label +
+      (options.useColor !== false
+        ? hex(palette.yellow, '▶ ') + hex(palette.text, content) + hex(palette.muted, ` (${completed}/${total})`)
+        : `▶ ${content} (${completed}/${total})`);
+  }
+  if (completed === total && total > 0) {
+    return label +
+      (options.useColor !== false
+        ? hex(palette.green, '✓ ') + hex(palette.text, 'All completed') + hex(palette.muted, ` (${total}/${total})`)
+        : `✓ All completed (${total}/${total})`);
+  }
+  return label + (options.useColor !== false ? hex(palette.muted, `${completed}/${total}`) : `${completed}/${total}`);
+}
+
+// ============================================
 // Types
 // ============================================
 

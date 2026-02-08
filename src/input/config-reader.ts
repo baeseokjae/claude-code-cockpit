@@ -6,6 +6,7 @@ import { readdirSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ConfigCounts } from '../types/index.js';
 import { createDebug } from '../utils/debug.js';
+import { getCached, setCache } from '../utils/cache.js';
 
 const debug = createDebug('config-reader');
 
@@ -81,10 +82,16 @@ export function countConfigs(cwd: string | null): ConfigCounts {
     };
   }
 
-  return {
+  const cacheKey = `config-counts-${cwd}`;
+  const cached = getCached<ConfigCounts>(cacheKey);
+  if (cached) return cached;
+
+  const result: ConfigCounts = {
     claudeMdCount: countClaudeMd(cwd),
     rulesCount: countRules(cwd),
     mcpCount: countMcp(cwd),
     hooksCount: countHooks(cwd),
   };
+  setCache(cacheKey, result, 30000);
+  return result;
 }

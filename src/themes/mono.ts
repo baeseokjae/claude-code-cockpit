@@ -16,6 +16,9 @@ import {
   getVisibleWidgets,
   hasAbnormalState,
   formatProjectGit,
+  formatDetailToolsSummary,
+  formatDetailAgentsSummary,
+  formatDetailTodosSummary,
 } from './helpers.js';
 
 /**
@@ -139,37 +142,65 @@ export const monoTheme: Theme = {
 
     lines.push(`${group1} | ${group2} | ${group3} | ${group4.trimStart()} | ${group5}`);
 
-    // Activity line
-    const activityParts: string[] = [];
+    // Activity line (detailMode or compact)
+    if (ctx.detailMode) {
+      const detailOpts = { palette: this.palette, icons: this.icons, useColor: false };
 
-    if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
-      const tools = summarizeTools(ctx);
-      if (tools) activityParts.push(tools);
-    }
+      if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
+        const toolsSummary = formatDetailToolsSummary(ctx.transcript.tools, detailOpts);
+        if (toolsSummary) lines.push('  ' + toolsSummary);
+      }
 
-    if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
-      const agents = summarizeAgents(ctx);
-      if (agents) activityParts.push(agents);
-    }
+      if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
+        const agentsSummary = formatDetailAgentsSummary(ctx.transcript.agents, detailOpts);
+        if (agentsSummary) lines.push('  ' + agentsSummary);
+      }
 
-    if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
-      const todos = summarizeTodos(ctx);
-      if (todos) activityParts.push(todos);
-    }
+      if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
+        const todosSummary = formatDetailTodosSummary(ctx.transcript.todos, detailOpts);
+        if (todosSummary) lines.push('  ' + todosSummary);
+      }
 
-    if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
-      const skills = summarizeSkills(ctx);
-      if (skills) activityParts.push(skills);
-    }
+      const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
+      const abnormal = hasAbnormalState(ctx);
+      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+      const advancedParts = visible.map(w => w.text);
 
-    // Activity widgets
-    const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
-    const abnormal = hasAbnormalState(ctx);
-    const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
-    activityParts.push(...visible.map(w => w.text));
+      if (advancedParts.length > 0) {
+        lines.push('  ' + advancedParts.join(' | '));
+      }
+    } else {
+      const activityParts: string[] = [];
 
-    if (activityParts.length > 0) {
-      lines.push(activityParts.join(' | '));
+      if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
+        const tools = summarizeTools(ctx);
+        if (tools) activityParts.push(tools);
+      }
+
+      if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
+        const agents = summarizeAgents(ctx);
+        if (agents) activityParts.push(agents);
+      }
+
+      if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
+        const todos = summarizeTodos(ctx);
+        if (todos) activityParts.push(todos);
+      }
+
+      if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
+        const skills = summarizeSkills(ctx);
+        if (skills) activityParts.push(skills);
+      }
+
+      // Activity widgets
+      const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
+      const abnormal = hasAbnormalState(ctx);
+      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+      activityParts.push(...visible.map(w => w.text));
+
+      if (activityParts.length > 0) {
+        lines.push(activityParts.join(' | '));
+      }
     }
 
     return lines;
@@ -251,31 +282,56 @@ export const monoTheme: Theme = {
     // Separator
     lines.push(dim(headerLine));
 
-    // Tools
-    if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
-      lines.push('  ' + renderToolsLine(ctx));
-    }
+    // Activity (detailMode or default)
+    if (ctx.detailMode) {
+      const detailOpts = { palette: this.palette, icons: this.icons, useColor: false };
 
-    // Agents
-    if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
-      lines.push('  ' + renderAgentsLine(ctx));
-    }
+      if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
+        const toolsSummary = formatDetailToolsSummary(ctx.transcript.tools, detailOpts);
+        if (toolsSummary) lines.push('  ' + toolsSummary);
+      }
 
-    // Todos
-    if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
-      lines.push('  ' + renderTodoLine(ctx));
-    }
+      if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
+        const agentsSummary = formatDetailAgentsSummary(ctx.transcript.agents, detailOpts);
+        if (agentsSummary) lines.push('  ' + agentsSummary);
+      }
 
-    // Skills
-    if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
-      lines.push('  ' + renderSkillsLine(ctx));
-    }
+      if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
+        const todosSummary = formatDetailTodosSummary(ctx.transcript.todos, detailOpts);
+        if (todosSummary) lines.push('  ' + todosSummary);
+      }
 
-    // Activity widgets
-    const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
-    const abnormal = hasAbnormalState(ctx);
-    const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
-    visible.forEach(w => lines.push('  ' + w.text));
+      const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
+      const abnormal = hasAbnormalState(ctx);
+      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+      visible.forEach(w => lines.push('  ' + w.text));
+    } else {
+      // Tools
+      if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
+        lines.push('  ' + renderToolsLine(ctx));
+      }
+
+      // Agents
+      if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
+        lines.push('  ' + renderAgentsLine(ctx));
+      }
+
+      // Todos
+      if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
+        lines.push('  ' + renderTodoLine(ctx));
+      }
+
+      // Skills
+      if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
+        lines.push('  ' + renderSkillsLine(ctx));
+      }
+
+      // Activity widgets
+      const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
+      const abnormal = hasAbnormalState(ctx);
+      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+      visible.forEach(w => lines.push('  ' + w.text));
+    }
 
     return lines;
   },

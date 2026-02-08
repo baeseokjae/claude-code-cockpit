@@ -15,7 +15,7 @@ export const ZEN_PALETTE: ColorPalette = {
   // Text - Neutral with sage hint
   text: '#e4e8e6',
   subtext: '#a2a8a5',
-  muted: '#6e7572',
+  muted: '#868b88',
 
   // Accents - Muted earth tones
   blue: '#6aadbd',

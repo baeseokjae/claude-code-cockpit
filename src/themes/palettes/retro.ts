@@ -11,7 +11,7 @@ export const RETRO_PALETTE: ColorPalette = {
 
   text: '#33ff33',
   subtext: '#22cc22',
-  muted: '#117711',
+  muted: '#1a991a',
 
   blue: '#33ff33',
   green: '#33ff33',

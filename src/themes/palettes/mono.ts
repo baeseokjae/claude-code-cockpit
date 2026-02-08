@@ -11,7 +11,7 @@ export const MONO_PALETTE: ColorPalette = {
 
   text: '#ffffff',
   subtext: '#cccccc',
-  muted: '#666666',
+  muted: '#767676',
 
   blue: '#ffffff',
   green: '#ffffff',

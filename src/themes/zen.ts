@@ -221,7 +221,7 @@ export const zenTheme: Theme = {
       }
     }
 
-    // Activity widgets
+    // Activity widgets (detailMode shows all widgets)
     const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
     const abnormal = hasAbnormalState(ctx);
     const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);

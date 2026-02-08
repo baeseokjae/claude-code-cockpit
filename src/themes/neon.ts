@@ -25,6 +25,9 @@ import {
   hasAbnormalState,
   getPercentColor,
   formatProjectGit,
+  formatDetailToolsSummary,
+  formatDetailAgentsSummary,
+  formatDetailTodosSummary,
 } from './helpers.js';
 
 /**
@@ -168,37 +171,65 @@ export const neonTheme: Theme = {
       `${group1}${separator}${group2}${separator}${group3}${separator}${group4.trimStart()}${separator}${group5}`
     );
 
-    // Line 2: Activity
-    const activityParts: string[] = [];
+    // Line 2+: Activity (detailMode or compact)
+    if (ctx.detailMode) {
+      const detailOpts = { palette: this.palette, icons: this.icons, transform: { case: 'upper' as const } };
 
-    if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
-      const toolsSummary = summarizeTools(ctx, this.icons, this.palette);
-      if (toolsSummary) activityParts.push(toolsSummary);
-    }
+      if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
+        const toolsSummary = formatDetailToolsSummary(ctx.transcript.tools, detailOpts);
+        if (toolsSummary) lines.push('  ' + toolsSummary);
+      }
 
-    if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
-      const agentsSummary = summarizeAgents(ctx, this.icons, this.palette);
-      if (agentsSummary) activityParts.push(agentsSummary);
-    }
+      if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
+        const agentsSummary = formatDetailAgentsSummary(ctx.transcript.agents, detailOpts);
+        if (agentsSummary) lines.push('  ' + agentsSummary);
+      }
 
-    if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
-      const todosSummary = summarizeTodos(ctx, this.icons, this.palette);
-      if (todosSummary) activityParts.push(todosSummary);
-    }
+      if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
+        const todosSummary = formatDetailTodosSummary(ctx.transcript.todos, detailOpts);
+        if (todosSummary) lines.push('  ' + todosSummary);
+      }
 
-    if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
-      const skillsSummary = summarizeSkills(ctx, this.icons, this.palette);
-      if (skillsSummary) activityParts.push(skillsSummary);
-    }
+      const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
+      const abnormal = hasAbnormalState(ctx);
+      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+      const advancedParts = visible.map(w => w.text);
 
-    // Activity widgets
-    const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
-    const abnormal = hasAbnormalState(ctx);
-    const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
-    activityParts.push(...visible.map(w => w.text));
+      if (advancedParts.length > 0) {
+        lines.push('  ' + advancedParts.join('  ' + hex(this.palette.muted, this.chars.separator) + '  '));
+      }
+    } else {
+      const activityParts: string[] = [];
 
-    if (activityParts.length > 0) {
-      lines.push(activityParts.join('  ' + hex(this.palette.muted, this.chars.separator) + '  '));
+      if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
+        const toolsSummary = summarizeTools(ctx, this.icons, this.palette);
+        if (toolsSummary) activityParts.push(toolsSummary);
+      }
+
+      if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
+        const agentsSummary = summarizeAgents(ctx, this.icons, this.palette);
+        if (agentsSummary) activityParts.push(agentsSummary);
+      }
+
+      if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
+        const todosSummary = summarizeTodos(ctx, this.icons, this.palette);
+        if (todosSummary) activityParts.push(todosSummary);
+      }
+
+      if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
+        const skillsSummary = summarizeSkills(ctx, this.icons, this.palette);
+        if (skillsSummary) activityParts.push(skillsSummary);
+      }
+
+      // Activity widgets
+      const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
+      const abnormal = hasAbnormalState(ctx);
+      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+      activityParts.push(...visible.map(w => w.text));
+
+      if (activityParts.length > 0) {
+        lines.push(activityParts.join('  ' + hex(this.palette.muted, this.chars.separator) + '  '));
+      }
     }
 
     return lines;
@@ -304,31 +335,59 @@ export const neonTheme: Theme = {
     lines.push(hex(this.palette.blue, bottomBorder));
 
     // Activity lines outside box
-    if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
-      const toolsLine = renderToolsLine(ctx, this.icons, this.palette);
-      if (toolsLine) lines.push('  ' + toolsLine);
-    }
+    if (ctx.detailMode) {
+      const detailOpts = { palette: this.palette, icons: this.icons, transform: { case: 'upper' as const } };
 
-    if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
-      const agentsLine = renderAgentsLine(ctx, this.icons, this.palette);
-      if (agentsLine) lines.push('  ' + agentsLine);
-    }
+      if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
+        const toolsSummary = formatDetailToolsSummary(ctx.transcript.tools, detailOpts);
+        if (toolsSummary) lines.push('  ' + toolsSummary);
+      }
 
-    if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
-      const todoLine = renderTodoLine(ctx, this.icons, this.palette);
-      if (todoLine) lines.push('  ' + todoLine);
-    }
+      if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
+        const agentsSummary = formatDetailAgentsSummary(ctx.transcript.agents, detailOpts);
+        if (agentsSummary) lines.push('  ' + agentsSummary);
+      }
 
-    if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
-      const skillsLine = renderSkillsLine(ctx, this.icons, this.palette);
-      if (skillsLine) lines.push('  ' + skillsLine);
-    }
+      if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
+        const todosSummary = formatDetailTodosSummary(ctx.transcript.todos, detailOpts);
+        if (todosSummary) lines.push('  ' + todosSummary);
+      }
 
-    // Activity widgets
-    const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
-    const abnormal = hasAbnormalState(ctx);
-    const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
-    visible.forEach(w => lines.push('  ' + w.text));
+      const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
+      const abnormal = hasAbnormalState(ctx);
+      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+      const advancedParts = visible.map(w => w.text);
+
+      if (advancedParts.length > 0) {
+        lines.push('  ' + advancedParts.join('  ' + hex(this.palette.muted, this.chars.separator) + '  '));
+      }
+    } else {
+      if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
+        const toolsLine = renderToolsLine(ctx, this.icons, this.palette);
+        if (toolsLine) lines.push('  ' + toolsLine);
+      }
+
+      if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
+        const agentsLine = renderAgentsLine(ctx, this.icons, this.palette);
+        if (agentsLine) lines.push('  ' + agentsLine);
+      }
+
+      if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
+        const todoLine = renderTodoLine(ctx, this.icons, this.palette);
+        if (todoLine) lines.push('  ' + todoLine);
+      }
+
+      if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
+        const skillsLine = renderSkillsLine(ctx, this.icons, this.palette);
+        if (skillsLine) lines.push('  ' + skillsLine);
+      }
+
+      // Activity widgets
+      const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
+      const abnormal = hasAbnormalState(ctx);
+      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+      visible.forEach(w => lines.push('  ' + w.text));
+    }
 
     return lines;
   },
