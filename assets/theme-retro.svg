@@ -1,66 +1,97 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="520" height="160" viewBox="0 0 520 160">
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="180" viewBox="0 0 800 180">
   <defs>
     <style>
-      .bg { fill: #0a0a0a; }
-      .text { fill: #33ff33; font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace; font-size: 13px; }
-      .bright { fill: #55ff55; }
-      .dark { fill: #117711; }
-      .red { fill: #ff3333; }
-      .bold { font-weight: bold; }
+      .bg { fill: #000000; }
+      .text { fill: #33ff33; font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace; font-size: 12px; }
+      .green { fill: #33ff33; }
+      .green-dim { fill: #22aa22; }
+      .green-bright { fill: #55ff55; }
+      .muted { fill: #116611; }
+      .bold { font-weight: 600; }
     </style>
   </defs>
-  <rect class="bg" width="520" height="160" rx="8"/>
+  <rect class="bg" width="800" height="180" rx="8"/>
 
-  <!-- Box top -->
+  <!-- Line 1: Model, Progress, Git with tag, Usage -->
   <text y="24" class="text">
-    <tspan x="16">╔════════════════════════════════════════════════╗</tspan>
+    <tspan x="16" class="green-bright bold">Opus 4.6</tspan>
+    <tspan dx="8" class="green">====</tspan><tspan class="muted">-----</tspan>
+    <tspan dx="4" class="green-bright bold">45%</tspan>
+    <tspan dx="12" class="green">claude-code-cockpit</tspan>
+    <tspan class="green"> (main</tspan><tspan class="green-dim">*</tspan><tspan class="green">)</tspan>
+    <tspan class="muted"> v1.0.0</tspan>
+    <tspan dx="12" class="green-bright bold">5h:30%</tspan>
+    <tspan dx="8" class="muted">7d:15%</tspan>
+    <tspan dx="12" class="muted">32m 15s</tspan>
   </text>
 
-  <!-- Title -->
-  <text y="44" class="text">
-    <tspan x="16">║</tspan>
-    <tspan dx="4" class="bright bold">CLAUDE CODE COCKPIT v1.0</tspan>
-    <tspan x="408">║</tspan>
+  <!-- Line 2: Git Activity & Lines & Cache -->
+  <text y="48" class="text">
+    <tspan x="24" class="green">o</tspan>
+    <tspan dx="4">Git:</tspan>
+    <tspan dx="8" class="green-bright">+3 commits</tspan>
+    <tspan dx="8" class="green">+1 PR</tspan>
+    <tspan dx="16" class="green-bright">+891</tspan>
+    <tspan dx="4" class="green-dim">-148</tspan>
+    <tspan dx="16" class="green">Cache:</tspan>
+    <tspan dx="4" class="green-bright">75%</tspan>
+    <tspan dx="4" class="muted">hit</tspan>
+    <tspan dx="8" class="green">$0.12</tspan>
+    <tspan dx="4" class="muted">saved</tspan>
   </text>
 
-  <!-- Divider -->
-  <text y="64" class="text">
-    <tspan x="16">╠════════════════════════════════════════════════╣</tspan>
+  <!-- Line 3: Tools with success rate -->
+  <text y="72" class="text">
+    <tspan x="24" class="green">o</tspan>
+    <tspan dx="4" class="green">Tools:</tspan>
+    <tspan dx="8">Read</tspan><tspan class="green-bright">+</tspan><tspan class="muted">12</tspan>
+    <tspan dx="8">Edit</tspan><tspan class="green-bright">+</tspan><tspan class="muted">8</tspan>
+    <tspan dx="8">Bash</tspan><tspan class="green-bright">+</tspan><tspan class="muted">5</tspan>
+    <tspan dx="8">Write</tspan><tspan class="green-bright">+</tspan><tspan class="muted">3</tspan>
+    <tspan dx="12" class="green-bright">+87%</tspan>
+    <tspan dx="4" class="green-dim">-13%</tspan>
+    <tspan dx="4" class="muted">(28)</tspan>
   </text>
 
-  <!-- Model line -->
-  <text y="84" class="text">
-    <tspan x="16">║</tspan>
-    <tspan dx="4">MODEL:</tspan>
-    <tspan dx="4" class="bright bold">OPUS 4.5</tspan>
-    <tspan dx="8">MEM:</tspan>
-    <tspan dx="4" class="bright">[████████</tspan><tspan class="dark">░░</tspan><tspan class="bright">]</tspan>
-    <tspan dx="4" class="bright bold">39%</tspan>
-    <tspan x="408">║</tspan>
+  <!-- Line 4: Agents -->
+  <text y="96" class="text">
+    <tspan x="24" class="green">o</tspan>
+    <tspan dx="4" class="green">Agents:</tspan>
+    <tspan dx="8">planner</tspan><tspan class="green-bright">+</tspan><tspan class="muted">[s]</tspan>
+    <tspan dx="8">code-reviewer</tspan><tspan class="green-bright">+</tspan><tspan class="muted">[o]</tspan>
+    <tspan dx="8">build-fix</tspan><tspan class="green-dim">~</tspan><tspan class="muted">[h]</tspan>
   </text>
 
-  <!-- Project line -->
-  <text y="104" class="text">
-    <tspan x="16">║</tspan>
-    <tspan dx="4">DIR:</tspan>
-    <tspan dx="4" class="bright">MY-PROJECT</tspan>
-    <tspan dx="8">BRANCH:</tspan>
-    <tspan dx="4" class="bright">(MAIN*)</tspan>
-    <tspan dx="8">TIME:</tspan>
-    <tspan dx="4" class="bright bold">29M</tspan>
-    <tspan x="408">║</tspan>
+  <!-- Line 5: Workflow Phase & Test Coverage -->
+  <text y="120" class="text">
+    <tspan x="24" class="green">o</tspan>
+    <tspan dx="4">Phase:</tspan>
+    <tspan dx="8" class="green bold">[IMPLEMENT]</tspan>
+    <tspan dx="4" class="muted">85%</tspan>
+    <tspan dx="16" class="green">Tests:</tspan>
+    <tspan dx="4" class="green-bright bold">+ 87%</tspan>
+    <tspan dx="4" class="muted">(309/356)</tspan>
+    <tspan dx="16" class="green">Pass@1:</tspan>
+    <tspan dx="4" class="green-bright">78%</tspan>
   </text>
 
-  <!-- Box bottom -->
-  <text y="124" class="text">
-    <tspan x="16">╚════════════════════════════════════════════════╝</tspan>
+  <!-- Line 6: Config & Cost -->
+  <text y="144" class="text">
+    <tspan x="24" class="muted">o</tspan>
+    <tspan dx="4" class="muted">Config:</tspan>
+    <tspan dx="4" class="green">2</tspan><tspan class="muted"> .md</tspan>
+    <tspan dx="8" class="green">3</tspan><tspan class="muted"> rules</tspan>
+    <tspan dx="8" class="green">2</tspan><tspan class="muted"> MCP</tspan>
+    <tspan dx="8" class="green-bright">4</tspan><tspan class="muted"> hooks</tspan>
+    <tspan dx="16" class="green bold">Cost: $0.47</tspan>
+    <tspan dx="12" class="muted">125 tok/s</tspan>
   </text>
 
-  <!-- Tools line -->
-  <text y="148" class="text">
-    <tspan x="24">● TOOLS:</tspan>
-    <tspan dx="4" class="bright">BASH</tspan><tspan class="dark">+6</tspan>
-    <tspan dx="8" class="bright">READ</tspan><tspan class="dark">+4</tspan>
-    <tspan dx="8" class="bright">EDIT</tspan><tspan class="dark">+2</tspan>
+  <!-- Line 7: Alerts & Suggestions -->
+  <text y="168" class="text">
+    <tspan x="24" class="green-bright">!</tspan>
+    <tspan dx="4" class="green-bright">28 calls try /compact</tspan>
+    <tspan dx="16" class="muted">Security: </tspan><tspan class="green-bright">92</tspan>
+    <tspan dx="16" class="muted">MCP: 2 servers (15 calls)</tspan>
   </text>
 </svg>

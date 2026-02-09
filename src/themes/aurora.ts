@@ -188,19 +188,25 @@ export const auroraTheme: Theme = {
     // === Line 2: ● Git: +N commits  +N PRs  +added -removed  Cache: XX% hit  $X.XX saved ===
     const line2Parts: string[] = [];
 
-    if (ctx.config.display.showGitActivity && ctx.gitActivity) {
-      const { commits, pullRequests } = ctx.gitActivity;
-      if (commits > 0 || pullRequests > 0) {
-        const gitParts: string[] = [hex(p.text, 'Git:')];
-        if (commits > 0) gitParts.push(hex(p.green, `+${commits} commit${commits > 1 ? 's' : ''}`));
-        if (pullRequests > 0) gitParts.push(hex(p.mauve, `+${pullRequests} PR${pullRequests > 1 ? 's' : ''}`));
+    {
+      const gitParts: string[] = [hex(p.text, 'Git:')];
+      let hasGitContent = false;
+
+      if (ctx.config.display.showGitActivity && ctx.gitActivity) {
+        const { commits, pullRequests } = ctx.gitActivity;
+        if (commits > 0) { gitParts.push(hex(p.green, `+${commits} commit${commits > 1 ? 's' : ''}`)); hasGitContent = true; }
+        if (pullRequests > 0) { gitParts.push(hex(p.mauve, `+${pullRequests} PR${pullRequests > 1 ? 's' : ''}`)); hasGitContent = true; }
+      }
+
+      if (ctx.config.display.showLines && ctx.linesData) {
+        const { added, removed } = ctx.linesData;
+        gitParts.push(hex(p.green, `+${fmtNum(added)}`) + ' ' + hex(p.red, `-${fmtNum(removed)}`));
+        hasGitContent = true;
+      }
+
+      if (hasGitContent) {
         line2Parts.push(gitParts.join(' '));
       }
-    }
-
-    if (ctx.config.display.showLines && ctx.linesData) {
-      const { added, removed } = ctx.linesData;
-      line2Parts.push(hex(p.green, `+${fmtNum(added)}`) + ' ' + hex(p.red, `-${fmtNum(removed)}`));
     }
 
     if (ctx.config.display.showCacheMetrics && ctx.cacheMetrics) {
@@ -391,7 +397,7 @@ export const auroraTheme: Theme = {
     // Tokens
     const absoluteTokens = getAbsoluteTokens(ctx.stdin);
     let tokensText = '';
-    
+
     if (ctx.config.display.showAbsoluteTokens && absoluteTokens) {
       tokensText = hex(this.palette.subtext, `(${Math.round(absoluteTokens.used / 1000)}k/${Math.round(absoluteTokens.total / 1000)}k)`);
     } else {
@@ -542,4 +548,3 @@ function formatUsageSummaryLine(usageData: any, palette: ColorPalette): string {
 
   return hex(palette.muted, '● Usage: ') + parts.join('  ');
 }
-
