@@ -19,8 +19,6 @@ import type { CoverageSummary } from './test-coverage.js';
 import type { PassAtKSummary } from './pass-at-k.js';
 import type { PerformanceMetrics } from './performance.js';
 import type { McpStatus } from './mcp-status.js';
-import type { SecurityDashboard } from './security.js';
-import type { LearningTracker } from './learning.js';
 import type { InstanceSync } from './instance-sync.js';
 
 export interface RenderContext {
@@ -60,12 +58,11 @@ export interface RenderContext {
 
   // Phase 5 features
   mcpStatus: McpStatus | null;
-  securityDashboard: SecurityDashboard | null;
-  learningTracker: LearningTracker | null;
   instanceSync: InstanceSync | null;
 
   sessionDuration: string;
 
   theme: Theme;
   detailMode: boolean;
+  tier: 1 | 2 | 3;
 }

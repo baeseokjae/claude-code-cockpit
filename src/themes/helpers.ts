@@ -5,7 +5,8 @@
 
 import type { RenderContext, ColorPalette, IconSet } from '../types/index.js';
 import { fileUrl, githubBranchUrl, hyperlink } from '../render/links.js';
-import { hex } from '../render/colors.js';
+import { hex, bold, underline } from '../render/colors.js';
+import { formatCount } from '../render/superscript.js';
 import { formatLines, formatLinesCompact } from '../data/lines.js';
 import { formatCacheHitRate, formatCacheSavings } from '../data/cache-metrics.js';
 
@@ -127,6 +128,25 @@ export function getPercentColor(
   if (percent >= 75) return palette.progressHigh;
   if (percent >= 50) return palette.progressMid;
   return palette.progressLow;
+}
+
+// ============================================
+// Context Action Hint (90%+ -> /compact)
+// ============================================
+
+export function formatContextHint(
+  percent: number | null,
+  palette: ColorPalette
+): string | null {
+  if (percent === null || percent < 90) return null;
+  return hex(palette.progressCritical, ' /compact');
+}
+
+export function formatContextHintPlain(
+  percent: number | null
+): string | null {
+  if (percent === null || percent < 90) return null;
+  return bold(' /compact');
 }
 
 // ============================================
@@ -632,7 +652,7 @@ export function formatPassAtKDisplay(
                 passAt1 >= 60 ? palette.yellow :
                 palette.red;
 
-  return hex(palette.text, 'Pass@1: ') + hex(color, `${passAt1}%`);
+  return hex(palette.text, '1st-try: ') + hex(color, `${passAt1}%`);
 }
 
 // ============================================
@@ -712,66 +732,6 @@ export function formatMcpStatusDisplay(
 }
 
 // ============================================
-// Security Dashboard Display Helper
-// ============================================
-
-export function formatSecurityDashboardDisplay(
-  ctx: RenderContext,
-  palette: ColorPalette,
-  icons: IconSet
-): string | null {
-  if (!ctx.securityDashboard || !ctx.securityDashboard.hasIssues) {
-    return null;
-  }
-
-  const { score, criticalCount, highCount } = ctx.securityDashboard;
-
-  const scoreColor = score.overall >= 80 ? palette.green :
-                     score.overall >= 60 ? palette.yellow :
-                     palette.red;
-
-  if (criticalCount > 0) {
-    return hex(palette.red, icons.error) + ' ' +
-           hex(palette.red, `${criticalCount} critical`) + ' ' +
-           hex(scoreColor, `(${score.overall})`);
-  }
-
-  if (highCount > 0) {
-    return hex(palette.yellow, icons.warning) + ' ' +
-           hex(palette.yellow, `${highCount} high`) + ' ' +
-           hex(scoreColor, `(${score.overall})`);
-  }
-
-  return hex(scoreColor, `Security: ${score.overall}`);
-}
-
-// ============================================
-// Learning Tracker Display Helper
-// ============================================
-
-export function formatLearningTrackerDisplay(
-  ctx: RenderContext,
-  palette: ColorPalette
-): string | null {
-  if (!ctx.learningTracker || !ctx.learningTracker.hasLearnings) {
-    return null;
-  }
-
-  const { patterns, improvements } = ctx.learningTracker;
-
-  if (patterns.length > 0) {
-    return hex(palette.blue, `${patterns.length} patterns`) + ' ' +
-           hex(palette.muted, `learned`);
-  }
-
-  if (improvements.length > 0) {
-    return hex(palette.yellow, `${improvements.length} suggestions`);
-  }
-
-  return null;
-}
-
-// ============================================
 // Instance Sync Display Helper
 // ============================================
 
@@ -824,12 +784,6 @@ export function collectActivityWidgets(
     widgets.push({ text: violationsText, category: 'critical', priority });
   }
 
-  const securityText = formatSecurityDashboardDisplay(ctx, palette, icons);
-  if (securityText && ctx.config.display.showSecurityDashboard) {
-    const priority = (ctx.securityDashboard?.criticalCount || 0) > 0 ? 8 : 18;
-    widgets.push({ text: securityText, category: 'analytics', priority });
-  }
-
   // P1: Warnings (priority 20-39)
   const compactText = formatCompactSuggestionDisplay(ctx, palette, icons);
   if (compactText) {
@@ -879,11 +833,6 @@ export function collectActivityWidgets(
     if (t) widgets.push({ text: t, category: 'info', priority: 85 });
   }
 
-  if (ctx.config.display.showLearningTracker) {
-    const t = formatLearningTrackerDisplay(ctx, palette);
-    if (t) widgets.push({ text: t, category: 'analytics', priority: 90 });
-  }
-
   if (ctx.config.display.showInstanceSync) {
     const t = formatInstanceSyncDisplay(ctx, palette);
     if (t) {
@@ -910,17 +859,352 @@ export function hasAbnormalState(ctx: RenderContext): boolean {
 export function getVisibleWidgets(
   widgets: ActivityWidget[],
   detailMode: boolean,
-  hasAbnormalState: boolean
+  hasAbnormalState: boolean,
+  maxWidgets: number = 8
 ): ActivityWidget[] {
-  if (detailMode) return widgets;
+  let filtered: ActivityWidget[];
 
-  if (hasAbnormalState) {
+  if (detailMode) {
+    filtered = widgets;
+  } else if (hasAbnormalState) {
     // Show critical, warning, and info (exclude analytics)
-    return widgets.filter(w => w.category !== 'analytics');
+    filtered = widgets.filter(w => w.category !== 'analytics');
+  } else {
+    // Normal state: only critical and warning
+    filtered = widgets.filter(w =>
+      w.category === 'critical' || w.category === 'warning'
+    );
   }
 
-  // Normal state: only critical and warning
-  return widgets.filter(w =>
-    w.category === 'critical' || w.category === 'warning'
-  );
+  // Priority 기반 정렬은 이미 되어 있으므로 상위 N개만 반환
+  return filtered.slice(0, maxWidgets);
+}
+
+// ============================================
+// Compact Summarize Functions (styled: aurora/neon)
+// ============================================
+
+export interface CompactStyledOptions {
+  palette: ColorPalette;
+  icons: IconSet;
+  transform?: TextTransform;
+}
+
+export function summarizeToolsStyled(ctx: RenderContext, opts: CompactStyledOptions): string {
+  const { palette, icons, transform } = opts;
+  const toolCounts = new Map<string, number>();
+  let runningTool: string | null = null;
+
+  for (const tool of ctx.transcript.tools) {
+    toolCounts.set(tool.name, (toolCounts.get(tool.name) || 0) + 1);
+    if (tool.status === 'running') runningTool = tool.name;
+  }
+
+  const toolItems: string[] = [];
+  for (const [name, count] of toolCounts) {
+    const isRunning = runningTool === name;
+    const icon = isRunning ? icons.running : icons.success;
+    const iconColor = isRunning ? palette.yellow : palette.green;
+    const countStr = formatCount(count);
+
+    if (transform?.case === 'upper') {
+      // Neon style: color the whole item
+      toolItems.push(hex(iconColor, `${name}${icon}${countStr}`));
+    } else {
+      // Aurora style: separate colors
+      toolItems.push(hex(palette.text, name) + hex(iconColor, icon) + hex(palette.muted, countStr));
+    }
+  }
+
+  return hex(palette.categoryTools, icons.categoryTools) + ' ' + toolItems.join(' ');
+}
+
+export function summarizeAgentsStyled(ctx: RenderContext, opts: CompactStyledOptions): string {
+  const { palette, icons, transform } = opts;
+  const agentItems: string[] = [];
+
+  for (const agent of ctx.transcript.agents.slice(0, 2)) {
+    const icon = agent.status === 'running' ? icons.running : icons.success;
+    const iconColor = agent.status === 'running' ? palette.yellow : palette.green;
+    const modelChar = agent.model ? agent.model[0] : '';
+    const modelAbbr = modelChar
+      ? `[${transform?.case === 'upper' ? modelChar.toUpperCase() : modelChar}]`
+      : '';
+
+    if (transform?.case === 'upper') {
+      // Neon style
+      agentItems.push(hex(iconColor, `${agent.type.toUpperCase()}${icon}`) + hex(palette.muted, modelAbbr));
+    } else {
+      // Aurora style
+      agentItems.push(hex(palette.text, agent.type) + hex(iconColor, icon) + hex(palette.muted, modelAbbr));
+    }
+  }
+
+  return hex(palette.categoryAgents, icons.categoryAgents) + ' ' + agentItems.join(' ');
+}
+
+export function summarizeTodosStyled(ctx: RenderContext, opts: CompactStyledOptions): string {
+  const { palette, icons, transform } = opts;
+  const total = ctx.transcript.todos.length;
+  const completed = ctx.transcript.todos.filter((t) => t.status === 'completed').length;
+  const inProgress = ctx.transcript.todos.find((t) => t.status === 'in_progress');
+
+  const label = hex(palette.categoryTodos, icons.categoryTodos);
+
+  if (inProgress) {
+    const shortContent = inProgress.content.substring(0, 20);
+    const displayContent = transform?.case === 'upper' ? shortContent.toUpperCase() : shortContent;
+
+    if (transform?.case === 'upper') {
+      // Neon style: yellow for both marker and content
+      return label + ' ' + hex(palette.yellow, `▸ ${displayContent}`) + hex(palette.muted, ` ${completed}/${total}`);
+    }
+    // Aurora style
+    return label + ' ' + hex(palette.yellow, '▸ ') + hex(palette.text, displayContent) + hex(palette.muted, ` ${completed}/${total}`);
+  }
+
+  return label + ' ' + hex(palette.muted, `${completed}/${total}`);
+}
+
+export function summarizeSkillsStyled(ctx: RenderContext, opts: CompactStyledOptions): string {
+  const { palette, icons, transform } = opts;
+  const skillItems: string[] = [];
+
+  for (const skill of ctx.transcript.skills.slice(0, 3)) {
+    const icon = skill.status === 'running' ? icons.running : icons.success;
+    const iconColor = skill.status === 'running' ? palette.yellow : palette.green;
+    const displayName = transform?.case === 'upper' ? skill.name.toUpperCase() : skill.name;
+
+    if (transform?.case === 'upper') {
+      // Neon style
+      skillItems.push(hex(iconColor, `${displayName}${icon}`));
+    } else {
+      // Aurora style
+      skillItems.push(hex(palette.text, displayName) + hex(iconColor, icon));
+    }
+  }
+
+  return hex(palette.mauve, icons.skill) + ' ' + skillItems.join(' ');
+}
+
+// ============================================
+// Expanded Line Functions (styled: aurora/neon)
+// ============================================
+
+export function renderToolsLineStyled(ctx: RenderContext, opts: CompactStyledOptions): string {
+  const { palette, icons, transform } = opts;
+  const parts: string[] = [];
+
+  for (const tool of ctx.transcript.tools.slice(0, 5)) {
+    const icon = tool.status === 'running' ? icons.running : tool.status === 'error' ? icons.error : icons.success;
+    const iconColor = tool.status === 'running' ? palette.yellow : tool.status === 'error' ? palette.red : palette.green;
+    const target = tool.target ? ` ${tool.target}` : '';
+    parts.push(hex(palette.text, tool.name) + hex(iconColor, icon) + hex(palette.muted, target));
+  }
+
+  const labelText = transform?.case === 'upper' ? 'TOOLS: ' : 'Tools: ';
+  return hex(palette.categoryTools, icons.categoryTools + ' ' + labelText) + parts.join('   ');
+}
+
+export function renderAgentsLineStyled(ctx: RenderContext, opts: CompactStyledOptions): string {
+  const { palette, icons, transform } = opts;
+  const agentParts: string[] = [];
+
+  for (const agent of ctx.transcript.agents.slice(0, 3)) {
+    const icon = agent.status === 'running' ? icons.running : agent.status === 'error' ? icons.error : icons.success;
+    const iconColor = agent.status === 'running' ? palette.yellow : agent.status === 'error' ? palette.red : palette.green;
+    const displayType = transform?.case === 'upper' ? agent.type.toUpperCase() : agent.type;
+    const modelText = agent.model
+      ? (transform?.case === 'upper' ? `[${agent.model.toUpperCase()}]` : `[${agent.model}]`)
+      : '';
+    const desc = agent.description
+      ? ` ${transform?.case === 'upper' ? agent.description.substring(0, 40).toUpperCase() : agent.description.substring(0, 40)}`
+      : '';
+    agentParts.push(hex(palette.text, displayType) + hex(iconColor, icon) + hex(palette.muted, ` ${modelText}`) + hex(palette.muted, desc));
+  }
+
+  const labelText = transform?.case === 'upper' ? 'AGENTS: ' : 'Agents: ';
+  return hex(palette.categoryAgents, icons.categoryAgents + ' ' + labelText) + agentParts.join('   ');
+}
+
+export function renderTodosLineStyled(ctx: RenderContext, opts: CompactStyledOptions): string {
+  const { palette, icons, transform } = opts;
+  const total = ctx.transcript.todos.length;
+  const completed = ctx.transcript.todos.filter((t) => t.status === 'completed').length;
+  const inProgress = ctx.transcript.todos.find((t) => t.status === 'in_progress');
+
+  const labelText = transform?.case === 'upper' ? 'TODOS: ' : 'Todos: ';
+  const label = hex(palette.categoryTodos, icons.categoryTodos + ' ' + labelText);
+
+  if (inProgress) {
+    const filledChar = transform?.case === 'upper' ? '█' : '●';
+    const emptyChar = transform?.case === 'upper' ? '░' : '○';
+    const progressBar = filledChar.repeat(completed) + emptyChar.repeat(total - completed);
+    const displayContent = transform?.case === 'upper' ? inProgress.content.toUpperCase() : inProgress.content;
+    return label + hex(palette.yellow, '▸ ') + hex(palette.text, displayContent) + hex(palette.muted, ` (${completed}/${total}) ${progressBar}`);
+  }
+
+  const completedText = transform?.case === 'upper' ? 'ALL TASKS COMPLETED' : 'All tasks completed';
+  return label + hex(palette.green, '✓ ') + hex(palette.text, completedText) + hex(palette.muted, ` (${total}/${total})`);
+}
+
+export function renderSkillsLineStyled(ctx: RenderContext, opts: CompactStyledOptions): string {
+  const { palette, icons, transform } = opts;
+  const parts: string[] = [];
+
+  for (const skill of ctx.transcript.skills.slice(0, 5)) {
+    const icon = skill.status === 'running' ? icons.running : skill.status === 'error' ? icons.error : icons.success;
+    const iconColor = skill.status === 'running' ? palette.yellow : skill.status === 'error' ? palette.red : palette.green;
+    const displayName = transform?.case === 'upper' ? skill.name.toUpperCase() : skill.name;
+    const args = skill.args
+      ? ` ${transform?.case === 'upper' ? skill.args.toUpperCase() : skill.args}`
+      : '';
+    parts.push(hex(palette.text, displayName) + hex(iconColor, icon) + hex(palette.muted, args));
+  }
+
+  const labelText = transform?.case === 'upper' ? 'SKILLS: ' : 'Skills: ';
+  return hex(palette.mauve, icons.skill + ' ' + labelText) + parts.join('   ');
+}
+
+// ============================================
+// Compact Summarize Functions (plain: mono/retro)
+// ============================================
+
+export interface CompactPlainOptions {
+  transform?: TextTransform;
+}
+
+export function summarizeToolsPlain(ctx: RenderContext, opts: CompactPlainOptions = {}): string {
+  const { transform } = opts;
+  const toolCounts = new Map<string, number>();
+  let running: string | null = null;
+
+  for (const tool of ctx.transcript.tools) {
+    toolCounts.set(tool.name, (toolCounts.get(tool.name) || 0) + 1);
+    if (tool.status === 'running') running = tool.name;
+  }
+
+  const parts: string[] = [];
+  for (const [name, count] of toolCounts) {
+    const isRunning = running === name;
+    const marker = isRunning ? '~' : '+';
+    const displayName = transform?.case === 'upper' ? name.toUpperCase() : name;
+    const text = `${displayName}${marker}${count > 1 ? count : ''}`;
+    parts.push(isRunning ? bold(text) : text);
+  }
+
+  return '\u25CF ' + parts.join(' ');
+}
+
+export function summarizeAgentsPlain(ctx: RenderContext, opts: CompactPlainOptions = {}): string {
+  const { transform } = opts;
+  const limit = transform?.case === 'upper' ? 3 : 2;
+  const agentItems = ctx.transcript.agents
+    .slice(0, limit)
+    .map((a) => {
+      const marker = a.status === 'running' ? '~' : '+';
+      const modelChar = a.model ? a.model[0] : '';
+      const model = modelChar
+        ? `[${transform?.case === 'upper' ? modelChar.toUpperCase() : modelChar}]`
+        : '';
+      const displayType = transform?.case === 'upper' ? a.type.toUpperCase() : a.type;
+      return `${displayType}${marker}${model}`;
+    })
+    .join(' ');
+
+  return '\u25CF ' + agentItems;
+}
+
+export function summarizeTodosPlain(ctx: RenderContext, opts: CompactPlainOptions = {}): string {
+  const { transform } = opts;
+  const total = ctx.transcript.todos.length;
+  const completed = ctx.transcript.todos.filter((t) => t.status === 'completed').length;
+  const current = ctx.transcript.todos.find((t) => t.status === 'in_progress');
+
+  if (current) {
+    const maxLen = transform?.case === 'upper' ? 25 : 15;
+    const shortContent = current.content.substring(0, maxLen);
+    const displayContent = transform?.case === 'upper' ? shortContent.toUpperCase() : shortContent;
+    const suffix = transform?.case === 'upper' ? `... (${completed}/${total})` : `... ${completed}/${total}`;
+    return `\u25CF >${displayContent}${suffix}`;
+  }
+  return `\u25CF ${completed}/${total}`;
+}
+
+export function summarizeSkillsPlain(ctx: RenderContext, opts: CompactPlainOptions = {}): string {
+  const { transform } = opts;
+  const skillItems = ctx.transcript.skills
+    .slice(0, 3)
+    .map((s) => {
+      const marker = s.status === 'running' ? '~' : '+';
+      const displayName = transform?.case === 'upper' ? s.name.toUpperCase() : s.name;
+      return `${displayName}${marker}`;
+    })
+    .join(' ');
+
+  return '\u25CF ' + skillItems;
+}
+
+// ============================================
+// Expanded Line Functions (plain: mono)
+// ============================================
+
+export function renderToolsLinePlain(ctx: RenderContext): string {
+  const tools = ctx.transcript.tools
+    .slice(0, 6)
+    .map((t) => {
+      const marker = t.status === 'running' ? '~' : t.status === 'error' ? 'x' : '+';
+      const target = t.target ? ` ${t.target.split('/').pop()}` : '';
+      const text = `${t.name}${marker}${target}`;
+
+      if (t.status === 'error') return underline(text);
+      if (t.status === 'running') return bold(text);
+      return text;
+    })
+    .join('  ');
+
+  return '\u25CF Tools: ' + tools;
+}
+
+export function renderAgentsLinePlain(ctx: RenderContext): string {
+  const agents = ctx.transcript.agents
+    .slice(0, 3)
+    .map((agent) => {
+      const marker = agent.status === 'running' ? '~' : agent.status === 'error' ? 'x' : '+';
+      const model = agent.model ? `[${agent.model}]` : '';
+      const desc = agent.description ? ` ${agent.description.substring(0, 30)}` : '';
+      const text = `${agent.type}${marker} ${model}${desc}`;
+
+      if (agent.status === 'error') return underline(text);
+      if (agent.status === 'running') return bold(text);
+      return text;
+    })
+    .join('  ');
+
+  return '\u25CF Agents: ' + agents;
+}
+
+export function renderTodosLinePlain(ctx: RenderContext): string {
+  const total = ctx.transcript.todos.length;
+  const completed = ctx.transcript.todos.filter((t) => t.status === 'completed').length;
+  const current = ctx.transcript.todos.find((t) => t.status === 'in_progress');
+
+  if (current) {
+    const bar = '#'.repeat(completed) + '-'.repeat(total - completed);
+    return `\u25CF Todos: > ${current.content} [${bar}] ${completed}/${total}`;
+  }
+  return `\u25CF Todos: + All done (${total}/${total})`;
+}
+
+export function renderSkillsLinePlain(ctx: RenderContext): string {
+  const skills = ctx.transcript.skills
+    .slice(0, 5)
+    .map((skill) => {
+      const marker = skill.status === 'running' ? '~' : skill.status === 'error' ? 'x' : '+';
+      const args = skill.args ? ` ${skill.args}` : '';
+      return `${skill.name}${marker}${args}`;
+    })
+    .join('  ');
+
+  return '\u25CF Skills: ' + skills;
 }

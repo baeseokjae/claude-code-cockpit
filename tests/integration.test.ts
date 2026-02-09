@@ -196,6 +196,7 @@ describe('theme rendering', () => {
       sessionDuration: '1m',
       theme: auroraTheme,
       detailMode: false,
+      tier: 3,
     };
 
     const lines = auroraTheme.render(ctx);

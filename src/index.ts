@@ -24,8 +24,6 @@ import { getTestCoverageSummary } from './data/test-coverage.js';
 import { getPassAtKSummary } from './data/pass-at-k.js';
 import { getPerformanceMetrics } from './data/performance-metrics.js';
 import { analyzeMcpStatus } from './data/mcp-status.js';
-import { createSecurityDashboard } from './data/security-dashboard.js';
-import { createLearningTracker } from './data/learning-tracker.js';
 import { getInstanceSync } from './data/instance-sync.js';
 import { loadConfig } from './config/loader.js';
 import { loadTheme } from './themes/index.js';
@@ -34,6 +32,12 @@ import { writeSessionFile } from './output/session-file.js';
 import { createDebug } from './utils/debug.js';
 
 const debug = createDebug('main');
+
+export function getTier(width: number, layout: { compactWidth: number; fullWidth: number }): 1 | 2 | 3 {
+  if (width < layout.compactWidth) return 1;
+  if (width < layout.fullWidth) return 2;
+  return 3;
+}
 
 export interface MainDeps {
   readStdin: typeof readStdin;
@@ -79,13 +83,21 @@ export async function main(deps: MainDeps = defaultDeps): Promise<void> {
     const transcript = await deps.parseTranscript(transcriptPath);
 
     const cwd = getCwd(stdin);
-    const configCounts = deps.countConfigs(cwd);
+    const width = process.stdout.columns || 80;
+    const tier = getTier(width, theme.layout);
+    const isDetailed = tier >= 3 || config.detailMode;
 
+    // Tier 2+: config counts require filesystem reads
+    const configCounts = tier >= 2
+      ? deps.countConfigs(cwd)
+      : { claudeMdCount: 0, rulesCount: 0, mcpCount: 0, hooksCount: 0 };
+
+    // Git: limit expensive options by tier
     const gitStatus = await deps.getGitStatus(cwd || undefined, {
-      showAllBranches: config.display.showAllBranches,
+      showAllBranches: tier >= 3 && config.display.showAllBranches,
       showAllBranchesDepth: config.display.showAllBranchesDepth,
-      includeTag: config.display.showGitTag,
-      includeWorktrees: config.display.showGitWorktrees,
+      includeTag: tier >= 2 && config.display.showGitTag,
+      includeWorktrees: tier >= 3 && config.display.showGitWorktrees,
     });
 
     const durationMs = stdin.cost?.total_duration_ms ||
@@ -95,7 +107,8 @@ export async function main(deps: MainDeps = defaultDeps): Promise<void> {
 
     const extraLabel = null;
 
-    const usageData = config.display.showUsage ? await deps.fetchUsage() : null;
+    // Tier 2+: usage API call
+    const usageData = tier >= 2 && config.display.showUsage ? await deps.fetchUsage() : null;
 
     const tokenSpeed = calculateTokenSpeed(stdin, durationMs);
 
@@ -113,39 +126,33 @@ export async function main(deps: MainDeps = defaultDeps): Promise<void> {
       ? extractViolations(transcript.tools)
       : null;
 
-    const mcpInfo = config.display.showMcpImpact
+    // Tier 2+: MCP config requires filesystem reads
+    const mcpInfo = tier >= 2 && config.display.showMcpImpact
       ? readMcpConfig(cwd || undefined)
       : null;
 
-    const workflowState = config.display.showWorkflowPhase
+    // Analytics: Tier 3 or detailMode
+    const workflowState = isDetailed && config.display.showWorkflowPhase
       ? detectWorkflowPhase(transcript.tools, transcript.agents, transcript.todos)
       : null;
 
-    const testCoverage = config.display.showTestCoverage
+    const testCoverage = isDetailed && config.display.showTestCoverage
       ? getTestCoverageSummary(cwd || undefined)
       : null;
 
-    const passAtK = config.display.showPassAtK
+    const passAtK = isDetailed && config.display.showPassAtK
       ? getPassAtKSummary(transcript.tools)
       : null;
 
-    const performanceMetrics = config.display.showPerformanceMetrics
+    const performanceMetrics = isDetailed && config.display.showPerformanceMetrics
       ? getPerformanceMetrics(cwd || undefined)
       : null;
 
-    const mcpStatus = config.display.showMcpStatus
+    const mcpStatus = isDetailed && config.display.showMcpStatus
       ? analyzeMcpStatus(transcript.tools, mcpInfo)
       : null;
 
-    const securityDashboard = config.display.showSecurityDashboard
-      ? createSecurityDashboard(violations)
-      : null;
-
-    const learningTracker = config.display.showLearningTracker
-      ? createLearningTracker(transcript.tools, transcript.bashErrors || null)
-      : null;
-
-    const instanceSync = config.display.showInstanceSync
+    const instanceSync = isDetailed && config.display.showInstanceSync
       ? getInstanceSync(stdin.session_id, cwd || undefined, gitStatus?.branch)
       : null;
 
@@ -171,12 +178,11 @@ export async function main(deps: MainDeps = defaultDeps): Promise<void> {
       passAtK,
       performanceMetrics,
       mcpStatus,
-      securityDashboard,
-      learningTracker,
       instanceSync,
       sessionDuration,
       theme,
       detailMode: config.detailMode,
+      tier,
     };
 
     const lines = theme.render(ctx);

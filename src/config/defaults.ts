@@ -40,8 +40,6 @@ export const DEFAULT_CONFIG: CockpitConfig = {
     showGitWorktrees: false,
     showPerformanceMetrics: false,
     showMcpStatus: false,
-    showSecurityDashboard: false,
-    showLearningTracker: false,
     showInstanceSync: false,
   },
 
@@ -62,6 +60,8 @@ export const DEFAULT_CONFIG: CockpitConfig = {
     compactSuggestionEnabled: true,
     compactSuggestionThreshold: 50,
   },
+
+  maxActivityWidgets: 8,
 
   performance: {
     maxTools: 20,

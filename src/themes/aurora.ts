@@ -12,12 +12,11 @@
  * - >= 120: Tier 3 (full)
  */
 
-import type { Theme, RenderContext, IconSet, ColorPalette } from '../types/index.js';
+import type { Theme, RenderContext, ColorPalette } from '../types/index.js';
 import { AURORA_PALETTE } from './palettes/aurora.js';
 import { getIcons } from './icons.js';
 import { hex } from '../render/colors.js';
 import { createProgressBar, formatPercent, visualLength } from '../render/utils.js';
-import { formatCount } from '../render/superscript.js';
 import { formatUsageCompact, formatUsageFull } from '../render/usage.js';
 import { formatResetTime } from '../data/usage-api.js';
 import { formatTokenSpeed } from '../data/speed-tracker.js';
@@ -30,6 +29,18 @@ import {
   hasAbnormalState,
   getPercentColor,
   formatProjectGit,
+  formatDetailToolsSummary,
+  formatDetailAgentsSummary,
+  formatDetailTodosSummary,
+  summarizeToolsStyled,
+  summarizeAgentsStyled,
+  summarizeTodosStyled,
+  summarizeSkillsStyled,
+  renderToolsLineStyled,
+  renderAgentsLineStyled,
+  renderTodosLineStyled,
+  renderSkillsLineStyled,
+  formatContextHint,
 } from './helpers.js';
 
 export const auroraTheme: Theme = {
@@ -92,6 +103,7 @@ export const auroraTheme: Theme = {
 
     const percentColor = getPercentColor(percent, this.palette);
     const percentText = hex(percentColor, percentStr);
+    const contextHint = formatContextHint(percent, this.palette) || '';
 
     // Project and git with parentheses and links
     const projectGit = formatProjectGit(ctx, this.palette, this.icons, { showFileStats: true });
@@ -102,7 +114,7 @@ export const auroraTheme: Theme = {
     const linesText = formatLinesDisplay(ctx, this.palette, this.icons, 'compact');
     const linesDisplay = linesText ? ` ${linesText}` : '';
 
-    return [`${modelText}${sessionText} ${percentText}${projectGit}${linesDisplay}${durationText}`];
+    return [`${modelText}${sessionText} ${percentText}${contextHint}${projectGit}${linesDisplay}${durationText}`];
   },
 
   renderCompact(ctx: RenderContext): string[] {
@@ -136,6 +148,7 @@ export const auroraTheme: Theme = {
     } else {
       contextText = hex(progressColor, percentStr);
     }
+    const compactContextHint = formatContextHint(percent, this.palette) || '';
 
     // Project and git with parentheses and links
     const projectGit = formatProjectGit(ctx, this.palette, this.icons, { showFileStats: true });
@@ -165,7 +178,7 @@ export const auroraTheme: Theme = {
     // Line 1 with logical grouping
     const separator = hex(this.palette.muted, ' │ ');
     const group1 = `${modelText}${sessionText}`;
-    const group2 = `${progressText} ${contextText}`;
+    const group2 = `${progressText} ${contextText}${compactContextHint}`;
     const group3 = projectGit;
     const group4 = `${linesDisplay}${cacheDisplay}${speedText}`;
     const group5 = `${durationText}${usageText}`;
@@ -175,23 +188,22 @@ export const auroraTheme: Theme = {
     );
 
     // Line 2+: Activity (detailMode or compact)
+    const styledOpts = { palette: this.palette, icons: this.icons };
+
     if (ctx.detailMode) {
-      // Tools summary statistics
       if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
-        const toolsSummary = formatToolsSummary(ctx.transcript.tools, this.palette, this.icons);
-        lines.push('  ' + toolsSummary);
+        const toolsSummary = formatDetailToolsSummary(ctx.transcript.tools, styledOpts);
+        if (toolsSummary) lines.push('  ' + toolsSummary);
       }
 
-      // Agents summary
       if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
-        const agentsSummary = formatAgentsSummary(ctx.transcript.agents, this.palette, this.icons);
-        lines.push('  ' + agentsSummary);
+        const agentsSummary = formatDetailAgentsSummary(ctx.transcript.agents, styledOpts);
+        if (agentsSummary) lines.push('  ' + agentsSummary);
       }
 
-      // Todos summary
       if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
-        const todosSummary = formatTodosSummary(ctx.transcript.todos, this.palette, this.icons);
-        lines.push('  ' + todosSummary);
+        const todosSummary = formatDetailTodosSummary(ctx.transcript.todos, styledOpts);
+        if (todosSummary) lines.push('  ' + todosSummary);
       }
 
       // Usage detail
@@ -203,7 +215,7 @@ export const auroraTheme: Theme = {
       // Advanced feature widgets
       const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
       const abnormal = hasAbnormalState(ctx);
-      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal, ctx.config.maxActivityWidgets);
       const advancedParts = visible.map(w => w.text);
 
       if (advancedParts.length > 0) {
@@ -214,29 +226,25 @@ export const auroraTheme: Theme = {
       const activityParts: string[] = [];
 
       if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
-        const toolsSummary = summarizeTools(ctx, this.icons, this.palette);
-        if (toolsSummary) activityParts.push(toolsSummary);
+        activityParts.push(summarizeToolsStyled(ctx, styledOpts));
       }
 
       if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
-        const agentsSummary = summarizeAgents(ctx, this.icons, this.palette);
-        if (agentsSummary) activityParts.push(agentsSummary);
+        activityParts.push(summarizeAgentsStyled(ctx, styledOpts));
       }
 
       if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
-        const todosSummary = summarizeTodos(ctx, this.palette, this.icons);
-        if (todosSummary) activityParts.push(todosSummary);
+        activityParts.push(summarizeTodosStyled(ctx, styledOpts));
       }
 
       if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
-        const skillsSummary = summarizeSkills(ctx, this.icons, this.palette);
-        if (skillsSummary) activityParts.push(skillsSummary);
+        activityParts.push(summarizeSkillsStyled(ctx, styledOpts));
       }
 
       // New features: Activity widgets
       const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
       const abnormal = hasAbnormalState(ctx);
-      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal, ctx.config.maxActivityWidgets);
       activityParts.push(...visible.map(w => w.text));
 
       if (activityParts.length > 0) {
@@ -343,21 +351,22 @@ export const auroraTheme: Theme = {
     lines.push(hex(this.palette.overlay, bottomBorder));
 
     // Activity lines (outside box)
+    const styledOptsFull = { palette: this.palette, icons: this.icons };
+
     if (ctx.detailMode) {
-      // detailMode: summary statistics
       if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
-        const toolsSummary = formatToolsSummary(ctx.transcript.tools, this.palette, this.icons);
-        lines.push('  ' + toolsSummary);
+        const toolsSummary = formatDetailToolsSummary(ctx.transcript.tools, styledOptsFull);
+        if (toolsSummary) lines.push('  ' + toolsSummary);
       }
 
       if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
-        const agentsSummary = formatAgentsSummary(ctx.transcript.agents, this.palette, this.icons);
-        lines.push('  ' + agentsSummary);
+        const agentsSummary = formatDetailAgentsSummary(ctx.transcript.agents, styledOptsFull);
+        if (agentsSummary) lines.push('  ' + agentsSummary);
       }
 
       if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
-        const todosSummary = formatTodosSummary(ctx.transcript.todos, this.palette, this.icons);
-        lines.push('  ' + todosSummary);
+        const todosSummary = formatDetailTodosSummary(ctx.transcript.todos, styledOptsFull);
+        if (todosSummary) lines.push('  ' + todosSummary);
       }
 
       if (ctx.config.display.showUsage && ctx.usageData) {
@@ -368,7 +377,7 @@ export const auroraTheme: Theme = {
       // Advanced feature widgets
       const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
       const abnormal = hasAbnormalState(ctx);
-      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal, ctx.config.maxActivityWidgets);
       const advancedParts = visible.map(w => w.text);
 
       if (advancedParts.length > 0) {
@@ -376,34 +385,26 @@ export const auroraTheme: Theme = {
       }
     } else {
       // Default mode: compact display
-      // Tools
       if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
-        const toolsLine = renderToolsLine(ctx, this.icons, this.palette);
-        if (toolsLine) lines.push('  ' + toolsLine);
+        lines.push('  ' + renderToolsLineStyled(ctx, styledOptsFull));
       }
 
-      // Agents
       if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
-        const agentsLine = renderAgentsLine(ctx, this.icons, this.palette);
-        if (agentsLine) lines.push('  ' + agentsLine);
+        lines.push('  ' + renderAgentsLineStyled(ctx, styledOptsFull));
       }
 
-      // Todos
       if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
-        const todoLine = renderTodoLine(ctx, this.icons, this.palette);
-        if (todoLine) lines.push('  ' + todoLine);
+        lines.push('  ' + renderTodosLineStyled(ctx, styledOptsFull));
       }
 
-      // Skills
       if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
-        const skillsLine = renderSkillsLine(ctx, this.icons, this.palette);
-        if (skillsLine) lines.push('  ' + skillsLine);
+        lines.push('  ' + renderSkillsLineStyled(ctx, styledOptsFull));
       }
 
       // Additional activity indicators
       const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
       const abnormal = hasAbnormalState(ctx);
-      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal, ctx.config.maxActivityWidgets);
       const activityParts = visible.map(w => w.text);
 
       if (activityParts.length > 0) {
@@ -415,188 +416,6 @@ export const auroraTheme: Theme = {
   },
 };
 
-function summarizeTools(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
-  const toolCounts = new Map<string, number>();
-  let runningTool: string | null = null;
-
-  for (const tool of ctx.transcript.tools) {
-    const count = toolCounts.get(tool.name) || 0;
-    toolCounts.set(tool.name, count + 1);
-
-    if (tool.status === 'running') {
-      runningTool = tool.name;
-    }
-  }
-
-  const toolItems: string[] = [];
-  for (const [name, count] of toolCounts) {
-    const isRunning = runningTool === name;
-    const icon = isRunning ? icons.running : icons.success;
-    const iconColor = isRunning ? palette.yellow : palette.green;
-    const countStr = formatCount(count);
-    toolItems.push(hex(palette.text, name) + hex(iconColor, icon) + hex(palette.muted, countStr));
-  }
-
-  return hex(palette.categoryTools, icons.categoryTools) + ' ' + toolItems.join(' ');
-}
-
-function summarizeAgents(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
-  const agentItems: string[] = [];
-
-  for (const agent of ctx.transcript.agents.slice(0, 2)) {
-    const icon = agent.status === 'running' ? icons.running : icons.success;
-    const iconColor = agent.status === 'running' ? palette.yellow : palette.green;
-    const modelAbbr = agent.model ? `[${agent.model[0]}]` : '';
-    agentItems.push(hex(palette.text, agent.type) + hex(iconColor, icon) + hex(palette.muted, modelAbbr));
-  }
-
-  return hex(palette.categoryAgents, icons.categoryAgents) + ' ' + agentItems.join(' ');
-}
-
-function summarizeTodos(ctx: RenderContext, palette: ColorPalette, icons: IconSet): string {
-  const total = ctx.transcript.todos.length;
-  const completed = ctx.transcript.todos.filter((t) => t.status === 'completed').length;
-  const inProgress = ctx.transcript.todos.find((t) => t.status === 'in_progress');
-
-  const label = hex(palette.categoryTodos, icons.categoryTodos);
-
-  if (inProgress) {
-    const shortContent = inProgress.content.substring(0, 20);
-    return label + ' ' + hex(palette.yellow, '▸ ') + hex(palette.text, shortContent) + hex(palette.muted, ` ${completed}/${total}`);
-  }
-
-  return label + ' ' + hex(palette.muted, `${completed}/${total}`);
-}
-
-function renderToolsLine(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
-  const parts: string[] = [];
-
-  for (const tool of ctx.transcript.tools.slice(0, 5)) {
-    const icon = tool.status === 'running' ? icons.running : tool.status === 'error' ? icons.error : icons.success;
-    const iconColor = tool.status === 'running' ? palette.yellow : tool.status === 'error' ? palette.red : palette.green;
-    const target = tool.target ? ` ${tool.target}` : '';
-    parts.push(hex(palette.text, tool.name) + hex(iconColor, icon) + hex(palette.muted, target));
-  }
-
-  return hex(palette.categoryTools, icons.categoryTools + ' Tools: ') + parts.join('   ');
-}
-
-function renderAgentsLine(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
-  const agentParts: string[] = [];
-
-  for (const agent of ctx.transcript.agents.slice(0, 3)) {
-    const icon = agent.status === 'running' ? icons.running : agent.status === 'error' ? icons.error : icons.success;
-    const iconColor = agent.status === 'running' ? palette.yellow : agent.status === 'error' ? palette.red : palette.green;
-    const modelAbbr = agent.model ? `[${agent.model}]` : '';
-    const desc = agent.description ? ` ${agent.description.substring(0, 40)}` : '';
-    agentParts.push(hex(palette.text, agent.type) + hex(iconColor, icon) + hex(palette.muted, ` ${modelAbbr}`) + hex(palette.muted, desc));
-  }
-
-  return hex(palette.categoryAgents, icons.categoryAgents + ' Agents: ') + agentParts.join('   ');
-}
-
-function renderTodoLine(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
-  const total = ctx.transcript.todos.length;
-  const completed = ctx.transcript.todos.filter((t) => t.status === 'completed').length;
-  const inProgress = ctx.transcript.todos.find((t) => t.status === 'in_progress');
-
-  const label = hex(palette.categoryTodos, icons.categoryTodos + ' Todos: ');
-
-  if (inProgress) {
-    const progressBar = '●'.repeat(completed) + '○'.repeat(total - completed);
-    return label + hex(palette.yellow, '▸ ') + hex(palette.text, inProgress.content) + hex(palette.muted, ` (${completed}/${total}) ${progressBar}`);
-  }
-
-  return label + hex(palette.green, '✓ ') + hex(palette.text, 'All tasks completed') + hex(palette.muted, ` (${total}/${total})`);
-}
-
-function summarizeSkills(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
-  const skillItems: string[] = [];
-
-  for (const skill of ctx.transcript.skills.slice(0, 3)) {
-    const icon = skill.status === 'running' ? icons.running : icons.success;
-    const iconColor = skill.status === 'running' ? palette.yellow : palette.green;
-    skillItems.push(hex(palette.text, skill.name) + hex(iconColor, icon));
-  }
-
-  return hex(palette.mauve, icons.skill) + ' ' + skillItems.join(' ');
-}
-
-function renderSkillsLine(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
-  const parts: string[] = [];
-
-  for (const skill of ctx.transcript.skills.slice(0, 5)) {
-    const icon = skill.status === 'running' ? icons.running : skill.status === 'error' ? icons.error : icons.success;
-    const iconColor = skill.status === 'running' ? palette.yellow : skill.status === 'error' ? palette.red : palette.green;
-    const args = skill.args ? ` ${skill.args}` : '';
-    parts.push(hex(palette.text, skill.name) + hex(iconColor, icon) + hex(palette.muted, args));
-  }
-
-  return hex(palette.mauve, icons.skill + ' Skills: ') + parts.join('   ');
-}
-
-/**
- * Format tools summary with counts
- */
-function formatToolsSummary(tools: any[], palette: ColorPalette, icons: IconSet): string {
-  const counts = new Map<string, number>();
-  for (const tool of tools) {
-    counts.set(tool.name, (counts.get(tool.name) || 0) + 1);
-  }
-
-  const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
-  const items = sorted.slice(0, 5).map(([name, count]) => hex(palette.text, `${name} ×${count}`));
-  const total = tools.length;
-
-  return hex(palette.categoryTools, icons.categoryTools + ' Tools: ') +
-    items.join('  ') +
-    hex(palette.muted, ` (${total})`);
-}
-
-/**
- * Format agents summary with counts
- */
-function formatAgentsSummary(agents: any[], palette: ColorPalette, icons: IconSet): string {
-  const counts = new Map<string, number>();
-  for (const agent of agents) {
-    counts.set(agent.type, (counts.get(agent.type) || 0) + 1);
-  }
-
-  const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
-  const items = sorted.slice(0, 3).map(([type, count]) => hex(palette.text, `${type} ×${count}`));
-  const total = agents.length;
-
-  return hex(palette.categoryAgents, icons.categoryAgents + ' Agents: ') +
-    items.join('  ') +
-    hex(palette.muted, ` (${total})`);
-}
-
-/**
- * Format todos summary
- */
-function formatTodosSummary(todos: any[], palette: ColorPalette, icons: IconSet): string {
-  const total = todos.length;
-  const completed = todos.filter((t: any) => t.status === 'completed').length;
-  const inProgress = todos.find((t: any) => t.status === 'in_progress');
-
-  const label = hex(palette.categoryTodos, icons.categoryTodos + ' Todos: ');
-
-  if (inProgress) {
-    return label +
-      hex(palette.yellow, '▸ ') +
-      hex(palette.text, inProgress.content.substring(0, 20) + '...') +
-      hex(palette.muted, ` (${completed}/${total})`);
-  }
-
-  if (completed === total) {
-    return label +
-      hex(palette.green, '✓ ') +
-      hex(palette.text, 'All completed') +
-      hex(palette.muted, ` (${total}/${total})`);
-  }
-
-  return label + hex(palette.muted, `${completed}/${total}`);
-}
 
 /**
  * Format usage summary line

@@ -19,6 +19,15 @@ import {
   formatDetailToolsSummary,
   formatDetailAgentsSummary,
   formatDetailTodosSummary,
+  summarizeToolsPlain,
+  summarizeAgentsPlain,
+  summarizeTodosPlain,
+  summarizeSkillsPlain,
+  renderToolsLinePlain,
+  renderAgentsLinePlain,
+  renderTodosLinePlain,
+  renderSkillsLinePlain,
+  formatContextHintPlain,
 } from './helpers.js';
 
 /**
@@ -85,7 +94,8 @@ export const monoTheme: Theme = {
     const linesDisplay = linesText ? ` ${linesText}` : '';
 
     // Text only, no colors
-    return [`[${model}]${sessionText} ${percentStr}${projectGit}${linesDisplay} | ${duration}`];
+    const contextHint = formatContextHintPlain(percent) || '';
+    return [`[${model}]${sessionText} ${percentStr}${contextHint}${projectGit}${linesDisplay} | ${duration}`];
   },
 
   renderCompact(ctx: RenderContext): string[] {
@@ -135,7 +145,8 @@ export const monoTheme: Theme = {
 
     // Line 1 with logical grouping (Mono style uses | separator)
     const group1 = `[${model}]${sessionText}`;
-    const group2 = `[${progressBar}] ${contextStr}${warning}`;
+    const compactContextHint = formatContextHintPlain(percent) || '';
+    const group2 = `[${progressBar}] ${contextStr}${compactContextHint}${warning}`;
     const group3 = projectGit;
     const group4 = `${linesDisplay}${cacheDisplay}`;
     const group5 = `${duration}${usage}${speed}`;
@@ -163,7 +174,7 @@ export const monoTheme: Theme = {
 
       const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
       const abnormal = hasAbnormalState(ctx);
-      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal, ctx.config.maxActivityWidgets);
       const advancedParts = visible.map(w => w.text);
 
       if (advancedParts.length > 0) {
@@ -173,29 +184,25 @@ export const monoTheme: Theme = {
       const activityParts: string[] = [];
 
       if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
-        const tools = summarizeTools(ctx);
-        if (tools) activityParts.push(tools);
+        activityParts.push(summarizeToolsPlain(ctx));
       }
 
       if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
-        const agents = summarizeAgents(ctx);
-        if (agents) activityParts.push(agents);
+        activityParts.push(summarizeAgentsPlain(ctx));
       }
 
       if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
-        const todos = summarizeTodos(ctx);
-        if (todos) activityParts.push(todos);
+        activityParts.push(summarizeTodosPlain(ctx));
       }
 
       if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
-        const skills = summarizeSkills(ctx);
-        if (skills) activityParts.push(skills);
+        activityParts.push(summarizeSkillsPlain(ctx));
       }
 
       // Activity widgets
       const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
       const abnormal = hasAbnormalState(ctx);
-      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal, ctx.config.maxActivityWidgets);
       activityParts.push(...visible.map(w => w.text));
 
       if (activityParts.length > 0) {
@@ -303,33 +310,29 @@ export const monoTheme: Theme = {
 
       const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
       const abnormal = hasAbnormalState(ctx);
-      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal, ctx.config.maxActivityWidgets);
       visible.forEach(w => lines.push('  ' + w.text));
     } else {
-      // Tools
       if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
-        lines.push('  ' + renderToolsLine(ctx));
+        lines.push('  ' + renderToolsLinePlain(ctx));
       }
 
-      // Agents
       if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
-        lines.push('  ' + renderAgentsLine(ctx));
+        lines.push('  ' + renderAgentsLinePlain(ctx));
       }
 
-      // Todos
       if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
-        lines.push('  ' + renderTodoLine(ctx));
+        lines.push('  ' + renderTodosLinePlain(ctx));
       }
 
-      // Skills
       if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
-        lines.push('  ' + renderSkillsLine(ctx));
+        lines.push('  ' + renderSkillsLinePlain(ctx));
       }
 
       // Activity widgets
       const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
       const abnormal = hasAbnormalState(ctx);
-      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal, ctx.config.maxActivityWidgets);
       visible.forEach(w => lines.push('  ' + w.text));
     }
 
@@ -337,125 +340,4 @@ export const monoTheme: Theme = {
   },
 };
 
-function summarizeTools(ctx: RenderContext): string {
-  const toolCounts = new Map<string, number>();
-  let running: string | null = null;
-
-  for (const tool of ctx.transcript.tools) {
-    toolCounts.set(tool.name, (toolCounts.get(tool.name) || 0) + 1);
-    if (tool.status === 'running') running = tool.name;
-  }
-
-  const parts: string[] = [];
-  for (const [name, count] of toolCounts) {
-    const isRunning = running === name;
-    const marker = isRunning ? '~' : '+';
-    const text = `${name}${marker}${count > 1 ? count : ''}`;
-    parts.push(isRunning ? bold(text) : text);
-  }
-
-  return '● ' + parts.join(' ');
-}
-
-function summarizeAgents(ctx: RenderContext): string {
-  const agentItems = ctx.transcript.agents
-    .slice(0, 2)
-    .map((a) => {
-      const marker = a.status === 'running' ? '~' : '+';
-      const model = a.model ? `[${a.model[0]}]` : '';
-      return `${a.type}${marker}${model}`;
-    })
-    .join(' ');
-
-  return '● ' + agentItems;
-}
-
-function summarizeTodos(ctx: RenderContext): string {
-  const total = ctx.transcript.todos.length;
-  const completed = ctx.transcript.todos.filter((t) => t.status === 'completed').length;
-  const current = ctx.transcript.todos.find((t) => t.status === 'in_progress');
-
-  if (current) {
-    return `● >${current.content.substring(0, 15)}... ${completed}/${total}`;
-  }
-  return `● ${completed}/${total}`;
-}
-
-function renderToolsLine(ctx: RenderContext): string {
-  const tools = ctx.transcript.tools
-    .slice(0, 6)
-    .map((t) => {
-      const marker = t.status === 'running' ? '~' : t.status === 'error' ? 'x' : '+';
-      const target = t.target ? ` ${t.target.split('/').pop()}` : '';
-      const text = `${t.name}${marker}${target}`;
-
-      if (t.status === 'error') {
-        return underline(text);
-      } else if (t.status === 'running') {
-        return bold(text);
-      }
-      return text;
-    })
-    .join('  ');
-
-  return '● Tools: ' + tools;
-}
-
-function renderAgentsLine(ctx: RenderContext): string {
-  const agents = ctx.transcript.agents
-    .slice(0, 3)
-    .map((agent) => {
-      const marker = agent.status === 'running' ? '~' : agent.status === 'error' ? 'x' : '+';
-      const model = agent.model ? `[${agent.model}]` : '';
-      const desc = agent.description ? ` ${agent.description.substring(0, 30)}` : '';
-      const text = `${agent.type}${marker} ${model}${desc}`;
-
-      if (agent.status === 'error') {
-        return underline(text);
-      } else if (agent.status === 'running') {
-        return bold(text);
-      }
-      return text;
-    })
-    .join('  ');
-
-  return '● Agents: ' + agents;
-}
-
-function renderTodoLine(ctx: RenderContext): string {
-  const total = ctx.transcript.todos.length;
-  const completed = ctx.transcript.todos.filter((t) => t.status === 'completed').length;
-  const current = ctx.transcript.todos.find((t) => t.status === 'in_progress');
-
-  if (current) {
-    const bar = '#'.repeat(completed) + '-'.repeat(total - completed);
-    return `● Todos: > ${current.content} [${bar}] ${completed}/${total}`;
-  }
-  return `● Todos: + All done (${total}/${total})`;
-}
-
-function summarizeSkills(ctx: RenderContext): string {
-  const skillItems = ctx.transcript.skills
-    .slice(0, 3)
-    .map((s) => {
-      const marker = s.status === 'running' ? '~' : '+';
-      return `${s.name}${marker}`;
-    })
-    .join(' ');
-
-  return '● ' + skillItems;
-}
-
-function renderSkillsLine(ctx: RenderContext): string {
-  const skills = ctx.transcript.skills
-    .slice(0, 5)
-    .map((skill) => {
-      const marker = skill.status === 'running' ? '~' : skill.status === 'error' ? 'x' : '+';
-      const args = skill.args ? ` ${skill.args}` : '';
-      return `${skill.name}${marker}${args}`;
-    })
-    .join('  ');
-
-  return '● Skills: ' + skills;
-}
 

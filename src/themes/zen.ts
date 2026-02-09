@@ -21,6 +21,7 @@ import {
   getVisibleWidgets,
   hasAbnormalState,
   formatProjectGit,
+  formatContextHint,
 } from './helpers.js';
 
 /**
@@ -94,7 +95,8 @@ export const zenTheme: Theme = {
     const linesDisplay = linesText ? ` ${linesText} ·` : '';
 
     // Ultra simple
-    return [hex(this.palette.subtext, `${sessionText}${model} ${contextStr}${linesDisplay} · ${duration}`)];
+    const contextHint = formatContextHint(percent, this.palette) || '';
+    return [hex(this.palette.subtext, `${sessionText}${model} ${contextStr}`) + contextHint + hex(this.palette.subtext, `${linesDisplay} · ${duration}`)];
   },
 
   renderCompact(ctx: RenderContext): string[] {
@@ -130,8 +132,10 @@ export const zenTheme: Theme = {
     const cacheText = formatCacheDisplay(ctx, this.palette, this.icons, 'compact');
     const cacheDisplay = cacheText ? cacheText : null;
 
+    const compactContextHint = formatContextHint(percent, this.palette) || '';
     const parts = [sessionText ? sessionText.trim() : null, model, contextStr, projectGit || null, linesDisplay, cacheDisplay, speed, duration].filter(Boolean);
-    return [hex(this.palette.subtext, parts.join(' · '))];
+    const joined = hex(this.palette.subtext, parts.join(' · '));
+    return [compactContextHint ? joined + compactContextHint : joined];
   },
 
   renderFull(ctx: RenderContext): string[] {
@@ -224,7 +228,7 @@ export const zenTheme: Theme = {
     // Activity widgets (detailMode shows all widgets)
     const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
     const abnormal = hasAbnormalState(ctx);
-    const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+    const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal, ctx.config.maxActivityWidgets);
     activityParts.push(...visible.map(w => w.text));
 
     if (activityParts.length > 0) {

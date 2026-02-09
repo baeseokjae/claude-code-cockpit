@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { collectActivityWidgets, type ActivityWidget } from '../src/themes/helpers.js';
+import { collectActivityWidgets, getVisibleWidgets, type ActivityWidget } from '../src/themes/helpers.js';
 import type { RenderContext } from '../src/types/index.js';
 import { DEFAULT_CONFIG } from '../src/config/defaults.js';
 
@@ -181,7 +181,6 @@ describe('Priority-based widget sorting', () => {
           showGitActivity: true,
           showToolStats: true,
           showTestCoverage: true,
-          showLearningTracker: true,
         },
       },
     });
@@ -196,5 +195,56 @@ describe('Priority-based widget sorting', () => {
     for (let i = 1; i < widgets.length; i++) {
       expect(widgets[i].priority).toBeGreaterThanOrEqual(widgets[i - 1].priority);
     }
+  });
+});
+
+describe('maxWidgets limit', () => {
+  it('limits widgets to maxWidgets count', () => {
+    const widgets: ActivityWidget[] = Array.from({ length: 10 }, (_, i) => ({
+      text: `widget-${i}`,
+      category: 'critical' as const,
+      priority: i * 10,
+    }));
+
+    const result = getVisibleWidgets(widgets, true, false, 5);
+    expect(result).toHaveLength(5);
+    expect(result[0].text).toBe('widget-0');
+    expect(result[4].text).toBe('widget-4');
+  });
+
+  it('returns all widgets when count is less than maxWidgets', () => {
+    const widgets: ActivityWidget[] = [
+      { text: 'a', category: 'critical', priority: 0 },
+      { text: 'b', category: 'warning', priority: 10 },
+    ];
+
+    const result = getVisibleWidgets(widgets, true, false, 8);
+    expect(result).toHaveLength(2);
+  });
+
+  it('defaults to 8 when maxWidgets is not provided', () => {
+    const widgets: ActivityWidget[] = Array.from({ length: 12 }, (_, i) => ({
+      text: `widget-${i}`,
+      category: 'critical' as const,
+      priority: i,
+    }));
+
+    const result = getVisibleWidgets(widgets, true, false);
+    expect(result).toHaveLength(8);
+  });
+
+  it('applies maxWidgets after category filtering', () => {
+    const widgets: ActivityWidget[] = [
+      { text: 'crit-0', category: 'critical', priority: 0 },
+      { text: 'warn-0', category: 'warning', priority: 10 },
+      { text: 'info-0', category: 'info', priority: 20 },
+      { text: 'analytics-0', category: 'analytics', priority: 30 },
+      { text: 'crit-1', category: 'critical', priority: 5 },
+    ];
+
+    // Normal state (no abnormal): only critical + warning, then maxWidgets
+    const result = getVisibleWidgets(widgets, false, false, 10);
+    expect(result).toHaveLength(3); // 2 critical + 1 warning
+    expect(result.every(w => w.category === 'critical' || w.category === 'warning')).toBe(true);
   });
 });

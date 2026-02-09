@@ -45,8 +45,6 @@ describe('Preset System', () => {
     expect(display.showTestCoverage).toBe(true);
     expect(display.showPassAtK).toBe(true);
     expect(display.showPerformanceMetrics).toBe(true);
-    expect(display.showSecurityDashboard).toBe(true);
-    expect(display.showLearningTracker).toBe(true);
     expect(display.showInstanceSync).toBe(true);
   });
 

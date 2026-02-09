@@ -19,6 +19,11 @@ import {
   formatDetailToolsSummary,
   formatDetailAgentsSummary,
   formatDetailTodosSummary,
+  summarizeToolsPlain,
+  summarizeAgentsPlain,
+  summarizeTodosPlain,
+  summarizeSkillsPlain,
+  formatContextHint,
 } from './helpers.js';
 
 /**
@@ -98,7 +103,8 @@ export const retroTheme: Theme = {
     const linesDisplay = linesText ? ` ${linesText}` : '';
 
     const color = this.palette.text;
-    return [hex(color, `[${model}]${sessionText} ${contextStr}${projectGit}${linesDisplay} | ${duration}`)];
+    const contextHint = formatContextHint(percent, this.palette) || '';
+    return [hex(color, `[${model}]${sessionText} ${contextStr}`) + contextHint + hex(color, `${projectGit}${linesDisplay} | ${duration}`)];
   },
 
   renderCompact(ctx: RenderContext): string[] {
@@ -152,6 +158,9 @@ export const retroTheme: Theme = {
     const cacheText = formatCacheDisplay(ctx, this.palette, this.icons, 'compact');
     const cacheDisplay = cacheText ? '  ' + cacheText : '';
 
+    // Context action hint
+    const compactContextHint = formatContextHint(percent, this.palette) || '';
+
     // Line 1 with logical grouping (Retro style uses | separator)
     const group1 = `[${model}]${sessionText}`;
     const group2 = `[${progressBar}] ${contextStr}${warning}`;
@@ -159,7 +168,7 @@ export const retroTheme: Theme = {
     const group4 = `${linesDisplay}${cacheDisplay}`;
     const group5 = `${duration}${speed}`;
 
-    lines.push(hex(color, `${group1} | `) + hex(warningColor, `${group2} | `) + hex(dimColor, `${group3} | ${group4.trimStart()} | ${group5}`));
+    lines.push(hex(color, `${group1} | `) + hex(warningColor, `${group2}`) + compactContextHint + hex(color, ` | `) + hex(dimColor, `${group3} | ${group4.trimStart()} | ${group5}`));
 
     // Activity (detailMode or compact)
     if (ctx.detailMode) {
@@ -182,35 +191,36 @@ export const retroTheme: Theme = {
 
       const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
       const abnormal = hasAbnormalState(ctx);
-      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal, ctx.config.maxActivityWidgets);
       const advancedParts = visible.map(w => w.text);
 
       if (advancedParts.length > 0) {
         lines.push('  ' + advancedParts.join(' | '));
       }
     } else {
+      const retroOpts = { transform: { case: 'upper' as const } };
       const activityParts: string[] = [];
 
       if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
-        activityParts.push(summarizeTools(ctx, this.palette));
+        activityParts.push(summarizeToolsPlain(ctx, retroOpts));
       }
 
       if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
-        activityParts.push(summarizeAgents(ctx, this.palette));
+        activityParts.push(summarizeAgentsPlain(ctx, retroOpts));
       }
 
       if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
-        activityParts.push(summarizeTodos(ctx, this.palette));
+        activityParts.push(summarizeTodosPlain(ctx, retroOpts));
       }
 
       if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
-        activityParts.push(summarizeSkills(ctx, this.palette));
+        activityParts.push(summarizeSkillsPlain(ctx, retroOpts));
       }
 
       // Activity widgets
       const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
       const abnormal = hasAbnormalState(ctx);
-      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal, ctx.config.maxActivityWidgets);
       activityParts.push(...visible.map(w => w.text));
 
       if (activityParts.length > 0) {
@@ -334,40 +344,38 @@ export const retroTheme: Theme = {
 
       const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
       const abnormal = hasAbnormalState(ctx);
-      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal, ctx.config.maxActivityWidgets);
       visible.forEach(w => {
         const widgetLine = ` ${w.text}`;
         lines.push(hex(color, '║') + hex(color, widgetLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(widgetLine))) + hex(color, '║'));
       });
     } else {
-      // Tools
+      const retroOptsFull = { transform: { case: 'upper' as const } };
+
       if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
-        const toolsLine = ` TOOLS: ${summarizeTools(ctx, this.palette)}`;
+        const toolsLine = ` TOOLS: ${summarizeToolsPlain(ctx, retroOptsFull)}`;
         lines.push(hex(color, '║') + hex(color, toolsLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(toolsLine))) + hex(color, '║'));
       }
 
-      // Agents
       if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
-        const agentsLine = ` AGENTS: ${summarizeAgents(ctx, this.palette)}`;
+        const agentsLine = ` AGENTS: ${summarizeAgentsPlain(ctx, retroOptsFull)}`;
         lines.push(hex(color, '║') + hex(color, agentsLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(agentsLine))) + hex(color, '║'));
       }
 
-      // Todos
       if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
-        const todosLine = ` TASKS: ${summarizeTodos(ctx, this.palette)}`;
+        const todosLine = ` TASKS: ${summarizeTodosPlain(ctx, retroOptsFull)}`;
         lines.push(hex(color, '║') + hex(color, todosLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(todosLine))) + hex(color, '║'));
       }
 
-      // Skills
       if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
-        const skillsLine = ` SKILLS: ${summarizeSkills(ctx, this.palette)}`;
+        const skillsLine = ` SKILLS: ${summarizeSkillsPlain(ctx, retroOptsFull)}`;
         lines.push(hex(color, '║') + hex(color, skillsLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(skillsLine))) + hex(color, '║'));
       }
 
       // Activity widgets
       const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
       const abnormal = hasAbnormalState(ctx);
-      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal, ctx.config.maxActivityWidgets);
       visible.forEach(w => {
         const widgetLine = ` ${w.text}`;
         lines.push(hex(color, '║') + hex(color, widgetLine) + ' '.repeat(Math.max(0, innerWidth - visualLength(widgetLine))) + hex(color, '║'));
@@ -381,59 +389,4 @@ export const retroTheme: Theme = {
   },
 };
 
-function summarizeTools(ctx: RenderContext, _palette: typeof RETRO_PALETTE): string {
-  const toolCounts = new Map<string, number>();
-  let running: string | null = null;
-
-  for (const tool of ctx.transcript.tools) {
-    toolCounts.set(tool.name, (toolCounts.get(tool.name) || 0) + 1);
-    if (tool.status === 'running') running = tool.name;
-  }
-
-  const parts: string[] = [];
-  for (const [name, count] of toolCounts) {
-    const isRunning = running === name;
-    const marker = isRunning ? '~' : '+';
-    const text = `${name.toUpperCase()}${marker}${count > 1 ? count : ''}`;
-    parts.push(isRunning ? bold(text) : text);
-  }
-
-  return '● ' + parts.join(' ');
-}
-
-function summarizeAgents(ctx: RenderContext, _palette: typeof RETRO_PALETTE): string {
-  const agentItems = ctx.transcript.agents
-    .slice(0, 3)
-    .map((a) => {
-      const marker = a.status === 'running' ? '~' : '+';
-      const model = a.model ? `[${a.model[0].toUpperCase()}]` : '';
-      return `${a.type.toUpperCase()}${marker}${model}`;
-    })
-    .join(' ');
-
-  return '● ' + agentItems;
-}
-
-function summarizeTodos(ctx: RenderContext, _palette: typeof RETRO_PALETTE): string {
-  const total = ctx.transcript.todos.length;
-  const completed = ctx.transcript.todos.filter((t) => t.status === 'completed').length;
-  const current = ctx.transcript.todos.find((t) => t.status === 'in_progress');
-
-  if (current) {
-    return `● >${current.content.substring(0, 25).toUpperCase()}... (${completed}/${total})`;
-  }
-  return `● ${completed}/${total}`;
-}
-
-function summarizeSkills(ctx: RenderContext, _palette: typeof RETRO_PALETTE): string {
-  const skillItems = ctx.transcript.skills
-    .slice(0, 3)
-    .map((s) => {
-      const marker = s.status === 'running' ? '~' : '+';
-      return `${s.name.toUpperCase()}${marker}`;
-    })
-    .join(' ');
-
-  return '● ' + skillItems;
-}
 

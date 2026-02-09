@@ -41,8 +41,6 @@ export interface CockpitConfig {
     showGitWorktrees: boolean;
     showPerformanceMetrics: boolean;
     showMcpStatus: boolean;
-    showSecurityDashboard: boolean;
-    showLearningTracker: boolean;
     showInstanceSync: boolean;
   };
 
@@ -62,6 +60,8 @@ export interface CockpitConfig {
     compactSuggestionEnabled: boolean;
     compactSuggestionThreshold: number;
   };
+
+  maxActivityWidgets?: number;
 
   performance: {
     maxTools: number;

@@ -37,8 +37,6 @@ export const PRESETS: Record<PresetName, Partial<CockpitConfig['display']>> = {
     showGitWorktrees: false,
     showPerformanceMetrics: false,
     showMcpStatus: false,
-    showSecurityDashboard: false,
-    showLearningTracker: false,
     showInstanceSync: false,
   },
 
@@ -72,8 +70,6 @@ export const PRESETS: Record<PresetName, Partial<CockpitConfig['display']>> = {
     showGitWorktrees: false,
     showPerformanceMetrics: false,
     showMcpStatus: false,
-    showSecurityDashboard: false,
-    showLearningTracker: false,
     showInstanceSync: false,
   },
 
@@ -107,8 +103,6 @@ export const PRESETS: Record<PresetName, Partial<CockpitConfig['display']>> = {
     showGitWorktrees: true,
     showPerformanceMetrics: true,
     showMcpStatus: true,
-    showSecurityDashboard: true,
-    showLearningTracker: true,
     showInstanceSync: true,
   },
 };

@@ -7,12 +7,11 @@
  * - Tier 3 (renderFull): Tier 2 + box layout, token details, cost, config counts
  */
 
-import type { Theme, RenderContext, IconSet, ColorPalette } from '../types/index.js';
+import type { Theme, RenderContext } from '../types/index.js';
 import { NEON_PALETTE } from './palettes/neon.js';
 import { getIcons } from './icons.js';
 import { hex, bold } from '../render/colors.js';
 import { createProgressBar, formatPercent, visualLength } from '../render/utils.js';
-import { formatCount } from '../render/superscript.js';
 import { getUsageColor } from '../render/usage.js';
 import { formatResetTime } from '../data/usage-api.js';
 import { formatTokenSpeed } from '../data/speed-tracker.js';
@@ -28,6 +27,15 @@ import {
   formatDetailToolsSummary,
   formatDetailAgentsSummary,
   formatDetailTodosSummary,
+  summarizeToolsStyled,
+  summarizeAgentsStyled,
+  summarizeTodosStyled,
+  summarizeSkillsStyled,
+  renderToolsLineStyled,
+  renderAgentsLineStyled,
+  renderTodosLineStyled,
+  renderSkillsLineStyled,
+  formatContextHint,
 } from './helpers.js';
 
 /**
@@ -92,6 +100,7 @@ export const neonTheme: Theme = {
 
     const percentColor = getPercentColor(percent, this.palette);
     const percentText = hex(percentColor, bold(percentStr));
+    const contextHint = formatContextHint(percent, this.palette) || '';
 
     const projectGit = formatProjectGit(ctx, this.palette, this.icons, {
       transform: { case: 'upper' },
@@ -103,7 +112,7 @@ export const neonTheme: Theme = {
     const linesText = formatLinesDisplay(ctx, this.palette, this.icons, 'compact');
     const linesDisplay = linesText ? ` ${linesText}` : '';
 
-    return [`${modelText}${sessionText} ${percentText}${projectGit}${linesDisplay}${durationText}`];
+    return [`${modelText}${sessionText} ${percentText}${contextHint}${projectGit}${linesDisplay}${durationText}`];
   },
 
   renderCompact(ctx: RenderContext): string[] {
@@ -132,6 +141,7 @@ export const neonTheme: Theme = {
     } else {
       contextText = hex(progressColor, bold(percentStr));
     }
+    const compactContextHint = formatContextHint(percent, this.palette) || '';
 
     const projectGit = formatProjectGit(ctx, this.palette, this.icons, {
       transform: { case: 'upper' },
@@ -162,7 +172,7 @@ export const neonTheme: Theme = {
     // Line 1 with logical grouping
     const separator = hex(this.palette.muted, ' │ ');
     const group1 = `${modelText}${sessionText}`;
-    const group2 = `${progressText} ${contextText}`;
+    const group2 = `${progressText} ${contextText}${compactContextHint}`;
     const group3 = projectGit;
     const group4 = `${linesDisplay}${cacheDisplay}${speedText}`;
     const group5 = `${durationText}${usageText}`;
@@ -192,39 +202,36 @@ export const neonTheme: Theme = {
 
       const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
       const abnormal = hasAbnormalState(ctx);
-      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal, ctx.config.maxActivityWidgets);
       const advancedParts = visible.map(w => w.text);
 
       if (advancedParts.length > 0) {
         lines.push('  ' + advancedParts.join('  ' + hex(this.palette.muted, this.chars.separator) + '  '));
       }
     } else {
+      const neonOpts = { palette: this.palette, icons: this.icons, transform: { case: 'upper' as const } };
       const activityParts: string[] = [];
 
       if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
-        const toolsSummary = summarizeTools(ctx, this.icons, this.palette);
-        if (toolsSummary) activityParts.push(toolsSummary);
+        activityParts.push(summarizeToolsStyled(ctx, neonOpts));
       }
 
       if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
-        const agentsSummary = summarizeAgents(ctx, this.icons, this.palette);
-        if (agentsSummary) activityParts.push(agentsSummary);
+        activityParts.push(summarizeAgentsStyled(ctx, neonOpts));
       }
 
       if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
-        const todosSummary = summarizeTodos(ctx, this.icons, this.palette);
-        if (todosSummary) activityParts.push(todosSummary);
+        activityParts.push(summarizeTodosStyled(ctx, neonOpts));
       }
 
       if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
-        const skillsSummary = summarizeSkills(ctx, this.icons, this.palette);
-        if (skillsSummary) activityParts.push(skillsSummary);
+        activityParts.push(summarizeSkillsStyled(ctx, neonOpts));
       }
 
       // Activity widgets
       const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
       const abnormal = hasAbnormalState(ctx);
-      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal, ctx.config.maxActivityWidgets);
       activityParts.push(...visible.map(w => w.text));
 
       if (activityParts.length > 0) {
@@ -355,37 +362,35 @@ export const neonTheme: Theme = {
 
       const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
       const abnormal = hasAbnormalState(ctx);
-      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal, ctx.config.maxActivityWidgets);
       const advancedParts = visible.map(w => w.text);
 
       if (advancedParts.length > 0) {
         lines.push('  ' + advancedParts.join('  ' + hex(this.palette.muted, this.chars.separator) + '  '));
       }
     } else {
+      const neonOptsFull = { palette: this.palette, icons: this.icons, transform: { case: 'upper' as const } };
+
       if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
-        const toolsLine = renderToolsLine(ctx, this.icons, this.palette);
-        if (toolsLine) lines.push('  ' + toolsLine);
+        lines.push('  ' + renderToolsLineStyled(ctx, neonOptsFull));
       }
 
       if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
-        const agentsLine = renderAgentsLine(ctx, this.icons, this.palette);
-        if (agentsLine) lines.push('  ' + agentsLine);
+        lines.push('  ' + renderAgentsLineStyled(ctx, neonOptsFull));
       }
 
       if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
-        const todoLine = renderTodoLine(ctx, this.icons, this.palette);
-        if (todoLine) lines.push('  ' + todoLine);
+        lines.push('  ' + renderTodosLineStyled(ctx, neonOptsFull));
       }
 
       if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
-        const skillsLine = renderSkillsLine(ctx, this.icons, this.palette);
-        if (skillsLine) lines.push('  ' + skillsLine);
+        lines.push('  ' + renderSkillsLineStyled(ctx, neonOptsFull));
       }
 
       // Activity widgets
       const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
       const abnormal = hasAbnormalState(ctx);
-      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal);
+      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal, ctx.config.maxActivityWidgets);
       visible.forEach(w => lines.push('  ' + w.text));
     }
 
@@ -393,119 +398,4 @@ export const neonTheme: Theme = {
   },
 };
 
-function summarizeTools(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
-  const toolItems: string[] = [];
-  const toolCounts = new Map<string, number>();
-  let runningTool: string | null = null;
-
-  for (const tool of ctx.transcript.tools) {
-    toolCounts.set(tool.name, (toolCounts.get(tool.name) || 0) + 1);
-    if (tool.status === 'running') runningTool = tool.name;
-  }
-
-  for (const [name, count] of toolCounts) {
-    const isRunning = runningTool === name;
-    const icon = isRunning ? icons.running : icons.success;
-    const color = isRunning ? palette.yellow : palette.green;
-    const countStr = formatCount(count);
-    toolItems.push(hex(color, `${name}${icon}${countStr}`));
-  }
-
-  return hex(palette.categoryTools, icons.categoryTools) + ' ' + toolItems.join(' ');
-}
-
-function summarizeAgents(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
-  const agentItems: string[] = [];
-
-  for (const agent of ctx.transcript.agents.slice(0, 2)) {
-    const icon = agent.status === 'running' ? icons.running : icons.success;
-    const color = agent.status === 'running' ? palette.yellow : palette.green;
-    const modelAbbr = agent.model ? `[${agent.model[0].toUpperCase()}]` : '';
-    agentItems.push(hex(color, `${agent.type.toUpperCase()}${icon}`) + hex(palette.muted, modelAbbr));
-  }
-
-  return hex(palette.categoryAgents, icons.categoryAgents) + ' ' + agentItems.join(' ');
-}
-
-function summarizeTodos(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
-  const total = ctx.transcript.todos.length;
-  const completed = ctx.transcript.todos.filter((t) => t.status === 'completed').length;
-  const inProgress = ctx.transcript.todos.find((t) => t.status === 'in_progress');
-
-  const label = hex(palette.categoryTodos, icons.categoryTodos);
-
-  if (inProgress) {
-    const shortContent = inProgress.content.substring(0, 20).toUpperCase();
-    return label + ' ' + hex(palette.yellow, `▸ ${shortContent}`) + hex(palette.muted, ` ${completed}/${total}`);
-  }
-
-  return label + ' ' + hex(palette.muted, `${completed}/${total}`);
-}
-
-function renderToolsLine(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
-  const parts: string[] = [];
-
-  for (const tool of ctx.transcript.tools.slice(0, 5)) {
-    const icon = tool.status === 'running' ? icons.running : tool.status === 'error' ? icons.error : icons.success;
-    const iconColor = tool.status === 'running' ? palette.yellow : tool.status === 'error' ? palette.red : palette.green;
-    const target = tool.target ? ` ${tool.target}` : '';
-    parts.push(hex(palette.text, tool.name) + hex(iconColor, icon) + hex(palette.muted, target));
-  }
-
-  return hex(palette.categoryTools, icons.categoryTools + ' TOOLS: ') + parts.join('   ');
-}
-
-function renderAgentsLine(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
-  const agentParts: string[] = [];
-
-  for (const agent of ctx.transcript.agents.slice(0, 3)) {
-    const icon = agent.status === 'running' ? icons.running : agent.status === 'error' ? icons.error : icons.success;
-    const iconColor = agent.status === 'running' ? palette.yellow : agent.status === 'error' ? palette.red : palette.green;
-    const modelAbbr = agent.model ? `[${agent.model.toUpperCase()}]` : '';
-    const desc = agent.description ? ` ${agent.description.substring(0, 40).toUpperCase()}` : '';
-    agentParts.push(hex(palette.text, agent.type.toUpperCase()) + hex(iconColor, icon) + hex(palette.muted, ` ${modelAbbr}`) + hex(palette.muted, desc));
-  }
-
-  return hex(palette.categoryAgents, icons.categoryAgents + ' AGENTS: ') + agentParts.join('   ');
-}
-
-function renderTodoLine(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
-  const total = ctx.transcript.todos.length;
-  const completed = ctx.transcript.todos.filter((t) => t.status === 'completed').length;
-  const inProgress = ctx.transcript.todos.find((t) => t.status === 'in_progress');
-
-  const label = hex(palette.categoryTodos, icons.categoryTodos + ' TODOS: ');
-
-  if (inProgress) {
-    const progressBar = '█'.repeat(completed) + '░'.repeat(total - completed);
-    return label + hex(palette.yellow, '▸ ') + hex(palette.text, inProgress.content.toUpperCase()) + hex(palette.muted, ` (${completed}/${total}) ${progressBar}`);
-  }
-
-  return label + hex(palette.green, '✓ ') + hex(palette.text, 'ALL TASKS COMPLETED') + hex(palette.muted, ` (${total}/${total})`);
-}
-
-function summarizeSkills(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
-  const skillItems: string[] = [];
-
-  for (const skill of ctx.transcript.skills.slice(0, 3)) {
-    const icon = skill.status === 'running' ? icons.running : icons.success;
-    const iconColor = skill.status === 'running' ? palette.yellow : palette.green;
-    skillItems.push(hex(iconColor, `${skill.name.toUpperCase()}${icon}`));
-  }
-
-  return hex(palette.mauve, icons.skill) + ' ' + skillItems.join(' ');
-}
-
-function renderSkillsLine(ctx: RenderContext, icons: IconSet, palette: ColorPalette): string {
-  const parts: string[] = [];
-
-  for (const skill of ctx.transcript.skills.slice(0, 5)) {
-    const icon = skill.status === 'running' ? icons.running : skill.status === 'error' ? icons.error : icons.success;
-    const iconColor = skill.status === 'running' ? palette.yellow : skill.status === 'error' ? palette.red : palette.green;
-    const args = skill.args ? ` ${skill.args.toUpperCase()}` : '';
-    parts.push(hex(palette.text, skill.name.toUpperCase()) + hex(iconColor, icon) + hex(palette.muted, args));
-  }
-
-  return hex(palette.mauve, icons.skill + ' SKILLS: ') + parts.join('   ');
-}
 

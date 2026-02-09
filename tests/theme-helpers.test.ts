@@ -11,6 +11,8 @@ import {
   aggregateAgents,
   getSessionName,
   extractProjectGitData,
+  formatContextHint,
+  formatContextHintPlain,
 } from '../src/themes/helpers.js';
 import { AURORA_PALETTE } from '../src/themes/palettes/aurora.js';
 import type { RenderContext, StdinData, TranscriptData, GitStatus } from '../src/types/index.js';
@@ -195,6 +197,46 @@ describe('theme helpers', () => {
       expect(result.subRepos).toHaveLength(0);
     });
   });
+
+  describe('formatContextHint', () => {
+    it('should return null below 90%', () => {
+      expect(formatContextHint(89, AURORA_PALETTE)).toBeNull();
+      expect(formatContextHint(50, AURORA_PALETTE)).toBeNull();
+      expect(formatContextHint(0, AURORA_PALETTE)).toBeNull();
+    });
+
+    it('should return hint at 90%+', () => {
+      const hint = formatContextHint(90, AURORA_PALETTE);
+      expect(hint).not.toBeNull();
+      expect(hint).toContain('/compact');
+    });
+
+    it('should return hint at 95%', () => {
+      const hint = formatContextHint(95, AURORA_PALETTE);
+      expect(hint).not.toBeNull();
+      expect(hint).toContain('/compact');
+    });
+
+    it('should return null for null percent', () => {
+      expect(formatContextHint(null, AURORA_PALETTE)).toBeNull();
+    });
+  });
+
+  describe('formatContextHintPlain', () => {
+    it('should return null below 90%', () => {
+      expect(formatContextHintPlain(89)).toBeNull();
+    });
+
+    it('should return hint at 90%+', () => {
+      const hint = formatContextHintPlain(90);
+      expect(hint).not.toBeNull();
+      expect(hint).toContain('/compact');
+    });
+
+    it('should return null for null percent', () => {
+      expect(formatContextHintPlain(null)).toBeNull();
+    });
+  });
 });
 
 // Helper to create mock context
@@ -231,5 +273,6 @@ function createMockContext(
     sessionDuration: '1m',
     theme: {} as any,
     detailMode: false,
+    tier: 3,
   };
 }
