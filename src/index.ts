@@ -85,7 +85,7 @@ export async function main(deps: MainDeps = defaultDeps): Promise<void> {
     const cwd = getCwd(stdin);
     const width = process.stdout.columns || 80;
     const tier = getTier(width, theme.layout);
-    const isDetailed = tier >= 3 || config.detailMode;
+    const isDetailed = tier >= 3 || config.detailMode || config.preset === 'full';
 
     // Tier 2+: config counts require filesystem reads
     const configCounts = tier >= 2

@@ -17,7 +17,7 @@ import { AURORA_PALETTE } from './palettes/aurora.js';
 import { getIcons } from './icons.js';
 import { hex } from '../render/colors.js';
 import { createProgressBar, formatPercent, visualLength } from '../render/utils.js';
-import { formatUsageCompact, formatUsageFull } from '../render/usage.js';
+import { formatUsageFull } from '../render/usage.js';
 import { formatResetTime } from '../data/usage-api.js';
 import { formatTokenSpeed } from '../data/speed-tracker.js';
 import { getModelName, getContextPercent, getAbsoluteTokens } from '../input/stdin.js';
@@ -32,8 +32,6 @@ import {
   formatDetailToolsSummary,
   formatDetailAgentsSummary,
   formatDetailTodosSummary,
-  summarizeToolsStyled,
-  summarizeAgentsStyled,
   summarizeTodosStyled,
   summarizeSkillsStyled,
   renderToolsLineStyled,
@@ -41,6 +39,10 @@ import {
   renderTodosLineStyled,
   renderSkillsLineStyled,
   formatContextHint,
+  formatBashErrorsDisplay,
+  formatViolationsDisplay,
+  formatCompactSuggestionDisplay,
+  formatMcpStatusDisplay,
 } from './helpers.js';
 
 export const auroraTheme: Theme = {
@@ -119,28 +121,29 @@ export const auroraTheme: Theme = {
 
   renderCompact(ctx: RenderContext): string[] {
     const lines: string[] = [];
+    const p = this.palette;
+    const gap = '  '; // Double-space separator between sections (SVG dx=8~16)
+    const pipeSep = hex(p.muted, ' │ ');
+    const bullet = (color: string) => hex(color, '●') + ' ';
 
-    // Line 1: Header
+    // === Line 1: Model [session] | Progress Context | Project Git | Usage Duration ===
     const model = getModelName(ctx.stdin);
     const percent = getContextPercent(ctx.stdin);
     const percentStr = percent !== null ? formatPercent(percent) : '??%';
 
-    const modelText = hex(this.palette.blue, model);
+    const modelText = hex(p.blue, model);
 
-    // Session/Plan name
     const sessionName = ctx.config.display.showSessionName
       ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
       : null;
-    const sessionText = sessionName ? hex(this.palette.muted, ` [${sessionName}]`) : '';
+    const sessionText = sessionName ? hex(p.muted, ` [${sessionName}]`) : '';
 
-    // Progress bar
     const progressBar = this.features.useGradientProgress
       ? createProgressBar(percent || 0, 10, this.chars.progressFilled, this.chars.progressEmpty)
       : '';
-    const progressColor = getPercentColor(percent, this.palette);
+    const progressColor = getPercentColor(percent, p);
     const progressText = hex(progressColor, progressBar);
 
-    // Context display (absolute tokens or percentage)
     const absoluteTokens = getAbsoluteTokens(ctx.stdin);
     let contextText = '';
     if (ctx.config.display.showAbsoluteTokens && absoluteTokens) {
@@ -148,108 +151,209 @@ export const auroraTheme: Theme = {
     } else {
       contextText = hex(progressColor, percentStr);
     }
-    const compactContextHint = formatContextHint(percent, this.palette) || '';
+    const compactContextHint = formatContextHint(percent, p) || '';
 
-    // Project and git with parentheses and links
-    const projectGit = formatProjectGit(ctx, this.palette, this.icons, { showFileStats: true });
+    const projectGit = formatProjectGit(ctx, p, this.icons, { showFileStats: true });
 
-    // Duration
     const duration = ctx.sessionDuration;
-    const durationText = hex(this.palette.muted, duration);
+    const durationText = hex(p.muted, duration);
 
-    // Usage
-    const usageText = ctx.config.display.showUsage && ctx.usageData
-      ? '  ' + formatUsageCompact(ctx.usageData, this.palette)
-      : '';
+    // Usage: show both 5h and 7d (SVG shows both)
+    let usageText = '';
+    if (ctx.config.display.showUsage && ctx.usageData) {
+      const fiveHour = ctx.usageData.fiveHour;
+      const sevenDay = ctx.usageData.sevenDay;
+      const usageParts: string[] = [];
+      if (fiveHour > 0) {
+        const fiveColor = fiveHour >= 90 ? p.red : fiveHour >= 75 ? p.peach : fiveHour >= 50 ? p.yellow : p.green;
+        usageParts.push(hex(fiveColor, `5h:${Math.round(fiveHour)}%`));
+      }
+      if (sevenDay > 0) {
+        usageParts.push(hex(p.muted, `7d:${Math.round(sevenDay)}%`));
+      }
+      if (usageParts.length > 0) {
+        usageText = usageParts.join(gap);
+      }
+    }
 
-    // Token speed
-    const speedText = ctx.config.display.showTokenSpeed && ctx.tokenSpeed
-      ? '  ' + hex(this.palette.green, formatTokenSpeed(ctx.tokenSpeed, 'output'))
-      : '';
-
-    // Lines
-    const linesText = formatLinesDisplay(ctx, this.palette, this.icons, 'compact');
-    const linesDisplay = linesText ? '  ' + linesText : '';
-
-    // Cache
-    const cacheText = formatCacheDisplay(ctx, this.palette, this.icons, 'compact');
-    const cacheDisplay = cacheText ? '  ' + cacheText : '';
-
-    // Line 1 with logical grouping
-    const separator = hex(this.palette.muted, ' │ ');
-    const group1 = `${modelText}${sessionText}`;
-    const group2 = `${progressText} ${contextText}${compactContextHint}`;
-    const group3 = projectGit;
-    const group4 = `${linesDisplay}${cacheDisplay}${speedText}`;
-    const group5 = `${durationText}${usageText}`;
-
+    // SVG order: Model | Progress | Project Git | Usage  Duration
+    const group4Parts = [usageText, durationText].filter(Boolean);
     lines.push(
-      `${group1}${separator}${group2}${separator}${group3}${separator}${group4.trimStart()}${separator}${group5}`
+      `${modelText}${sessionText}${pipeSep}${progressText} ${contextText}${compactContextHint}${pipeSep}${projectGit}${pipeSep}${group4Parts.join(gap)}`
     );
 
-    // Line 2+: Activity (detailMode or compact)
-    const styledOpts = { palette: this.palette, icons: this.icons };
+    // Helper: abbreviate large numbers (1234 → "1.2k")
+    const fmtNum = (n: number): string => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : `${n}`;
 
-    if (ctx.detailMode) {
-      if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
-        const toolsSummary = formatDetailToolsSummary(ctx.transcript.tools, styledOpts);
-        if (toolsSummary) lines.push('  ' + toolsSummary);
+    // === Line 2: ● Git: +N commits  +N PRs  +added -removed  Cache: XX% hit  $X.XX saved ===
+    const line2Parts: string[] = [];
+
+    if (ctx.config.display.showGitActivity && ctx.gitActivity) {
+      const { commits, pullRequests } = ctx.gitActivity;
+      if (commits > 0 || pullRequests > 0) {
+        const gitParts: string[] = [hex(p.text, 'Git:')];
+        if (commits > 0) gitParts.push(hex(p.green, `+${commits} commit${commits > 1 ? 's' : ''}`));
+        if (pullRequests > 0) gitParts.push(hex(p.mauve, `+${pullRequests} PR${pullRequests > 1 ? 's' : ''}`));
+        line2Parts.push(gitParts.join(' '));
+      }
+    }
+
+    if (ctx.config.display.showLines && ctx.linesData) {
+      const { added, removed } = ctx.linesData;
+      line2Parts.push(hex(p.green, `+${fmtNum(added)}`) + ' ' + hex(p.red, `-${fmtNum(removed)}`));
+    }
+
+    if (ctx.config.display.showCacheMetrics && ctx.cacheMetrics) {
+      const hitRate = Math.round(ctx.cacheMetrics.cacheHitRate);
+      const savings = ctx.cacheMetrics.estimatedSavings;
+      const savingsStr = savings < 0.01 ? '<$0.01' : `$${savings.toFixed(2)}`;
+      line2Parts.push(
+        hex(p.blue, 'Cache:') + ' ' + hex(p.green, `${hitRate}%`) + ' ' + hex(p.muted, 'hit') +
+        gap + hex(p.peach, savingsStr) + ' ' + hex(p.muted, 'saved')
+      );
+    }
+
+    if (line2Parts.length > 0) {
+      lines.push(bullet(p.teal) + line2Parts.join(gap));
+    }
+
+    // === Line 3: ● Tools: Read+12  Edit+8  Bash+5  +87% -13% (28) ===
+    if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
+      const toolCounts = new Map<string, number>();
+      let runningTool: string | null = null;
+      for (const tool of ctx.transcript.tools) {
+        toolCounts.set(tool.name, (toolCounts.get(tool.name) || 0) + 1);
+        if (tool.status === 'running') runningTool = tool.name;
       }
 
-      if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
-        const agentsSummary = formatDetailAgentsSummary(ctx.transcript.agents, styledOpts);
-        if (agentsSummary) lines.push('  ' + agentsSummary);
+      const toolItems: string[] = [];
+      for (const [name, count] of toolCounts) {
+        const isRunning = runningTool === name;
+        const icon = isRunning ? '~' : '+';
+        const iconColor = isRunning ? p.yellow : p.green;
+        const countStr = count > 1 ? hex(p.muted, `${count}`) : '';
+        toolItems.push(hex(p.text, name) + hex(iconColor, icon) + countStr);
       }
 
-      if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
-        const todosSummary = formatDetailTodosSummary(ctx.transcript.todos, styledOpts);
-        if (todosSummary) lines.push('  ' + todosSummary);
+      let line3 = hex(p.blue, 'Tools:') + ' ' + toolItems.join(gap);
+
+      // Tool stats: +87% -13% (28)
+      if (ctx.config.display.showToolStats && ctx.toolStats && ctx.toolStats.total > 0) {
+        const { total, successRate } = ctx.toolStats;
+        const errorRate = 100 - successRate;
+        line3 += gap + hex(p.green, `+${successRate}%`) + ' ' + hex(p.red, `-${errorRate}%`) + ' ' + hex(p.muted, `(${total})`);
       }
 
-      // Usage detail
-      if (ctx.config.display.showUsage && ctx.usageData) {
-        const usageSummary = formatUsageSummaryLine(ctx.usageData, this.palette);
-        lines.push('  ' + usageSummary);
+      lines.push(bullet(p.blue) + line3);
+    }
+
+    // === Line 4: ● Agents: planner+[s]  code-reviewer+[o]  build-fix~[h] ===
+    if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
+      const agentItems: string[] = [];
+      for (const agent of ctx.transcript.agents.slice(0, 3)) {
+        const isRunning = agent.status === 'running';
+        const icon = isRunning ? '~' : '+';
+        const iconColor = isRunning ? p.yellow : p.green;
+        const modelChar = agent.model ? `[${agent.model[0]}]` : '';
+        agentItems.push(hex(p.text, agent.type) + hex(iconColor, icon) + hex(p.muted, modelChar));
       }
+      lines.push(bullet(p.mauve) + hex(p.mauve, 'Agents:') + ' ' + agentItems.join(gap));
+    }
 
-      // Advanced feature widgets
-      const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
-      const abnormal = hasAbnormalState(ctx);
-      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal, ctx.config.maxActivityWidgets);
-      const advancedParts = visible.map(w => w.text);
+    // === Line 5: ● Phase: [IMPLEMENT] 85%  Tests: + 87% (309/356)  Pass@1: 78% ===
+    const line5Parts: string[] = [];
 
-      if (advancedParts.length > 0) {
-        lines.push('  ' + advancedParts.join('  ' + hex(this.palette.muted, this.chars.separator) + '  '));
+    if (ctx.workflowState && ctx.workflowState.currentPhase !== 'UNKNOWN') {
+      const { currentPhase, confidence } = ctx.workflowState;
+      const phaseColors: Record<string, string> = {
+        'PLAN': p.blue,
+        'IMPLEMENT': p.mauve,
+        'REVIEW': p.green,
+      };
+      const color = phaseColors[currentPhase] || p.muted;
+      line5Parts.push(hex(p.text, 'Phase:') + ' ' + hex(color, `[${currentPhase}]`) + ' ' + hex(p.muted, `${confidence}%`));
+    }
+
+    if (ctx.testCoverage?.coverage?.hasData) {
+      const { overall, passedTests, totalTests } = ctx.testCoverage.coverage;
+      const avg = Math.round((overall.statements + overall.branches + overall.functions + overall.lines) / 4);
+      const color = avg >= 80 ? p.green : avg >= 60 ? p.yellow : p.red;
+      let testStr = hex(p.green, 'Tests:') + ' ' + hex(color, `+ ${avg}%`);
+      if (passedTests != null && totalTests != null) {
+        testStr += ' ' + hex(p.muted, `(${passedTests}/${totalTests})`);
       }
-    } else {
-      // Compact mode: summary line
-      const activityParts: string[] = [];
+      line5Parts.push(testStr);
+    }
 
-      if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
-        activityParts.push(summarizeToolsStyled(ctx, styledOpts));
+    if (ctx.passAtK?.hasData && ctx.passAtK?.metrics) {
+      const { passAt1 } = ctx.passAtK.metrics;
+      const color = passAt1 >= 80 ? p.green : passAt1 >= 60 ? p.yellow : p.red;
+      line5Parts.push(hex(p.blue, 'Pass@1:') + ' ' + hex(color, `${passAt1}%`));
+    }
+
+    if (line5Parts.length > 0) {
+      lines.push(bullet(p.teal) + line5Parts.join(gap));
+    }
+
+    // === Line 6: ● Config: 2 .md  3 rules  2 MCP  4 hooks  Cost: $0.47  125 tok/s ===
+    const line6Parts: string[] = [];
+
+    if (ctx.config.display.showConfigCounts) {
+      const cc = ctx.configCounts;
+      const configItems: string[] = [];
+      if (cc.claudeMdCount > 0) configItems.push(hex(p.teal, `${cc.claudeMdCount}`) + hex(p.muted, ' .md'));
+      if (cc.rulesCount > 0) configItems.push(hex(p.blue, `${cc.rulesCount}`) + hex(p.muted, ' rules'));
+      if (cc.mcpCount > 0) configItems.push(hex(p.mauve, `${cc.mcpCount}`) + hex(p.muted, ' MCP'));
+      if (cc.hooksCount > 0) configItems.push(hex(p.green, `${cc.hooksCount}`) + hex(p.muted, ' hooks'));
+      if (configItems.length > 0) {
+        line6Parts.push(hex(p.muted, 'Config:') + ' ' + configItems.join(gap));
       }
+    }
 
-      if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
-        activityParts.push(summarizeAgentsStyled(ctx, styledOpts));
+    const cost = ctx.config.display.showCost ? ctx.stdin.cost?.total_cost_usd : undefined;
+    if (cost) {
+      line6Parts.push(hex(p.peach, `Cost: $${cost.toFixed(2)}`));
+    }
+
+    if (ctx.config.display.showTokenSpeed && ctx.tokenSpeed) {
+      const speedStr = formatTokenSpeed(ctx.tokenSpeed, 'output');
+      if (speedStr && speedStr !== '0 tok/s') {
+        line6Parts.push(hex(p.muted, speedStr));
       }
+    }
 
-      if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
-        activityParts.push(summarizeTodosStyled(ctx, styledOpts));
-      }
+    if (line6Parts.length > 0) {
+      lines.push(bullet(p.muted) + line6Parts.join(gap));
+    }
 
-      if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
-        activityParts.push(summarizeSkillsStyled(ctx, styledOpts));
-      }
+    // === Line 7: Alerts (errors, violations, compact suggestion, MCP) ===
+    const line7Parts: string[] = [];
 
-      // New features: Activity widgets
-      const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
-      const abnormal = hasAbnormalState(ctx);
-      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal, ctx.config.maxActivityWidgets);
-      activityParts.push(...visible.map(w => w.text));
+    const bashErrorsText = formatBashErrorsDisplay(ctx, p, this.icons);
+    if (bashErrorsText) line7Parts.push(bashErrorsText);
 
-      if (activityParts.length > 0) {
-        lines.push(activityParts.join('  ' + hex(this.palette.muted, this.chars.separator) + '  '));
-      }
+    const violationsText = formatViolationsDisplay(ctx, p, this.icons);
+    if (violationsText) line7Parts.push(violationsText);
+
+    const compactText = formatCompactSuggestionDisplay(ctx, p, this.icons);
+    if (compactText) line7Parts.push(compactText);
+
+    const mcpStatusText = formatMcpStatusDisplay(ctx, p);
+    if (mcpStatusText) line7Parts.push(mcpStatusText);
+
+    if (line7Parts.length > 0) {
+      lines.push(line7Parts.join(gap));
+    }
+
+    // === Extra: Todos + Skills ===
+    const styledOpts = { palette: p, icons: this.icons };
+
+    if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
+      lines.push(summarizeTodosStyled(ctx, styledOpts));
+    }
+
+    if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
+      lines.push(summarizeSkillsStyled(ctx, styledOpts));
     }
 
     return lines;
