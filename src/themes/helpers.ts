@@ -938,7 +938,8 @@ export function summarizeTodosStyled(ctx: RenderContext, opts: CompactStyledOpti
   const completed = ctx.transcript.todos.filter((t) => t.status === 'completed').length;
   const inProgress = ctx.transcript.todos.find((t) => t.status === 'in_progress');
 
-  const label = hex(palette.categoryTodos, icons.categoryTodos);
+  const todoLabel = transform?.case === 'upper' ? 'TODOS:' : 'Todos:';
+  const label = hex(palette.categoryTodos, icons.categoryTodos + ' ' + todoLabel);
 
   if (inProgress) {
     const shortContent = inProgress.content.substring(0, 20);
