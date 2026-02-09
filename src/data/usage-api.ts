@@ -281,7 +281,7 @@ export function formatUsagePercent(percent: number): string {
   return `${Math.round(percent)}%`;
 }
 
-export function formatResetTime(isoTimestamp: string | null): string {
+export function formatResetTime(isoTimestamp: string | null, mode: 'full' | 'compact' = 'full'): string {
   if (!isoTimestamp) return '';
 
   try {
@@ -297,6 +297,9 @@ export function formatResetTime(isoTimestamp: string | null): string {
     const diffHours = Math.floor(diffMins / 60);
 
     if (diffHours >= 1) {
+      if (mode === 'compact') {
+        return `${diffHours}h`;
+      }
       const remainingMins = diffMins % 60;
       return remainingMins > 0 ? `${diffHours}h${remainingMins}m` : `${diffHours}h`;
     }

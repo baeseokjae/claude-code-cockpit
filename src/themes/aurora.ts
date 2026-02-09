@@ -166,7 +166,14 @@ export const auroraTheme: Theme = {
       const usageParts: string[] = [];
       if (fiveHour > 0) {
         const fiveColor = fiveHour >= 90 ? p.red : fiveHour >= 75 ? p.peach : fiveHour >= 50 ? p.yellow : p.green;
-        usageParts.push(hex(fiveColor, `5h:${Math.round(fiveHour)}%`));
+        let fiveHourText = hex(fiveColor, `5h:${Math.round(fiveHour)}%`);
+        if (fiveHour >= 50) {
+          const fiveReset = formatResetTime(ctx.usageData.fiveHourResetAt, 'compact');
+          if (fiveReset) {
+            fiveHourText += hex(p.muted, ` ↻${fiveReset}`);
+          }
+        }
+        usageParts.push(fiveHourText);
       }
       if (sevenDay > 0) {
         usageParts.push(hex(p.muted, `7d:${Math.round(sevenDay)}%`));
