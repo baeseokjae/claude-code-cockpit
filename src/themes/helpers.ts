@@ -4,7 +4,7 @@
  */
 
 import type { RenderContext, ColorPalette, IconSet } from '../types/index.js';
-import { fileUrl, githubBranchUrl, hyperlink } from '../render/links.js';
+import { fileUrl, githubBranchUrl } from '../render/links.js';
 import { hex, bold, underline } from '../render/colors.js';
 import { formatCount } from '../render/superscript.js';
 import { formatLines, formatLinesCompact } from '../data/lines.js';
@@ -304,19 +304,18 @@ export function formatProjectGit(
 
   let result = prefix;
 
-  // Project name with file:// link
+  // Project name (plain text, no hyperlink)
   if (project && ctx.stdin.cwd) {
     const projectName = applyTextTransform(project, transform);
-    const projectLink = hyperlink(fileUrl(ctx.stdin.cwd), projectName);
 
     if (palette) {
-      result += hex(palette.teal, projectPrefix + projectLink);
+      result += hex(palette.teal, projectPrefix + projectName);
     } else {
-      result += projectPrefix + projectLink;
+      result += projectPrefix + projectName;
     }
   }
 
-  // Git branch with GitHub link (if available)
+  // Git branch (plain text, no hyperlink)
   if (git) {
     let branchText = applyTextTransform(git, transform);
 
@@ -343,23 +342,13 @@ export function formatProjectGit(
       }
     }
 
-    if (ctx.gitStatus?.remoteUrl) {
-      const branchUrl = githubBranchUrl(ctx.gitStatus.remoteUrl, ctx.gitStatus.branch || git);
-      const branchLink = hyperlink(branchUrl, branchText);
+    const branchPrefixStr = branchPrefix ? '  ' + branchPrefix : '';
 
-      if (palette) {
-        const color = branchColor || palette.teal;
-        result += hex(color, `${branchPrefix ? '  ' + branchPrefix : ''} (${branchLink})`);
-      } else {
-        result += `${branchPrefix ? '  ' + branchPrefix : ''} (${branchLink})`;
-      }
+    if (palette) {
+      const color = branchColor || palette.teal;
+      result += hex(color, `${branchPrefixStr} (${branchText})`);
     } else {
-      if (palette) {
-        const color = branchColor || palette.teal;
-        result += hex(color, `${branchPrefix ? '  ' + branchPrefix : ''} (${branchText})`);
-      } else {
-        result += `${branchPrefix ? '  ' + branchPrefix : ''} (${branchText})`;
-      }
+      result += `${branchPrefixStr} (${branchText})`;
     }
   }
 
@@ -381,7 +370,7 @@ export function formatProjectGit(
     const moreText = remaining > 0 ? ` +${remaining}` : '';
 
     const label = subrepoStyle === 'minimal' ? '' :
-                  transform.case === 'upper' ? 'SUBS: ' : 'sub: ';
+      transform.case === 'upper' ? 'SUBS: ' : 'sub: ';
 
     if (palette) {
       result += hex(palette.muted, `  ${label}${subItems.join(' ')}${moreText}`);
@@ -501,8 +490,8 @@ export function formatToolStatsDisplay(
   }
 
   return hex(palette.text, 'Tools: ') +
-         hex(palette.text, `${total}`) + ' ' +
-         `(${hex(palette.green, `✓${success}`)} ${hex(palette.red, `✗${error}`)})`;
+    hex(palette.text, `${total}`) + ' ' +
+    `(${hex(palette.green, `✓${success}`)} ${hex(palette.red, `✗${error}`)})`;
 }
 
 // ============================================
@@ -523,8 +512,8 @@ export function formatBashErrorsDisplay(
   const codesStr = exitCodes.slice(0, 2).join(', ');
 
   return hex(palette.red, icons.error) + ' ' +
-         hex(palette.red, `Bash: ${count} error${count > 1 ? 's' : ''}`) +
-         hex(palette.muted, ` (${codesStr}${exitCodes.length > 2 ? '...' : ''})`);
+    hex(palette.red, `Bash: ${count} error${count > 1 ? 's' : ''}`) +
+    hex(palette.muted, ` (${codesStr}${exitCodes.length > 2 ? '...' : ''})`);
 }
 
 // ============================================
@@ -542,8 +531,8 @@ export function formatCompactSuggestionDisplay(
 
   const { totalToolCalls } = ctx.compactSuggestion;
   return hex(palette.yellow, icons.warning) + ' ' +
-         hex(palette.yellow, `${totalToolCalls} calls`) + ' ' +
-         hex(palette.muted, 'try /compact');
+    hex(palette.yellow, `${totalToolCalls} calls`) + ' ' +
+    hex(palette.muted, 'try /compact');
 }
 
 // ============================================
@@ -628,8 +617,8 @@ export function formatTestCoverageDisplay(
   const avgCoverage = Math.round((overall.statements + overall.branches + overall.functions + overall.lines) / 4);
 
   const color = avgCoverage >= 80 ? palette.green :
-                avgCoverage >= 60 ? palette.yellow :
-                palette.red;
+    avgCoverage >= 60 ? palette.yellow :
+      palette.red;
 
   return hex(palette.teal, icons.success) + ' ' + hex(color, `${avgCoverage}%`);
 }
@@ -649,8 +638,8 @@ export function formatPassAtKDisplay(
   const { passAt1 } = ctx.passAtK.metrics;
 
   const color = passAt1 >= 80 ? palette.green :
-                passAt1 >= 60 ? palette.yellow :
-                palette.red;
+    passAt1 >= 60 ? palette.yellow :
+      palette.red;
 
   return hex(palette.text, '1st-try: ') + hex(color, `${passAt1}%`);
 }
@@ -672,7 +661,7 @@ export function formatGitWorktreesDisplay(
 
   if (dirtyCount > 0) {
     return hex(palette.yellow, `${count} worktrees`) + ' ' +
-           hex(palette.red, `(${dirtyCount} dirty)`);
+      hex(palette.red, `(${dirtyCount} dirty)`);
   }
 
   return hex(palette.text, `${count} worktrees`);
@@ -701,8 +690,8 @@ export function formatPerformanceMetricsDisplay(
     const timeS = Math.round(ctx.performanceMetrics.test.lastTestTime / 1000);
     const status = ctx.performanceMetrics.test.lastTestStatus;
     const color = status === 'pass' ? palette.green :
-                  status === 'fail' ? palette.red :
-                  palette.muted;
+      status === 'fail' ? palette.red :
+        palette.muted;
     parts.push(hex(color, `Test: ${timeS}s`));
   }
 
@@ -728,7 +717,7 @@ export function formatMcpStatusDisplay(
   }
 
   return hex(palette.teal, `MCP: ${serverCount} servers`) + ' ' +
-         hex(palette.text, `(${totalToolCalls} calls)`);
+    hex(palette.text, `(${totalToolCalls} calls)`);
 }
 
 // ============================================
@@ -747,12 +736,12 @@ export function formatInstanceSyncDisplay(
 
   if (conflictCount > 0) {
     return hex(palette.mauve, `${instanceCount} instances`) + ' ' +
-           hex(palette.red, `(${conflictCount} conflict${conflictCount > 1 ? 's' : ''}!)`);
+      hex(palette.red, `(${conflictCount} conflict${conflictCount > 1 ? 's' : ''}!)`);
   }
 
   if (hasActiveTeam) {
     return hex(palette.mauve, `${instanceCount} instances`) + ' ' +
-           hex(palette.teal, '(team)');
+      hex(palette.teal, '(team)');
   }
 
   return hex(palette.mauve, `${instanceCount} instances`);
@@ -852,8 +841,8 @@ export function collectActivityWidgets(
 
 export function hasAbnormalState(ctx: RenderContext): boolean {
   return (ctx.bashErrors && ctx.bashErrors.length > 0) ||
-         (ctx.violations && ctx.violations.total > 0) ||
-         (ctx.transcript.tools.some(t => t.status === 'error'));
+    (ctx.violations && ctx.violations.total > 0) ||
+    (ctx.transcript.tools.some(t => t.status === 'error'));
 }
 
 export function getVisibleWidgets(

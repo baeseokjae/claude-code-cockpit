@@ -1,10 +1,9 @@
 /**
- * stdout output with NBSP conversion
+ * stdout output
  */
 
 export function writeOutput(lines: string[]): void {
   for (const line of lines) {
-    const converted = line.replace(/ /g, '\u00A0');
-    console.log(converted);
+    console.log(line + '\x1b[0m');
   }
 }
