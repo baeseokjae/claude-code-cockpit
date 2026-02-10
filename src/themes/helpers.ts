@@ -915,9 +915,9 @@ export function summarizeAgentsStyled(ctx: RenderContext, opts: CompactStyledOpt
   for (const agent of ctx.transcript.agents.slice(0, 2)) {
     const icon = agent.status === 'running' ? icons.running : icons.success;
     const iconColor = agent.status === 'running' ? palette.yellow : palette.green;
-    const modelChar = agent.model ? agent.model[0] : '';
+    const modelChar = agent.model ? agent.model[0].toUpperCase() : '';
     const modelAbbr = modelChar
-      ? `[${transform?.case === 'upper' ? modelChar.toUpperCase() : modelChar}]`
+      ? `[${modelChar}]`
       : '';
 
     if (transform?.case === 'upper') {
@@ -1079,7 +1079,7 @@ export function summarizeToolsPlain(ctx: RenderContext, opts: CompactPlainOption
     const isRunning = running === name;
     const marker = isRunning ? '~' : '+';
     const displayName = transform?.case === 'upper' ? name.toUpperCase() : name;
-    const text = `${displayName}${marker}${count > 1 ? count : ''}`;
+    const text = `${displayName}${marker}${count}`;
     parts.push(isRunning ? bold(text) : text);
   }
 
@@ -1093,9 +1093,9 @@ export function summarizeAgentsPlain(ctx: RenderContext, opts: CompactPlainOptio
     .slice(0, limit)
     .map((a) => {
       const marker = a.status === 'running' ? '~' : '+';
-      const modelChar = a.model ? a.model[0] : '';
+      const modelChar = a.model ? a.model[0].toUpperCase() : '';
       const model = modelChar
-        ? `[${transform?.case === 'upper' ? modelChar.toUpperCase() : modelChar}]`
+        ? `[${modelChar}]`
         : '';
       const displayType = transform?.case === 'upper' ? a.type.toUpperCase() : a.type;
       return `${displayType}${marker}${model}`;

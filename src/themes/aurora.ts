@@ -192,7 +192,7 @@ export const auroraTheme: Theme = {
     // Helper: abbreviate large numbers (1234 → "1.2k")
     const fmtNum = (n: number): string => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : `${n}`;
 
-    // === Line 2: ● Git: +N commits  +N PRs  +added -removed  Cache: XX% hit  $X.XX saved ===
+    // === Line 2: ● Git: +N commits (Xh)  +N PRs  +added -removed ===
     const line2Parts: string[] = [];
 
     {
@@ -201,7 +201,15 @@ export const auroraTheme: Theme = {
 
       if (ctx.config.display.showGitActivity && ctx.gitActivity) {
         const { commits, pullRequests } = ctx.gitActivity;
-        if (commits > 0) { gitParts.push(hex(p.green, `+${commits} commit${commits > 1 ? 's' : ''}`)); hasGitContent = true; }
+        if (commits > 0) {
+          let commitText = hex(p.green, `+${commits} commit${commits > 1 ? 's' : ''}`);
+          if (ctx.sessionDuration) {
+            const durMatch = ctx.sessionDuration.match(/^(\d+h)/);
+            if (durMatch) commitText += hex(p.muted, ` (${durMatch[1]})`);
+          }
+          gitParts.push(commitText);
+          hasGitContent = true;
+        }
         if (pullRequests > 0) { gitParts.push(hex(p.mauve, `+${pullRequests} PR${pullRequests > 1 ? 's' : ''}`)); hasGitContent = true; }
       }
 
@@ -214,16 +222,6 @@ export const auroraTheme: Theme = {
       if (hasGitContent) {
         line2Parts.push(gitParts.join(' '));
       }
-    }
-
-    if (ctx.config.display.showCacheMetrics && ctx.cacheMetrics) {
-      const hitRate = Math.round(ctx.cacheMetrics.cacheHitRate);
-      const savings = ctx.cacheMetrics.estimatedSavings;
-      const savingsStr = savings < 0.01 ? '<$0.01' : `$${savings.toFixed(2)}`;
-      line2Parts.push(
-        hex(p.blue, 'Cache:') + ' ' + hex(p.green, `${hitRate}%`) + ' ' + hex(p.muted, 'hit') +
-        gap + hex(p.peach, savingsStr) + ' ' + hex(p.muted, 'saved')
-      );
     }
 
     if (line2Parts.length > 0) {
@@ -244,39 +242,56 @@ export const auroraTheme: Theme = {
         const isRunning = runningTool === name;
         const icon = isRunning ? '~' : '+';
         const iconColor = isRunning ? p.yellow : p.green;
-        const countStr = count > 1 ? hex(p.muted, `${count}`) : '';
+        const countStr = hex(p.muted, `${count}`);
         toolItems.push(hex(p.text, name) + hex(iconColor, icon) + countStr);
       }
 
       let line3 = hex(p.blue, 'Tools:') + ' ' + toolItems.join(gap);
 
-      // Tool stats: +87% -13% (28)
+      // Tool stats: ✓98% ✗2% (28)
       if (ctx.config.display.showToolStats && ctx.toolStats && ctx.toolStats.total > 0) {
-        const { total, successRate } = ctx.toolStats;
-        const errorRate = 100 - successRate;
-        line3 += gap + hex(p.green, `+${successRate}%`) + ' ' + hex(p.red, `-${errorRate}%`) + ' ' + hex(p.muted, `(${total})`);
+        const { total, success, error: errCount } = ctx.toolStats;
+        const successPct = total > 0 ? Math.round((success / total) * 100) : 0;
+        const errorPct = total > 0 ? Math.round((errCount / total) * 100) : 0;
+        line3 += gap + hex(p.green, `✓${successPct}%`) + ' ' + hex(p.red, `✗${errorPct}%`) + ' ' + hex(p.muted, `(${total})`);
       }
 
       lines.push(bullet(p.blue) + line3);
     }
 
-    // === Line 4: ● Agents: planner+[s]  code-reviewer+[o]  build-fix~[h] ===
+    // === Line 4: ● Agents: 3x general-purpose+[s]  code-reviewer+[o] ===
     if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
-      const agentItems: string[] = [];
-      for (const agent of ctx.transcript.agents.slice(0, 3)) {
+      // Dedup agents by type
+      const agentMap = new Map<string, { count: number; isRunning: boolean; modelChar: string }>();
+      for (const agent of ctx.transcript.agents) {
+        const key = agent.type;
+        const existing = agentMap.get(key);
         const isRunning = agent.status === 'running';
-        const icon = isRunning ? '~' : '+';
-        const iconColor = isRunning ? p.yellow : p.green;
-        const modelChar = agent.model ? `[${agent.model[0]}]` : '';
-        agentItems.push(hex(p.text, agent.type) + hex(iconColor, icon) + hex(p.muted, modelChar));
+        const modelChar = agent.model ? agent.model[0].toUpperCase() : '';
+        if (existing) {
+          existing.count++;
+          if (isRunning) existing.isRunning = true;
+          if (!existing.modelChar && modelChar) existing.modelChar = modelChar;
+        } else {
+          agentMap.set(key, { count: 1, isRunning, modelChar });
+        }
+      }
+
+      const agentItems: string[] = [];
+      for (const [type, info] of agentMap) {
+        const icon = info.isRunning ? '~' : '+';
+        const iconColor = info.isRunning ? p.yellow : p.green;
+        const modelStr = info.modelChar ? `[${info.modelChar}]` : '';
+        const prefix = info.count > 1 ? hex(p.muted, `${info.count}x`) : '';
+        agentItems.push(prefix + hex(p.text, type) + hex(iconColor, icon) + hex(p.muted, modelStr));
       }
       lines.push(bullet(p.mauve) + hex(p.mauve, 'Agents:') + ' ' + agentItems.join(gap));
     }
 
-    // === Line 5: ● Phase: [IMPLEMENT] 85%  Tests: + 87% (309/356)  Pass@1: 78% ===
-    const line5Parts: string[] = [];
+    // === Line 5: ● Phase: [IMPLEMENT] conf:57%  Tests: +87%  Cost: $15.04 -$0.69  Cache: 87%  125 tok/s ===
+    const metaParts: string[] = [];
 
-    if (ctx.workflowState && ctx.workflowState.currentPhase !== 'UNKNOWN') {
+    if (ctx.config.display.showWorkflowPhase && ctx.workflowState && ctx.workflowState.currentPhase !== 'UNKNOWN') {
       const { currentPhase, confidence } = ctx.workflowState;
       const phaseColors: Record<string, string> = {
         'PLAN': p.blue,
@@ -284,10 +299,10 @@ export const auroraTheme: Theme = {
         'REVIEW': p.green,
       };
       const color = phaseColors[currentPhase] || p.muted;
-      line5Parts.push(hex(p.text, 'Phase:') + ' ' + hex(color, `[${currentPhase}]`) + ' ' + hex(p.muted, `${confidence}%`));
+      metaParts.push(hex(p.text, 'Phase:') + ' ' + hex(color, `[${currentPhase}]`) + ' ' + hex(p.muted, `conf:${confidence}%`));
     }
 
-    if (ctx.testCoverage?.coverage?.hasData) {
+    if (ctx.config.display.showTestCoverage && ctx.testCoverage?.coverage?.hasData) {
       const { overall, passedTests, totalTests } = ctx.testCoverage.coverage;
       const avg = Math.round((overall.statements + overall.branches + overall.functions + overall.lines) / 4);
       const color = avg >= 80 ? p.green : avg >= 60 ? p.yellow : p.red;
@@ -295,21 +310,16 @@ export const auroraTheme: Theme = {
       if (passedTests != null && totalTests != null) {
         testStr += ' ' + hex(p.muted, `(${passedTests}/${totalTests})`);
       }
-      line5Parts.push(testStr);
+      metaParts.push(testStr);
     }
 
-    if (ctx.passAtK?.hasData && ctx.passAtK?.metrics) {
+    if (ctx.config.display.showPassAtK && ctx.passAtK?.hasData && ctx.passAtK?.metrics) {
       const { passAt1 } = ctx.passAtK.metrics;
-      const color = passAt1 >= 80 ? p.green : passAt1 >= 60 ? p.yellow : p.red;
-      line5Parts.push(hex(p.blue, 'Pass@1:') + ' ' + hex(color, `${passAt1}%`));
+      if (passAt1 < 100) {
+        const color = passAt1 >= 80 ? p.green : passAt1 >= 60 ? p.yellow : p.red;
+        metaParts.push(hex(p.blue, 'Pass@1:') + ' ' + hex(color, `${passAt1}%`));
+      }
     }
-
-    if (line5Parts.length > 0) {
-      lines.push(bullet(p.teal) + line5Parts.join(gap));
-    }
-
-    // === Line 6: ● Config: 2 .md  3 rules  2 MCP  4 hooks  Cost: $0.47  125 tok/s ===
-    const line6Parts: string[] = [];
 
     if (ctx.config.display.showConfigCounts) {
       const cc = ctx.configCounts;
@@ -319,24 +329,36 @@ export const auroraTheme: Theme = {
       if (cc.mcpCount > 0) configItems.push(hex(p.mauve, `${cc.mcpCount}`) + hex(p.muted, ' MCP'));
       if (cc.hooksCount > 0) configItems.push(hex(p.green, `${cc.hooksCount}`) + hex(p.muted, ' hooks'));
       if (configItems.length > 0) {
-        line6Parts.push(hex(p.muted, 'Config:') + ' ' + configItems.join(gap));
+        metaParts.push(hex(p.muted, 'Config:') + ' ' + configItems.join(gap));
       }
     }
 
     const cost = ctx.config.display.showCost ? ctx.stdin.cost?.total_cost_usd : undefined;
     if (cost) {
-      line6Parts.push(hex(p.peach, `Cost: $${cost.toFixed(2)}`));
+      let costText = hex(p.peach, `Cost: $${cost.toFixed(2)}`);
+      if (ctx.config.display.showCacheMetrics && ctx.cacheMetrics && ctx.cacheMetrics.estimatedSavings >= 0.01) {
+        const savings = ctx.cacheMetrics.estimatedSavings;
+        costText += ' ' + hex(p.green, `-$${savings.toFixed(2)}`);
+      }
+      metaParts.push(costText);
+    }
+
+    if (ctx.config.display.showCacheMetrics && ctx.cacheMetrics) {
+      const hitRate = Math.round(ctx.cacheMetrics.cacheHitRate);
+      if (hitRate < 95) {
+        metaParts.push(hex(p.blue, 'Cache:') + ' ' + hex(p.green, `${hitRate}%`));
+      }
     }
 
     if (ctx.config.display.showTokenSpeed && ctx.tokenSpeed) {
       const speedStr = formatTokenSpeed(ctx.tokenSpeed, 'output');
       if (speedStr && speedStr !== '0 tok/s') {
-        line6Parts.push(hex(p.muted, speedStr));
+        metaParts.push(hex(p.muted, speedStr));
       }
     }
 
-    if (line6Parts.length > 0) {
-      lines.push(bullet(p.muted) + line6Parts.join(gap));
+    if (metaParts.length > 0) {
+      lines.push(bullet(p.teal) + metaParts.join(gap));
     }
 
     // === Line 7: Alerts (errors, violations, compact suggestion, MCP) ===
