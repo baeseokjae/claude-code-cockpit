@@ -157,6 +157,7 @@ export async function main(deps: MainDeps = defaultDeps): Promise<void> {
       : null;
 
     const ctx: RenderContext = {
+      width: process.stdout.columns || 80,
       stdin,
       transcript,
       config,
