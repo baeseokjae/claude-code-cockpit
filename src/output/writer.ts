@@ -5,7 +5,7 @@
 import { getTerminalWidth } from '../utils/terminal-width.js';
 
 export function writeOutput(lines: string[]): void {
-  const maxWidth = getTerminalWidth();
+  const maxWidth = getTerminalWidth() - 2; // safety margin for ambiguous-width edge cases
   for (const line of lines) {
     const output = truncateLine(line, maxWidth);
     console.log(output + '\x1b[0m');
@@ -83,6 +83,9 @@ function isFullWidth(cp: number): boolean {
     (cp >= 0x3200 && cp <= 0x32FF) ||
     (cp >= 0x3300 && cp <= 0x33FF) ||
     (cp >= 0x1F300 && cp <= 0x1F9FF) ||
+    (cp >= 0x2500 && cp <= 0x257F) ||  // Box Drawings (─, │, ╭, ╮, ╰, ╯)
+    (cp >= 0x2580 && cp <= 0x259F) ||  // Block Elements (▀, █, ▌)
+    (cp >= 0x25A0 && cp <= 0x25FF) ||  // Geometric Shapes (●, ▰, ▱, ◆, ▸)
     (cp >= 0x2600 && cp <= 0x26FF) ||  // Miscellaneous Symbols (⚡, ☀, ★)
     (cp >= 0x2700 && cp <= 0x27BF) ||  // Dingbats (✂, ✈)
     (cp >= 0xFE00 && cp <= 0xFE0F) ||  // Variation Selectors

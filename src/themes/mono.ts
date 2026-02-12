@@ -56,6 +56,7 @@ export const monoTheme: Theme = {
     minWidth: 40,
     compactWidth: 60,
     fullWidth: 100,
+    stableHeight: { minimal: 1, compact: 2, full: 6 },
   },
 
   features: {

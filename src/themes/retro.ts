@@ -52,6 +52,7 @@ export const retroTheme: Theme = {
     minWidth: 50,
     compactWidth: 70,
     fullWidth: 100,
+    stableHeight: { minimal: 1, compact: 2, full: 8 },
   },
 
   features: {

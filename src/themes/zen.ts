@@ -50,6 +50,7 @@ export const zenTheme: Theme = {
     minWidth: 30,
     compactWidth: 50,
     fullWidth: 80,
+    stableHeight: { minimal: 1, compact: 1, full: 2 },
   },
 
   features: {

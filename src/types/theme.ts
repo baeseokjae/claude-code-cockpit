@@ -83,6 +83,11 @@ export interface ThemeLayout {
   minWidth: number;
   compactWidth: number;
   fullWidth: number;
+  stableHeight: {
+    minimal: number;
+    compact: number;
+    full: number;
+  };
 }
 
 export interface ThemeFeatures {

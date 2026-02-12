@@ -68,6 +68,7 @@ export const auroraTheme: Theme = {
     minWidth: 60,
     compactWidth: 80,
     fullWidth: 120,
+    stableHeight: { minimal: 1, compact: 3, full: 7 },
   },
 
   features: {

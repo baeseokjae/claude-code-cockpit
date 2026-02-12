@@ -167,7 +167,10 @@ export function applyTextTransform(text: string, transform: TextTransform): stri
 
 export function getSessionName(ctx: RenderContext): string | null {
   if (!ctx.config.display.showSessionName) return null;
-  return ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8) || null;
+  const name = ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8) || null;
+  if (!name) return null;
+  const maxLen = ctx.tier === 1 ? 10 : ctx.tier === 2 ? 20 : 30;
+  return name.length > maxLen ? name.substring(0, maxLen - 1) + '\u2026' : name;
 }
 
 // ============================================
@@ -318,6 +321,12 @@ export function formatProjectGit(
   // Git branch (plain text, no hyperlink)
   if (git) {
     let branchText = applyTextTransform(git, transform);
+
+    // Truncate branch name to prevent line overflow
+    const maxBranchLen = ctx.tier === 1 ? 15 : ctx.tier === 2 ? 25 : 40;
+    if (branchText.length > maxBranchLen) {
+      branchText = branchText.substring(0, maxBranchLen - 1) + '\u2026';  // …
+    }
 
     // Add tag if available
     if (ctx.gitStatus?.tag) {
@@ -990,7 +999,8 @@ export function renderToolsLineStyled(ctx: RenderContext, opts: CompactStyledOpt
   for (const tool of ctx.transcript.tools.slice(0, 5)) {
     const icon = tool.status === 'running' ? icons.running : tool.status === 'error' ? icons.error : icons.success;
     const iconColor = tool.status === 'running' ? palette.yellow : tool.status === 'error' ? palette.red : palette.green;
-    const target = tool.target ? ` ${tool.target}` : '';
+    const targetName = tool.target ? tool.target.split('/').pop() : '';
+    const target = targetName ? ` ${targetName}` : '';
     parts.push(hex(palette.text, tool.name) + hex(iconColor, icon) + hex(palette.muted, target));
   }
 
