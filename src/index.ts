@@ -30,6 +30,7 @@ import { loadTheme } from './themes/index.js';
 import { writeOutput } from './output/writer.js';
 import { writeSessionFile } from './output/session-file.js';
 import { createDebug } from './utils/debug.js';
+import { getTerminalWidth } from './utils/terminal-width.js';
 
 const debug = createDebug('main');
 
@@ -83,7 +84,7 @@ export async function main(deps: MainDeps = defaultDeps): Promise<void> {
     const transcript = await deps.parseTranscript(transcriptPath);
 
     const cwd = getCwd(stdin);
-    const width = process.stdout.columns || 80;
+    const width = getTerminalWidth();
     const tier = getTier(width, theme.layout);
     const isDetailed = tier >= 3 || config.detailMode || config.preset === 'full';
 
@@ -157,7 +158,7 @@ export async function main(deps: MainDeps = defaultDeps): Promise<void> {
       : null;
 
     const ctx: RenderContext = {
-      width: process.stdout.columns || 80,
+      width,
       stdin,
       transcript,
       config,

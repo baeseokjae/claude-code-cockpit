@@ -2,11 +2,13 @@
  * stdout output
  */
 
+import { getTerminalWidth } from '../utils/terminal-width.js';
+
 export function writeOutput(lines: string[]): void {
-  const maxWidth = process.stdout.columns || 80;
+  const maxWidth = getTerminalWidth();
   for (const line of lines) {
     const output = truncateLine(line, maxWidth);
-    console.log(output + '\x1b[0m\x1b[K');
+    console.log(output + '\x1b[0m');
   }
 }
 
@@ -19,7 +21,7 @@ const ANSI_RE = /\x1b\[[0-9;]*m/g;
  */
 function truncateLine(line: string, maxWidth: number): string {
   // Fast path: measure visual length first
-  if (lineVisualLength(line) <= maxWidth) {
+  if (lineVisualLength(line) < maxWidth) {
     return line;
   }
 
@@ -80,6 +82,11 @@ function isFullWidth(cp: number): boolean {
     (cp >= 0x30A0 && cp <= 0x30FF) ||
     (cp >= 0x3200 && cp <= 0x32FF) ||
     (cp >= 0x3300 && cp <= 0x33FF) ||
-    (cp >= 0x1F300 && cp <= 0x1F9FF)
+    (cp >= 0x1F300 && cp <= 0x1F9FF) ||
+    (cp >= 0x2600 && cp <= 0x26FF) ||  // Miscellaneous Symbols (⚡, ☀, ★)
+    (cp >= 0x2700 && cp <= 0x27BF) ||  // Dingbats (✂, ✈)
+    (cp >= 0xFE00 && cp <= 0xFE0F) ||  // Variation Selectors
+    (cp >= 0x1F000 && cp <= 0x1F02F) || // Mahjong/Domino
+    (cp >= 0x1FA00 && cp <= 0x1FAFF)   // Extended-A Symbols
   );
 }
