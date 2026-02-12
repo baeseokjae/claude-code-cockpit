@@ -74,7 +74,7 @@ export const neonTheme: Theme = {
   },
 
   render(ctx: RenderContext): string[] {
-    const width = process.stdout.columns || 80;
+    const width = ctx.width;
 
     if (width < this.layout.compactWidth) {
       return this.renderMinimal(ctx);
@@ -244,7 +244,7 @@ export const neonTheme: Theme = {
 
   renderFull(ctx: RenderContext): string[] {
     const lines: string[] = [];
-    const width = process.stdout.columns || 120;
+    const width = ctx.width;
     const innerWidth = width - 2;
 
     // Box top
@@ -314,7 +314,7 @@ export const neonTheme: Theme = {
     const cacheDisplay = cacheText ? '  ' + cacheText : '';
 
     const line1 = `  ${modelText}${sessionText}   ${progressText} ${contextText}${warningText}   ${costText}${linesDisplay}${cacheDisplay}${usageText}   ${durationText}${speedText}`;
-    lines.push(hex(this.palette.blue, this.chars.boxVertical) + line1 + ' '.repeat(Math.max(0, innerWidth - visualLength(line1) + 10)) + hex(this.palette.blue, this.chars.boxVertical));
+    lines.push(hex(this.palette.blue, this.chars.boxVertical) + line1 + ' '.repeat(Math.max(0, innerWidth - visualLength(line1))) + hex(this.palette.blue, this.chars.boxVertical));
 
     // Middle border
     const midBorder = this.chars.boxVertical + this.chars.boxHorizontal.repeat(innerWidth) + this.chars.boxVertical;
@@ -335,7 +335,7 @@ export const neonTheme: Theme = {
     const configText = configParts.length > 0 ? hex(this.palette.muted, `  ${configParts.join('  ')}`) : '';
 
     const line2 = `  ${projectGit}${configText}`;
-    lines.push(hex(this.palette.blue, this.chars.boxVertical) + line2 + ' '.repeat(Math.max(0, innerWidth - visualLength(line2) + 10)) + hex(this.palette.blue, this.chars.boxVertical));
+    lines.push(hex(this.palette.blue, this.chars.boxVertical) + line2 + ' '.repeat(Math.max(0, innerWidth - visualLength(line2))) + hex(this.palette.blue, this.chars.boxVertical));
 
     // Box bottom
     const bottomBorder = this.chars.boxCornerBL + this.chars.boxHorizontal.repeat(innerWidth) + this.chars.boxCornerBR;

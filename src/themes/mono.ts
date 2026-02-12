@@ -66,7 +66,7 @@ export const monoTheme: Theme = {
   },
 
   render(ctx: RenderContext): string[] {
-    const width = process.stdout.columns || 80;
+    const width = ctx.width;
 
     if (width < this.layout.compactWidth) {
       return this.renderMinimal(ctx);
@@ -215,7 +215,7 @@ export const monoTheme: Theme = {
 
   renderFull(ctx: RenderContext): string[] {
     const lines: string[] = [];
-    const width = process.stdout.columns || 100;
+    const width = ctx.width;
 
     // Header line
     const headerLine = '-'.repeat(width);

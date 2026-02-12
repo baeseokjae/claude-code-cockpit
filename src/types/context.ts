@@ -22,6 +22,7 @@ import type { McpStatus } from './mcp-status.js';
 import type { InstanceSync } from './instance-sync.js';
 
 export interface RenderContext {
+  width: number;
   stdin: StdinData;
   transcript: TranscriptData;
 

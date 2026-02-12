@@ -62,7 +62,7 @@ export const retroTheme: Theme = {
   },
 
   render(ctx: RenderContext): string[] {
-    const width = process.stdout.columns || 80;
+    const width = ctx.width;
 
     if (width < this.layout.compactWidth) {
       return this.renderMinimal(ctx);
@@ -233,14 +233,15 @@ export const retroTheme: Theme = {
 
   renderFull(ctx: RenderContext): string[] {
     const lines: string[] = [];
-    const width = process.stdout.columns || 100;
+    const width = ctx.width;
     const innerWidth = width - 2;
     const color = this.palette.text;
     const dimColor = this.palette.muted;
 
     // Header
     lines.push(hex(color, '╔' + '═'.repeat(innerWidth) + '╗'));
-    lines.push(hex(color, '║') + hex(color, bold(' CLAUDE Code COCKPIT v1.0 ')) + ' '.repeat(innerWidth - 21) + hex(color, '║'));
+    const headerText = bold(' CLAUDE Code COCKPIT v1.0 ');
+    lines.push(hex(color, '║') + hex(color, headerText) + ' '.repeat(Math.max(0, innerWidth - visualLength(headerText))) + hex(color, '║'));
     lines.push(hex(color, '╠' + '═'.repeat(innerWidth) + '╣'));
 
     // System info

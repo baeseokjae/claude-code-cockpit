@@ -60,7 +60,7 @@ export const zenTheme: Theme = {
   },
 
   render(ctx: RenderContext): string[] {
-    const width = process.stdout.columns || 80;
+    const width = ctx.width;
 
     if (width < this.layout.compactWidth) {
       return this.renderMinimal(ctx);
@@ -200,7 +200,7 @@ export const zenTheme: Theme = {
     if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
       const running = ctx.transcript.agents.find((a) => a.status === 'running');
       if (running) {
-        activityParts.push(hex(this.palette.categoryAgents, 'agents ') + hex(this.palette.teal, `${running.type.toLowerCase()}~`));
+        activityParts.push(hex(this.palette.categoryAgents, 'agents ') + hex(this.palette.teal, running.type.toLowerCase()));
       }
     }
 

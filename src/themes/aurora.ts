@@ -78,7 +78,7 @@ export const auroraTheme: Theme = {
   },
 
   render(ctx: RenderContext): string[] {
-    const width = process.stdout.columns || 80;
+    const width = ctx.width;
 
     if (width < this.layout.compactWidth) {
       return this.renderMinimal(ctx);
@@ -259,31 +259,35 @@ export const auroraTheme: Theme = {
       lines.push(bullet(p.blue) + line3);
     }
 
-    // === Line 4: ● Agents: 3x general-purpose+[s]  code-reviewer+[o] ===
+    // === Line 4: ● Agents: [S]8xgeneral-purpose~⚡37  [O]Plan+  Explore+ ===
     if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
       // Dedup agents by type
-      const agentMap = new Map<string, { count: number; isRunning: boolean; modelChar: string }>();
+      const agentMap = new Map<string, { count: number; totalTools: number; isRunning: boolean; hasError: boolean; modelChar: string }>();
       for (const agent of ctx.transcript.agents) {
         const key = agent.type;
         const existing = agentMap.get(key);
         const isRunning = agent.status === 'running';
+        const hasError = agent.status === 'error';
         const modelChar = agent.model ? agent.model[0].toUpperCase() : '';
+        const toolCount = agent.subagentToolCount || 0;
         if (existing) {
           existing.count++;
+          existing.totalTools += toolCount;
           if (isRunning) existing.isRunning = true;
+          if (hasError) existing.hasError = true;
           if (!existing.modelChar && modelChar) existing.modelChar = modelChar;
         } else {
-          agentMap.set(key, { count: 1, isRunning, modelChar });
+          agentMap.set(key, { count: 1, totalTools: toolCount, isRunning, hasError, modelChar });
         }
       }
 
       const agentItems: string[] = [];
       for (const [type, info] of agentMap) {
-        const icon = info.isRunning ? '~' : '+';
-        const iconColor = info.isRunning ? p.yellow : p.green;
-        const modelStr = info.modelChar ? `[${info.modelChar}]` : '';
-        const prefix = info.count > 1 ? hex(p.muted, `${info.count}x`) : '';
-        agentItems.push(prefix + hex(p.text, type) + hex(iconColor, icon) + hex(p.muted, modelStr));
+        const statusColor = info.hasError ? p.red : info.isRunning ? p.yellow : p.green;
+        const modelStr = info.modelChar ? hex(p.muted, `[${info.modelChar}]`) : '';
+        const countStr = hex(p.muted, `${info.count}`);
+        const subToolsStr = info.totalTools > 0 ? hex(p.teal, `⚡${info.totalTools}`) : '';
+        agentItems.push(countStr + ' ' + modelStr + hex(statusColor, type) + subToolsStr);
       }
       lines.push(bullet(p.mauve) + hex(p.mauve, 'Agents:') + ' ' + agentItems.join(gap));
     }
@@ -396,7 +400,7 @@ export const auroraTheme: Theme = {
 
   renderFull(ctx: RenderContext): string[] {
     const lines: string[] = [];
-    const width = process.stdout.columns || 120;
+    const width = ctx.width;
 
     // Box top
     const topBorder = this.chars.boxCornerTL + this.chars.boxHorizontal.repeat(width - 2) + this.chars.boxCornerTR;
