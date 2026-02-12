@@ -21,6 +21,8 @@ export type {
   GitActivity,
   ToolStats,
   BashError,
+  ProgressEntry,
+  RawTranscriptEntry,
 } from './transcript.js';
 
 export type { GitStatus, FileStats, SubRepoStatus, WorktreeInfo } from './git.js';

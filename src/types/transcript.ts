@@ -26,6 +26,7 @@ export interface AgentEntry {
   startTime: Date;
   endTime?: Date;
   error?: string;
+  subagentToolCount?: number;
 }
 
 export type TodoStatus = 'pending' | 'in_progress' | 'completed';
@@ -112,3 +113,24 @@ export interface TextBlock {
   type: 'text';
   text: string;
 }
+
+/**
+ * Progress entry from subagent streaming (type: 'progress')
+ */
+export interface ProgressEntry {
+  type: 'progress';
+  parentToolUseID: string;
+  data: {
+    type?: string; // hook_progress, bash_progress — skip these
+    message?: {
+      message: {
+        content: ContentBlock[];
+      };
+    };
+  };
+}
+
+/**
+ * Raw transcript line — either a standard message entry or a progress entry
+ */
+export type RawTranscriptEntry = TranscriptEntry | ProgressEntry;

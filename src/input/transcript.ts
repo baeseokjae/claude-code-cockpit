@@ -11,6 +11,7 @@ import type {
   TodoItem,
   SkillEntry,
   TranscriptEntry,
+  ProgressEntry,
   ToolUseBlock,
   ToolResultBlock,
   TodoStatus,
@@ -47,6 +48,7 @@ export async function parseTranscript(
   const toolsMap = new Map<string, ToolEntry>();
   const agentsMap = new Map<string, AgentEntry>();
   const skillsMap = new Map<string, SkillEntry>();
+  const subagentToolCounts = new Map<string, number>();
   let currentTodos: TodoItem[] = [];
 
   try {
@@ -57,8 +59,13 @@ export async function parseTranscript(
       if (!line.trim()) continue;
 
       try {
-        const entry = JSON.parse(line) as TranscriptEntry;
-        processEntry(entry, toolsMap, agentsMap, skillsMap, currentTodos);
+        const raw = JSON.parse(line);
+
+        if (raw.type === 'progress') {
+          processProgressEntry(raw as ProgressEntry, subagentToolCounts);
+        } else {
+          processEntry(raw as TranscriptEntry, toolsMap, agentsMap, skillsMap, currentTodos);
+        }
       } catch (error) {
         debug('failed to parse line:', error);
         continue;
@@ -67,6 +74,14 @@ export async function parseTranscript(
   } catch (error) {
     debug('failed to read transcript:', error);
     return emptyData;
+  }
+
+  // Assign subagent tool counts to matching agents
+  for (const [parentToolUseID, count] of subagentToolCounts) {
+    const agent = agentsMap.get(parentToolUseID);
+    if (agent) {
+      agent.subagentToolCount = count;
+    }
   }
 
   const tools = Array.from(toolsMap.values())
@@ -336,6 +351,29 @@ function extractTarget(toolName: string, input: Record<string, unknown>): string
     return input.pattern as string;
   }
   return undefined;
+}
+
+function processProgressEntry(
+  entry: ProgressEntry,
+  subagentToolCounts: Map<string, number>
+): void {
+  // Skip non-subagent progress (hook_progress, bash_progress, etc.)
+  if (entry.data?.type) return;
+
+  const content = entry.data?.message?.message?.content;
+  if (!content || !Array.isArray(content)) return;
+
+  let toolCount = 0;
+  for (const block of content) {
+    if (block.type === 'tool_use') {
+      toolCount++;
+    }
+  }
+
+  if (toolCount > 0) {
+    const parentId = entry.parentToolUseID;
+    subagentToolCounts.set(parentId, (subagentToolCounts.get(parentId) || 0) + toolCount);
+  }
 }
 
 function extractModelFromPrompt(prompt: string, input?: Record<string, unknown>): string | undefined {

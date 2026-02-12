@@ -913,19 +913,21 @@ export function summarizeAgentsStyled(ctx: RenderContext, opts: CompactStyledOpt
   const agentItems: string[] = [];
 
   for (const agent of ctx.transcript.agents.slice(0, 2)) {
-    const icon = agent.status === 'running' ? icons.running : icons.success;
-    const iconColor = agent.status === 'running' ? palette.yellow : palette.green;
+    const statusColor = agent.status === 'error' ? palette.red : agent.status === 'running' ? palette.yellow : palette.green;
     const modelChar = agent.model ? agent.model[0].toUpperCase() : '';
     const modelAbbr = modelChar
       ? `[${modelChar}]`
       : '';
+    const subTools = agent.subagentToolCount && agent.subagentToolCount > 0
+      ? hex(palette.teal, `⚡${agent.subagentToolCount}`)
+      : '';
 
     if (transform?.case === 'upper') {
       // Neon style
-      agentItems.push(hex(iconColor, `${agent.type.toUpperCase()}${icon}`) + hex(palette.muted, modelAbbr));
+      agentItems.push(hex(statusColor, agent.type.toUpperCase()) + hex(palette.muted, modelAbbr) + subTools);
     } else {
       // Aurora style
-      agentItems.push(hex(palette.text, agent.type) + hex(iconColor, icon) + hex(palette.muted, modelAbbr));
+      agentItems.push(hex(statusColor, agent.type) + hex(palette.muted, modelAbbr) + subTools);
     }
   }
 
@@ -1001,16 +1003,18 @@ export function renderAgentsLineStyled(ctx: RenderContext, opts: CompactStyledOp
   const agentParts: string[] = [];
 
   for (const agent of ctx.transcript.agents.slice(0, 3)) {
-    const icon = agent.status === 'running' ? icons.running : agent.status === 'error' ? icons.error : icons.success;
-    const iconColor = agent.status === 'running' ? palette.yellow : agent.status === 'error' ? palette.red : palette.green;
+    const statusColor = agent.status === 'running' ? palette.yellow : agent.status === 'error' ? palette.red : palette.green;
     const displayType = transform?.case === 'upper' ? agent.type.toUpperCase() : agent.type;
     const modelText = agent.model
       ? (transform?.case === 'upper' ? `[${agent.model.toUpperCase()}]` : `[${agent.model}]`)
       : '';
+    const subTools = agent.subagentToolCount && agent.subagentToolCount > 0
+      ? hex(palette.teal, `⚡${agent.subagentToolCount}`)
+      : '';
     const desc = agent.description
       ? ` ${transform?.case === 'upper' ? agent.description.substring(0, 40).toUpperCase() : agent.description.substring(0, 40)}`
       : '';
-    agentParts.push(hex(palette.text, displayType) + hex(iconColor, icon) + hex(palette.muted, ` ${modelText}`) + hex(palette.muted, desc));
+    agentParts.push(hex(statusColor, displayType) + subTools + hex(palette.muted, ` ${modelText}`) + hex(palette.muted, desc));
   }
 
   const labelText = transform?.case === 'upper' ? 'AGENTS: ' : 'Agents: ';
@@ -1092,13 +1096,18 @@ export function summarizeAgentsPlain(ctx: RenderContext, opts: CompactPlainOptio
   const agentItems = ctx.transcript.agents
     .slice(0, limit)
     .map((a) => {
-      const marker = a.status === 'running' ? '~' : '+';
       const modelChar = a.model ? a.model[0].toUpperCase() : '';
       const model = modelChar
         ? `[${modelChar}]`
         : '';
+      const subTools = a.subagentToolCount && a.subagentToolCount > 0
+        ? `#${a.subagentToolCount}`
+        : '';
       const displayType = transform?.case === 'upper' ? a.type.toUpperCase() : a.type;
-      return `${displayType}${marker}${model}`;
+      const text = `${displayType}${model}${subTools}`;
+      if (a.status === 'error') return underline(text);
+      if (a.status === 'running') return bold(text);
+      return text;
     })
     .join(' ');
 
@@ -1160,10 +1169,12 @@ export function renderAgentsLinePlain(ctx: RenderContext): string {
   const agents = ctx.transcript.agents
     .slice(0, 3)
     .map((agent) => {
-      const marker = agent.status === 'running' ? '~' : agent.status === 'error' ? 'x' : '+';
       const model = agent.model ? `[${agent.model}]` : '';
+      const subTools = agent.subagentToolCount && agent.subagentToolCount > 0
+        ? `#${agent.subagentToolCount}`
+        : '';
       const desc = agent.description ? ` ${agent.description.substring(0, 30)}` : '';
-      const text = `${agent.type}${marker} ${model}${desc}`;
+      const text = `${agent.type}${subTools} ${model}${desc}`;
 
       if (agent.status === 'error') return underline(text);
       if (agent.status === 'running') return bold(text);
