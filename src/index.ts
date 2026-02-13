@@ -84,8 +84,9 @@ export async function main(deps: MainDeps = defaultDeps): Promise<void> {
     const transcript = await deps.parseTranscript(transcriptPath);
 
     const cwd = getCwd(stdin);
-    const width = getTerminalWidth();
-    const tier = getTier(width, theme.layout);
+    const rawWidth = getTerminalWidth();
+    const width = Math.max(40, rawWidth - config.rightMargin);
+    const tier = getTier(rawWidth, theme.layout);
     const isDetailed = tier >= 3 || config.detailMode || config.preset === 'full';
 
     // Tier 2+: config counts require filesystem reads

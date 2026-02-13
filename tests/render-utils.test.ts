@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createProgressBar, formatPercent, truncate } from '../src/render/utils.js';
+import { createProgressBar, formatPercent } from '../src/render/utils.js';
 
 describe('createProgressBar', () => {
   it('should create empty bar at 0%', () => {
@@ -51,21 +51,3 @@ describe('formatPercent', () => {
   });
 });
 
-describe('truncate', () => {
-  it('should not truncate short strings', () => {
-    expect(truncate('hello', 10)).toBe('hello');
-    expect(truncate('hello', 5)).toBe('hello');
-  });
-
-  it('should truncate long strings with ellipsis', () => {
-    // truncate uses '…' (single char) by default
-    expect(truncate('hello world', 8)).toBe('hello w…');
-    expect(truncate('hello world', 6)).toBe('hello…');
-  });
-
-  it('should handle edge cases', () => {
-    expect(truncate('', 10)).toBe('');
-    expect(truncate('hi', 2)).toBe('hi');
-    expect(truncate('hello', 3)).toBe('he…');
-  });
-});

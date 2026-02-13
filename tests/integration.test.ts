@@ -124,6 +124,10 @@ describe('main integration', () => {
   });
 
   it('should render tool activity', async () => {
+    // Ensure effective width >= compactWidth (80) so tier >= 2 shows tools
+    const savedColumns = process.env.COLUMNS;
+    process.env.COLUMNS = '100';
+
     const stdin: StdinData = {
       model: { display_name: 'Sonnet' },
       cwd: '/test',
@@ -159,6 +163,9 @@ describe('main integration', () => {
     const fullOutput = capturedOutput.join('\n');
     expect(fullOutput).toContain('Read');
     expect(fullOutput).toContain('Edit');
+
+    if (savedColumns === undefined) delete process.env.COLUMNS;
+    else process.env.COLUMNS = savedColumns;
   });
 
   it('should handle errors gracefully without throwing', async () => {
