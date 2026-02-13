@@ -61,6 +61,8 @@ export interface CockpitConfig {
     compactSuggestionThreshold: number;
   };
 
+  rightMargin: number;
+
   maxActivityWidgets?: number;
 
   performance: {

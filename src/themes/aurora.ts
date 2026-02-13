@@ -16,7 +16,7 @@ import type { Theme, RenderContext, ColorPalette } from '../types/index.js';
 import { AURORA_PALETTE } from './palettes/aurora.js';
 import { getIcons } from './icons.js';
 import { hex } from '../render/colors.js';
-import { createProgressBar, formatPercent, visualLength } from '../render/utils.js';
+import { createProgressBar, formatPercent, truncateAnsi, visualLength } from '../render/utils.js';
 import { formatUsageFull } from '../render/usage.js';
 import { formatResetTime } from '../data/usage-api.js';
 import { formatTokenSpeed } from '../data/speed-tracker.js';
@@ -29,6 +29,7 @@ import {
   hasAbnormalState,
   getPercentColor,
   formatProjectGit,
+  formatProjectGitParts,
   formatDetailToolsSummary,
   formatDetailAgentsSummary,
   formatDetailTodosSummary,
@@ -79,11 +80,9 @@ export const auroraTheme: Theme = {
   },
 
   render(ctx: RenderContext): string[] {
-    const width = ctx.width;
-
-    if (width < this.layout.compactWidth) {
+    if (ctx.tier === 1) {
       return this.renderMinimal(ctx);
-    } else if (width < this.layout.fullWidth) {
+    } else if (ctx.tier === 2) {
       return this.renderCompact(ctx);
     } else {
       return this.renderFull(ctx);
@@ -150,7 +149,7 @@ export const auroraTheme: Theme = {
     }
     const compactContextHint = formatContextHint(percent, p) || '';
 
-    const projectGit = formatProjectGit(ctx, p, this.icons, { showFileStats: true });
+    const { project: projectText, branch: branchText } = formatProjectGitParts(ctx, p, this.icons, { showFileStats: true });
 
     const duration = ctx.sessionDuration;
     const durationText = duration ? hex(p.muted, duration) : '';
@@ -186,9 +185,55 @@ export const auroraTheme: Theme = {
 
     // Line 1: Model [session] │ ▰▰▰▱▱ XX% │ Project(branch) ⇡3 1PR │ 5m32s
     const line1EndText = line1End.length > 0 ? pipeSep + line1End.join(' ') : '';
-    lines.push(
-      `${modelText}${sessionText}${pipeSep}${progressText} ${contextText}${compactContextHint}${pipeSep}${projectGit}${gitActivity}${line1EndText}`
-    );
+
+    // Width-aware assembly: fixed parts first, then fit middle into remaining space
+    // Truncation priority: project (first) → branch → gitActivity (last)
+    const leftPart = `${modelText}${sessionText}${pipeSep}${progressText} ${contextText}${compactContextHint}`;
+    const rightPart = line1EndText;
+    const pipeSepWidth = 3; // " │ " visual width
+    const availableMiddle = ctx.width - visualLength(leftPart) - visualLength(rightPart) - pipeSepWidth;
+
+    let middlePart: string;
+    const activityWidth = visualLength(gitActivity);
+    const branchWidth = visualLength(branchText);
+    const projectWidth = visualLength(projectText);
+    const fullWidth = projectWidth + branchWidth + activityWidth;
+
+    if (availableMiddle <= 0) {
+      middlePart = '';
+    } else if (fullWidth <= availableMiddle) {
+      middlePart = `${projectText}${branchText}${gitActivity}`;
+    } else {
+      // Step 1: Truncate project first (keep branch + activity intact)
+      const availableForProject = availableMiddle - branchWidth - activityWidth;
+
+      if (availableForProject >= 4) {
+        middlePart = truncateAnsi(projectText, availableForProject) + '\x1b[0m' + branchText + gitActivity;
+      } else {
+        // Step 2: Project minimal (4) + truncate branch (keep activity intact)
+        const minProject = 4;
+        const availableForBranch = availableMiddle - minProject - activityWidth;
+
+        if (availableForBranch >= 4) {
+          middlePart = truncateAnsi(projectText, minProject) + '\x1b[0m'
+            + truncateAnsi(branchText, availableForBranch) + '\x1b[0m' + gitActivity;
+        } else {
+          // Step 3: Project minimal + no branch + activity only
+          const availableForProjectFinal = availableMiddle - activityWidth;
+
+          if (availableForProjectFinal >= 4) {
+            middlePart = truncateAnsi(projectText, availableForProjectFinal) + '\x1b[0m' + gitActivity;
+          } else if (availableMiddle >= activityWidth) {
+            // Activity only
+            middlePart = gitActivity;
+          } else {
+            middlePart = truncateAnsi(`${projectText}${branchText}${gitActivity}`, availableMiddle);
+          }
+        }
+      }
+    }
+
+    lines.push(`${leftPart}${pipeSep}${middlePart}${rightPart}`);
 
     // === Line 2: ● Usage: 5h:35% ↻2h15m  7d:12% │ $1.50 -$0.69 ===
     const usageParts: string[] = [];

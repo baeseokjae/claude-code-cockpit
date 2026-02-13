@@ -280,15 +280,22 @@ export interface FormatProjectGitOptions {
   subrepoStyle?: 'full' | 'minimal';
 }
 
+export interface ProjectGitParts {
+  project: string;
+  branch: string;
+}
+
 /**
- * Format project and git information with theme-specific options
+ * Format project and git information as separate parts for width-aware layout.
+ * project: colored project name (e.g., "claude-code-cockpit")
+ * branch: colored branch + subrepo text (e.g., " (main*)")
  */
-export function formatProjectGit(
+export function formatProjectGitParts(
   ctx: RenderContext,
   palette: ColorPalette | null,
   _icons: IconSet | null,
   options: FormatProjectGitOptions = {}
-): string {
+): ProjectGitParts {
   const {
     transform = { case: 'none' },
     branchColor,
@@ -303,24 +310,23 @@ export function formatProjectGit(
   const git = ctx.config.display.showGit ? (ctx.gitStatus?.branch || '') : '';
   const dirty = ctx.gitStatus?.isDirty ? '*' : '';
 
-  if (!project && !git) return '';
-
-  let result = prefix;
+  let projectPart = prefix;
+  let branchPart = '';
 
   // Project name (plain text, no hyperlink)
   if (project && ctx.stdin.cwd) {
     let projectName = applyTextTransform(project, transform);
 
     // Truncate project name to prevent line overflow
-    const maxProjectLen = ctx.tier === 1 ? 12 : ctx.tier === 2 ? 16 : 25;
+    const maxProjectLen = ctx.tier === 1 ? 12 : ctx.tier === 2 ? 25 : 30;
     if (projectName.length > maxProjectLen) {
       projectName = projectName.substring(0, maxProjectLen - 1) + '\u2026';  // …
     }
 
     if (palette) {
-      result += hex(palette.teal, projectPrefix + projectName);
+      projectPart += hex(palette.teal, projectPrefix + projectName);
     } else {
-      result += projectPrefix + projectName;
+      projectPart += projectPrefix + projectName;
     }
   }
 
@@ -361,9 +367,9 @@ export function formatProjectGit(
 
     if (palette) {
       const color = branchColor || palette.teal;
-      result += hex(color, `${branchPrefixStr} (${branchText})`);
+      branchPart += hex(color, `${branchPrefixStr} (${branchText})`);
     } else {
-      result += `${branchPrefixStr} (${branchText})`;
+      branchPart += `${branchPrefixStr} (${branchText})`;
     }
   }
 
@@ -388,13 +394,26 @@ export function formatProjectGit(
       transform.case === 'upper' ? 'SUBS: ' : 'sub: ';
 
     if (palette) {
-      result += hex(palette.muted, `  ${label}${subItems.join(' ')}${moreText}`);
+      branchPart += hex(palette.muted, `  ${label}${subItems.join(' ')}${moreText}`);
     } else {
-      result += ` ${label}${subItems.join(' ')}${moreText}`;
+      branchPart += ` ${label}${subItems.join(' ')}${moreText}`;
     }
   }
 
-  return result;
+  return { project: projectPart, branch: branchPart };
+}
+
+/**
+ * Format project and git information with theme-specific options
+ */
+export function formatProjectGit(
+  ctx: RenderContext,
+  palette: ColorPalette | null,
+  icons: IconSet | null,
+  options: FormatProjectGitOptions = {}
+): string {
+  const parts = formatProjectGitParts(ctx, palette, icons, options);
+  return parts.project + parts.branch;
 }
 
 // ============================================

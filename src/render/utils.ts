@@ -22,7 +22,7 @@ export function visualLength(text: string): number {
   return width;
 }
 
-function isFullWidth(cp: number): boolean {
+export function isFullWidth(cp: number): boolean {
   return (
     // CJK Unified Ideographs (한자)
     (cp >= 0x4E00 && cp <= 0x9FFF) ||
@@ -49,20 +49,12 @@ function isFullWidth(cp: number): boolean {
     // CJK Compatibility
     (cp >= 0x3300 && cp <= 0x33FF) ||
     // Emoji (approximate - 표현 방식에 따라 다름)
-    (cp >= 0x1F300 && cp <= 0x1F9FF)
+    (cp >= 0x1F300 && cp <= 0x1F9FF) ||
+    // Mahjong/Domino
+    (cp >= 0x1F000 && cp <= 0x1F02F) ||
+    // Extended-A Symbols
+    (cp >= 0x1FA00 && cp <= 0x1FAFF)
   );
-}
-
-export function truncate(text: string, maxLength: number, ellipsis = '…'): string {
-  if (visualLength(text) <= maxLength) {
-    return text;
-  }
-  const stripped = text.replace(/\x1b\[[0-9;]*m/g, '');
-  if (stripped.length <= maxLength) {
-    return text;
-  }
-
-  return stripped.substring(0, maxLength - ellipsis.length) + ellipsis;
 }
 
 export function formatTokens(tokens: number): string {
@@ -103,6 +95,29 @@ export function createProgressBar(
   const filled = Math.round((clampedPercent / 100) * length);
   const empty = length - filled;
   return filledChar.repeat(filled) + emptyChar.repeat(empty);
+}
+
+export function truncateAnsi(text: string, maxWidth: number): string {
+  if (visualLength(text) <= maxWidth) return text;
+  if (maxWidth <= 1) return '\u2026';
+
+  const limit = maxWidth - 1; // reserve 1 for ellipsis
+  let result = '', width = 0, i = 0;
+  const ANSI_RE = /\x1b\[[0-9;]*m/g;
+
+  while (i < text.length) {
+    ANSI_RE.lastIndex = i;
+    const m = ANSI_RE.exec(text);
+    if (m && m.index === i) { result += m[0]; i += m[0].length; continue; }
+    const cp = text.codePointAt(i);
+    if (cp === undefined) break;
+    const cw = isFullWidth(cp) ? 2 : 1;
+    if (width + cw > limit) break;
+    width += cw;
+    const ch = String.fromCodePoint(cp);
+    result += ch; i += ch.length;
+  }
+  return result + '\u2026';
 }
 
 export function formatCost(usd: number): string {

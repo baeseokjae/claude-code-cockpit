@@ -61,6 +61,8 @@ export const DEFAULT_CONFIG: CockpitConfig = {
     compactSuggestionThreshold: 50,
   },
 
+  rightMargin: 2,
+
   maxActivityWidgets: 8,
 
   performance: {
