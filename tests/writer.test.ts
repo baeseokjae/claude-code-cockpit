@@ -91,14 +91,14 @@ describe('truncateLine logic', () => {
     expect(visualLength(text)).toBe(4); // 2자 × 2
   });
 
-  it('번개 이모지 ⚡는 2컬럼', () => {
+  it('번개 이모지 ⚡는 1컬럼', () => {
     const text = '⚡';
-    expect(visualLength(text)).toBe(2);
+    expect(visualLength(text)).toBe(1);
   });
 
-  it('별 이모지 ★는 2컬럼', () => {
+  it('별 이모지 ★는 1컬럼', () => {
     const text = '★';
-    expect(visualLength(text)).toBe(2);
+    expect(visualLength(text)).toBe(1);
   });
 
   it('ANSI 이스케이프는 폭 0', () => {
@@ -142,9 +142,6 @@ function isFullWidth(cp: number): boolean {
     (cp >= 0x3200 && cp <= 0x32FF) ||
     (cp >= 0x3300 && cp <= 0x33FF) ||
     (cp >= 0x1F300 && cp <= 0x1F9FF) ||
-    (cp >= 0x2600 && cp <= 0x26FF) ||  // Miscellaneous Symbols (⚡, ☀, ★)
-    (cp >= 0x2700 && cp <= 0x27BF) ||  // Dingbats (✂, ✈)
-    (cp >= 0xFE00 && cp <= 0xFE0F) ||  // Variation Selectors
     (cp >= 0x1F000 && cp <= 0x1F02F) || // Mahjong/Domino
     (cp >= 0x1FA00 && cp <= 0x1FAFF)   // Extended-A Symbols
   );

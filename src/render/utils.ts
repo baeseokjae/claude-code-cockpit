@@ -49,17 +49,7 @@ function isFullWidth(cp: number): boolean {
     // CJK Compatibility
     (cp >= 0x3300 && cp <= 0x33FF) ||
     // Emoji (approximate - 표현 방식에 따라 다름)
-    (cp >= 0x1F300 && cp <= 0x1F9FF) ||
-    // Box Drawings (─, │, ╭, ╮, ╰, ╯) - Ambiguous width, 2 cols in CJK terminals
-    (cp >= 0x2500 && cp <= 0x257F) ||
-    // Block Elements (▀, █, ▌)
-    (cp >= 0x2580 && cp <= 0x259F) ||
-    // Geometric Shapes (●, ▰, ▱, ◆, ▸)
-    (cp >= 0x25A0 && cp <= 0x25FF) ||
-    // Miscellaneous Symbols (⚡, ☀, ★)
-    (cp >= 0x2600 && cp <= 0x26FF) ||
-    // Dingbats (✂, ✈, ✓, ✗)
-    (cp >= 0x2700 && cp <= 0x27BF)
+    (cp >= 0x1F300 && cp <= 0x1F9FF)
   );
 }
 
