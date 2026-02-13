@@ -178,8 +178,42 @@ export const auroraTheme: Theme = {
       gitActivity += ' ' + hex(p.green, `+${fmtNum(added)}`) + ' ' + hex(p.red, `-${fmtNum(removed)}`);
     }
 
-    // Cost (moved from Line 5) + Duration
+    // Duration only (cost moved to Line 2 Usage)
     const line1End: string[] = [];
+    if (durationText) {
+      line1End.push(durationText);
+    }
+
+    // Line 1: Model [session] │ ▰▰▰▱▱ XX% │ Project(branch) ⇡3 1PR │ 5m32s
+    const line1EndText = line1End.length > 0 ? pipeSep + line1End.join(' ') : '';
+    lines.push(
+      `${modelText}${sessionText}${pipeSep}${progressText} ${contextText}${compactContextHint}${pipeSep}${projectGit}${gitActivity}${line1EndText}`
+    );
+
+    // === Line 2: ● Usage: 5h:35% ↻2h15m  7d:12% │ $1.50 -$0.69 ===
+    const usageParts: string[] = [];
+    if (ctx.config.display.showUsage && ctx.usageData) {
+      const fiveHour = ctx.usageData.fiveHour;
+      const sevenDay = ctx.usageData.sevenDay;
+      if (fiveHour > 0) {
+        const fiveColor = fiveHour >= 90 ? p.red : fiveHour >= 75 ? p.peach : fiveHour >= 50 ? p.yellow : p.green;
+        let fiveHourText = hex(fiveColor, `5h:${Math.round(fiveHour)}%`);
+        if (fiveHour >= 50) {
+          const fiveReset = formatResetTime(ctx.usageData.fiveHourResetAt, 'compact');
+          if (fiveReset) {
+            fiveHourText += hex(p.muted, ` ↻${fiveReset}`);
+          }
+        }
+        usageParts.push(fiveHourText);
+      }
+      if (sevenDay > 0) {
+        usageParts.push(hex(p.muted, `7d:${Math.round(sevenDay)}%`));
+      }
+    }
+    const usageContent = usageParts.length > 0 ? usageParts.join(gap) : hex(p.muted, '-');
+
+    // Add cost to usage line
+    let usageLine = bullet(p.teal) + hex(p.text, 'Usage:') + ' ' + usageContent;
     const cost = ctx.config.display.showCost ? ctx.stdin.cost?.total_cost_usd : undefined;
     if (cost) {
       let costPart = hex(p.peach, `$${cost.toFixed(2)}`);
@@ -187,19 +221,11 @@ export const auroraTheme: Theme = {
         const savings = ctx.cacheMetrics.estimatedSavings;
         costPart += hex(p.green, `-$${savings.toFixed(2)}`);
       }
-      line1End.push(costPart);
+      usageLine += pipeSep + costPart;
     }
-    if (durationText) {
-      line1End.push(durationText);
-    }
+    lines.push(usageLine);
 
-    // Line 1: Model [session] │ ▰▰▰▱▱ XX% │ Project(branch) ⇡3 1PR │ $1.50 5m32s
-    const line1EndText = line1End.length > 0 ? pipeSep + line1End.join(' ') : '';
-    lines.push(
-      `${modelText}${sessionText}${pipeSep}${progressText} ${contextText}${compactContextHint}${pipeSep}${projectGit}${gitActivity}${line1EndText}`
-    );
-
-    // === Line 2: ● Tools: Read+12  Edit+8  Bash+5  +87% -13% (28) ===
+    // === Line 3: ● Tools: Read+12  Edit+8  Bash+5  +87% -13% (28) ===
     if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
       const toolCounts = new Map<string, number>();
       let runningTool: string | null = null;
@@ -328,7 +354,7 @@ export const auroraTheme: Theme = {
       lines.push(bullet(p.teal) + metaParts.join(gap));
     }
 
-    // === Line 7: Alerts (errors, violations, compact suggestion, MCP) ===
+    // === Line 6: Alerts (errors, violations, compact suggestion, MCP) ===
     const line7Parts: string[] = [];
 
     const bashErrorsText = formatBashErrorsDisplay(ctx, p, this.icons);
@@ -357,29 +383,6 @@ export const auroraTheme: Theme = {
     if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
       lines.push(summarizeSkillsStyled(ctx, styledOpts));
     }
-
-    // === Last line: ● Usage: 5h:35% ↻2h15m  7d:12%  +203 -147 ===
-    const usageParts: string[] = [];
-    if (ctx.config.display.showUsage && ctx.usageData) {
-      const fiveHour = ctx.usageData.fiveHour;
-      const sevenDay = ctx.usageData.sevenDay;
-      if (fiveHour > 0) {
-        const fiveColor = fiveHour >= 90 ? p.red : fiveHour >= 75 ? p.peach : fiveHour >= 50 ? p.yellow : p.green;
-        let fiveHourText = hex(fiveColor, `5h:${Math.round(fiveHour)}%`);
-        if (fiveHour >= 50) {
-          const fiveReset = formatResetTime(ctx.usageData.fiveHourResetAt, 'compact');
-          if (fiveReset) {
-            fiveHourText += hex(p.muted, ` ↻${fiveReset}`);
-          }
-        }
-        usageParts.push(fiveHourText);
-      }
-      if (sevenDay > 0) {
-        usageParts.push(hex(p.muted, `7d:${Math.round(sevenDay)}%`));
-      }
-    }
-    const usageContent = usageParts.length > 0 ? usageParts.join(gap) : hex(p.muted, '-');
-    lines.push(bullet(p.teal) + hex(p.text, 'Usage:') + ' ' + usageContent);
 
     return lines;
   },
