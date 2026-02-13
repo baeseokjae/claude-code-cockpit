@@ -139,11 +139,7 @@ export const auroraTheme: Theme = {
       : null;
     const sessionText = sessionName ? hex(p.muted, ` [${sessionName}]`) : '';
 
-    const progressBar = this.features.useGradientProgress
-      ? createProgressBar(percent || 0, 10, this.chars.progressFilled, this.chars.progressEmpty)
-      : '';
     const progressColor = getPercentColor(percent, p);
-    const progressText = hex(progressColor, progressBar);
 
     const absoluteTokens = getAbsoluteTokens(ctx.stdin);
     let contextText = '';
@@ -157,79 +153,53 @@ export const auroraTheme: Theme = {
     const projectGit = formatProjectGit(ctx, p, this.icons, { showFileStats: true });
 
     const duration = ctx.sessionDuration;
-    const durationText = hex(p.muted, duration);
+    const durationText = duration ? hex(p.muted, duration) : '';
 
-    // Usage: show both 5h and 7d (SVG shows both)
-    let usageText = '';
-    if (ctx.config.display.showUsage && ctx.usageData) {
-      const fiveHour = ctx.usageData.fiveHour;
-      const sevenDay = ctx.usageData.sevenDay;
-      const usageParts: string[] = [];
-      if (fiveHour > 0) {
-        const fiveColor = fiveHour >= 90 ? p.red : fiveHour >= 75 ? p.peach : fiveHour >= 50 ? p.yellow : p.green;
-        let fiveHourText = hex(fiveColor, `5h:${Math.round(fiveHour)}%`);
-        if (fiveHour >= 50) {
-          const fiveReset = formatResetTime(ctx.usageData.fiveHourResetAt, 'compact');
-          if (fiveReset) {
-            fiveHourText += hex(p.muted, ` ↻${fiveReset}`);
-          }
-        }
-        usageParts.push(fiveHourText);
+    // Progress bar (fixed 10-length)
+    const progressBar = createProgressBar(percent || 0, 10, this.chars.progressFilled, this.chars.progressEmpty);
+    const progressText = hex(progressColor, progressBar);
+
+    // Git activity: ⇡3 1PR +125 -30 (Starship/Pure style) - compact for Line 1
+    let gitActivity = '';
+    if (ctx.config.display.showGitActivity && ctx.gitActivity) {
+      const parts: string[] = [];
+      const { commits, pullRequests } = ctx.gitActivity;
+      if (commits > 0) {
+        parts.push(hex(p.green, `⇡${commits}`));
       }
-      if (sevenDay > 0) {
-        usageParts.push(hex(p.muted, `7d:${Math.round(sevenDay)}%`));
+      if (pullRequests > 0) {
+        parts.push(hex(p.mauve, `${pullRequests}PR`));
       }
-      if (usageParts.length > 0) {
-        usageText = usageParts.join(gap);
-      }
+      if (parts.length > 0) gitActivity = ' ' + parts.join(' ');
+    }
+    if (ctx.config.display.showLines && ctx.linesData) {
+      const { added, removed } = ctx.linesData;
+      const fmtNum = (n: number): string => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : `${n}`;
+      gitActivity += ' ' + hex(p.green, `+${fmtNum(added)}`) + ' ' + hex(p.red, `-${fmtNum(removed)}`);
     }
 
-    // SVG order: Model | Progress | Project Git | Usage  Duration
-    const group4Parts = [usageText, durationText].filter(Boolean);
+    // Cost (moved from Line 5) + Duration
+    const line1End: string[] = [];
+    const cost = ctx.config.display.showCost ? ctx.stdin.cost?.total_cost_usd : undefined;
+    if (cost) {
+      let costPart = hex(p.peach, `$${cost.toFixed(2)}`);
+      if (ctx.config.display.showCacheMetrics && ctx.cacheMetrics && ctx.cacheMetrics.estimatedSavings >= 0.01) {
+        const savings = ctx.cacheMetrics.estimatedSavings;
+        costPart += hex(p.green, `-$${savings.toFixed(2)}`);
+      }
+      line1End.push(costPart);
+    }
+    if (durationText) {
+      line1End.push(durationText);
+    }
+
+    // Line 1: Model [session] │ ▰▰▰▱▱ XX% │ Project(branch) ⇡3 1PR │ $1.50 5m32s
+    const line1EndText = line1End.length > 0 ? pipeSep + line1End.join(' ') : '';
     lines.push(
-      `${modelText}${sessionText}${pipeSep}${progressText} ${contextText}${compactContextHint}${pipeSep}${projectGit}${pipeSep}${group4Parts.join(gap)}`
+      `${modelText}${sessionText}${pipeSep}${progressText} ${contextText}${compactContextHint}${pipeSep}${projectGit}${gitActivity}${line1EndText}`
     );
 
-    // Helper: abbreviate large numbers (1234 → "1.2k")
-    const fmtNum = (n: number): string => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : `${n}`;
-
-    // === Line 2: ● Git: +N commits (Xh)  +N PRs  +added -removed ===
-    const line2Parts: string[] = [];
-
-    {
-      const gitParts: string[] = [hex(p.text, 'Git:')];
-      let hasGitContent = false;
-
-      if (ctx.config.display.showGitActivity && ctx.gitActivity) {
-        const { commits, pullRequests } = ctx.gitActivity;
-        if (commits > 0) {
-          let commitText = hex(p.green, `+${commits} commit${commits > 1 ? 's' : ''}`);
-          if (ctx.sessionDuration) {
-            const durMatch = ctx.sessionDuration.match(/^(\d+h)/);
-            if (durMatch) commitText += hex(p.muted, ` (${durMatch[1]})`);
-          }
-          gitParts.push(commitText);
-          hasGitContent = true;
-        }
-        if (pullRequests > 0) { gitParts.push(hex(p.mauve, `+${pullRequests} PR${pullRequests > 1 ? 's' : ''}`)); hasGitContent = true; }
-      }
-
-      if (ctx.config.display.showLines && ctx.linesData) {
-        const { added, removed } = ctx.linesData;
-        gitParts.push(hex(p.green, `+${fmtNum(added)}`) + ' ' + hex(p.red, `-${fmtNum(removed)}`));
-        hasGitContent = true;
-      }
-
-      if (hasGitContent) {
-        line2Parts.push(gitParts.join(' '));
-      }
-    }
-
-    if (line2Parts.length > 0) {
-      lines.push(bullet(p.teal) + line2Parts.join(gap));
-    }
-
-    // === Line 3: ● Tools: Read+12  Edit+8  Bash+5  +87% -13% (28) ===
+    // === Line 2: ● Tools: Read+12  Edit+8  Bash+5  +87% -13% (28) ===
     if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
       const toolCounts = new Map<string, number>();
       let runningTool: string | null = null;
@@ -338,15 +308,7 @@ export const auroraTheme: Theme = {
       }
     }
 
-    const cost = ctx.config.display.showCost ? ctx.stdin.cost?.total_cost_usd : undefined;
-    if (cost) {
-      let costText = hex(p.peach, `Cost: $${cost.toFixed(2)}`);
-      if (ctx.config.display.showCacheMetrics && ctx.cacheMetrics && ctx.cacheMetrics.estimatedSavings >= 0.01) {
-        const savings = ctx.cacheMetrics.estimatedSavings;
-        costText += ' ' + hex(p.green, `-$${savings.toFixed(2)}`);
-      }
-      metaParts.push(costText);
-    }
+    // Cost moved to Line 1
 
     if (ctx.config.display.showCacheMetrics && ctx.cacheMetrics) {
       const hitRate = Math.round(ctx.cacheMetrics.cacheHitRate);
@@ -395,6 +357,29 @@ export const auroraTheme: Theme = {
     if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
       lines.push(summarizeSkillsStyled(ctx, styledOpts));
     }
+
+    // === Last line: ● Usage: 5h:35% ↻2h15m  7d:12%  +203 -147 ===
+    const usageParts: string[] = [];
+    if (ctx.config.display.showUsage && ctx.usageData) {
+      const fiveHour = ctx.usageData.fiveHour;
+      const sevenDay = ctx.usageData.sevenDay;
+      if (fiveHour > 0) {
+        const fiveColor = fiveHour >= 90 ? p.red : fiveHour >= 75 ? p.peach : fiveHour >= 50 ? p.yellow : p.green;
+        let fiveHourText = hex(fiveColor, `5h:${Math.round(fiveHour)}%`);
+        if (fiveHour >= 50) {
+          const fiveReset = formatResetTime(ctx.usageData.fiveHourResetAt, 'compact');
+          if (fiveReset) {
+            fiveHourText += hex(p.muted, ` ↻${fiveReset}`);
+          }
+        }
+        usageParts.push(fiveHourText);
+      }
+      if (sevenDay > 0) {
+        usageParts.push(hex(p.muted, `7d:${Math.round(sevenDay)}%`));
+      }
+    }
+    const usageContent = usageParts.length > 0 ? usageParts.join(gap) : hex(p.muted, '-');
+    lines.push(bullet(p.teal) + hex(p.text, 'Usage:') + ' ' + usageContent);
 
     return lines;
   },

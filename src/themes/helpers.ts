@@ -309,7 +309,13 @@ export function formatProjectGit(
 
   // Project name (plain text, no hyperlink)
   if (project && ctx.stdin.cwd) {
-    const projectName = applyTextTransform(project, transform);
+    let projectName = applyTextTransform(project, transform);
+
+    // Truncate project name to prevent line overflow
+    const maxProjectLen = ctx.tier === 1 ? 12 : ctx.tier === 2 ? 16 : 25;
+    if (projectName.length > maxProjectLen) {
+      projectName = projectName.substring(0, maxProjectLen - 1) + '\u2026';  // …
+    }
 
     if (palette) {
       result += hex(palette.teal, projectPrefix + projectName);
