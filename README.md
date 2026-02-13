@@ -6,7 +6,7 @@
 
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/baeseokjae/claude-code-cockpit)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
-[![Tests](https://img.shields.io/badge/tests-309%20passing-brightgreen.svg)](#-development)
+[![Tests](https://img.shields.io/badge/tests-321%20passing-brightgreen.svg)](#-development)
 [![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org)
 
 [English](./README.md) • [한국어](./README.ko.md)
@@ -103,7 +103,7 @@ Claude Code Cockpit transforms your Claude Code experience by providing **real-t
 #### 🚀 Technical Excellence
 - **Zero Dependencies**: Uses only Node.js built-in modules
 - **Fast Performance**: < 50ms render cycle, < 50MB memory
-- **309 Tests Passing**: Comprehensive test coverage with Vitest
+- **321 Tests Passing**: Comprehensive test coverage with Vitest
 - **Type-Safe**: Written in TypeScript 5.x
 
 ### Advanced Features (v2.0)
@@ -121,11 +121,6 @@ Claude Code Cockpit includes cutting-edge analysis features for power users:
   - Large files (>1MB)
   - TODO/FIXME comments
   - Severity-based icons (🔴 critical, 🟡 medium, 🔵 low)
-- **Security Dashboard**: Integrated security scoring (0-100) with sub-scores for:
-  - Secrets management
-  - Code quality
-  - Dependency security
-  - Issue severity classification and recommendations
 
 #### 🔄 Workflow Intelligence
 - **Workflow Phase Detection**: Auto-detect PLAN/IMPLEMENT/REVIEW phases
@@ -153,13 +148,6 @@ Claude Code Cockpit includes cutting-edge analysis features for power users:
   - Identify most-used MCP tools
   - Display: `MCP: 3 servers (45 calls)`
 - **MCP Impact Tracking**: Configuration and tool count estimation
-
-#### 📚 Learning & Performance
-- **Learning Tracker**: Session pattern analysis
-  - Detects Read-Edit-Write patterns (best practice)
-  - Identifies tool retry patterns
-  - Error streak detection
-  - Improvement suggestions
 - **Performance Metrics**: Build and test performance tracking (experimental)
 
 #### 🌳 Advanced Git Features
@@ -519,16 +507,6 @@ Edit `~/.claude/plugins/claude-code-cockpit/config.json`:
 - **Average attempts** - Shows average attempts needed for success
 - **Recent success rate** - Tracks success of last 10 attempts
 
-#### Security Dashboard
-- **Security scoring** - Overall score (0-100) with sub-scores for secrets, code quality, dependencies
-- **Issue severity** - Critical (🔴), High (🟠), Medium (🟡), Low (🔵)
-- **Recommendations** - Actionable suggestions for each security issue
-
-#### Learning Tracker
-- **Pattern detection** - Identifies Read-Edit-Write patterns, retry patterns
-- **Error analysis** - Tracks consecutive error streaks
-- **Improvement suggestions** - Provides actionable recommendations based on patterns
-
 ## ⚙️ Configuration
 
 Claude Code Cockpit is highly configurable. You can customize every aspect through the interactive wizard, configuration file, or environment variables.
@@ -550,6 +528,9 @@ For quick overrides without editing config files:
 # Theme selection
 export COCKPIT_THEME=aurora        # Options: aurora, neon, mono, zen, retro
 
+# Preset selection (applies a bundle of display settings)
+export COCKPIT_PRESET=developer    # Options: minimal, developer, full
+
 # Enable detail mode (advanced features)
 export COCKPIT_DETAIL=1            # 0=off, 1=on
 
@@ -566,39 +547,41 @@ These environment variables take precedence over config file settings.
 ```json
 {
   "theme": "aurora",
+  "preset": "developer",
   "detailMode": false,
+  "pathLevels": 1,
+  "rightMargin": 2,
+  "maxActivityWidgets": 8,
   "display": {
     "showGit": true,
     "showTools": true,
     "showAgents": true,
     "showTodos": true,
-    "showSkills": true,
+    "showSkills": false,
     "showUsage": true,
-    "showConfigCounts": true,
+    "showConfigCounts": false,
     "showCost": true,
     "showAbsoluteTokens": false,
     "showSessionName": true,
-    "showTokenSpeed": true,
+    "showTokenSpeed": false,
     "showGitFileStats": false,
     "showAllBranches": false,
     "showAllBranchesDepth": 2,
     "showLines": true,
-    "showCacheMetrics": true,
-    "showGitTag": true,
-    "showGitActivity": true,
-    "showToolStats": true,
+    "showCacheMetrics": false,
+    "showGitTag": false,
+    "showGitActivity": false,
+    "showToolStats": false,
     "showBashErrors": true,
     "showCompactSuggestion": true,
     "showViolations": true,
-    "showMcpImpact": true,
-    "showWorkflowPhase": true,
-    "showTestCoverage": true,
-    "showPassAtK": true,
+    "showMcpImpact": false,
+    "showWorkflowPhase": false,
+    "showTestCoverage": false,
+    "showPassAtK": false,
     "showGitWorktrees": false,
     "showPerformanceMetrics": false,
-    "showMcpStatus": true,
-    "showSecurityDashboard": true,
-    "showLearningTracker": false,
+    "showMcpStatus": false,
     "showInstanceSync": false,
     "sevenDayThreshold": 80
   },
@@ -619,6 +602,20 @@ These environment variables take precedence over config file settings.
 }
 ```
 
+### Presets
+
+Presets apply a predefined bundle of display settings. Individual display options can still override preset values.
+
+| Preset | Description |
+|--------|-------------|
+| `minimal` | Core only: model, context%, cost, duration. Most widgets off |
+| `developer` | Default + gitActivity, toolStats enabled |
+| `full` | All display options enabled |
+
+Set via config file (`"preset": "developer"`) or env var (`COCKPIT_PRESET=developer`).
+
+**Priority:** Default → Preset → User overrides
+
 ### Display Options
 
 All display options can be toggled individually. Here's a complete reference:
@@ -631,7 +628,7 @@ All display options can be toggled individually. Here's a complete reference:
 | `showTools` | ✅ true | Tool usage (Read, Edit, Bash, etc.) |
 | `showAgents` | ✅ true | Agent execution status |
 | `showTodos` | ✅ true | Todo progress tracking |
-| `showSkills` | ✅ true | Skill invocations (/commit, /review-pr) |
+| `showSkills` | ❌ false | Skill invocations (/commit, /review-pr) |
 | `showUsage` | ✅ true | API usage statistics |
 | `showCost` | ✅ true | Cost estimation |
 
@@ -640,15 +637,15 @@ All display options can be toggled individually. Here's a complete reference:
 | Option | Default | Description |
 |--------|---------|-------------|
 | `showAbsoluteTokens` | ❌ false | Show absolute token counts instead of percentages |
-| `showTokenSpeed` | ✅ true | Token generation speed (tok/s) |
+| `showTokenSpeed` | ❌ false | Token generation speed (tok/s) |
 | `showSessionName` | ✅ true | Session/plan name in status bar |
 
 #### Git Information
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `showGitTag` | ✅ true | Latest git tag next to branch |
-| `showGitActivity` | ✅ true | Commits and PRs created during session |
+| `showGitTag` | ❌ false | Latest git tag next to branch |
+| `showGitActivity` | ❌ false | Commits and PRs created during session |
 | `showGitFileStats` | ❌ false | Modified/added/deleted file counts |
 | `showAllBranches` | ❌ false | Branches from subdirectories (monorepo) |
 | `showAllBranchesDepth` | 2 | Maximum depth for subdirectory scanning |
@@ -659,14 +656,14 @@ All display options can be toggled individually. Here's a complete reference:
 | Option | Default | Description |
 |--------|---------|-------------|
 | `showLines` | ✅ true | Code additions/removals (+152 -48) |
-| `showCacheMetrics` | ✅ true | Cache hit rate and savings |
-| `showConfigCounts` | ✅ true | Count of .claude.md, rules, MCP, hooks |
+| `showCacheMetrics` | ❌ false | Cache hit rate and savings |
+| `showConfigCounts` | ❌ false | Count of .claude.md, rules, MCP, hooks |
 
 #### Activity Tracking
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `showToolStats` | ✅ true | Overall tool success/failure rate |
+| `showToolStats` | ❌ false | Overall tool success/failure rate |
 | `showBashErrors` | ✅ true | Failed bash commands with exit codes |
 
 #### Advanced Analysis (v2.0)
@@ -675,14 +672,12 @@ All display options can be toggled individually. Here's a complete reference:
 |--------|---------|-------------|
 | `showCompactSuggestion` | ✅ true | `/compact` suggestion when threshold exceeded |
 | `showViolations` | ✅ true | Code violations (secrets, console.log) |
-| `showMcpImpact` | ✅ true | MCP server configuration and tool count |
-| `showWorkflowPhase` | ✅ true | Current workflow phase (PLAN/IMPLEMENT/REVIEW) |
-| `showTestCoverage` | ✅ true | Test coverage percentage |
-| `showPassAtK` | ✅ true | Pass@k code generation quality metrics |
-| `showMcpStatus` | ✅ true | MCP server usage statistics |
-| `showSecurityDashboard` | ✅ true | Security score and issues |
+| `showMcpImpact` | ❌ false | MCP server configuration and tool count |
+| `showWorkflowPhase` | ❌ false | Current workflow phase (PLAN/IMPLEMENT/REVIEW) |
+| `showTestCoverage` | ❌ false | Test coverage percentage |
+| `showPassAtK` | ❌ false | Pass@k code generation quality metrics |
+| `showMcpStatus` | ❌ false | MCP server usage statistics |
 | `showPerformanceMetrics` | ❌ false | Build/test performance (experimental) |
-| `showLearningTracker` | ❌ false | Pattern detection and suggestions (experimental) |
 | `showInstanceSync` | ❌ false | Multi-instance sync (experimental) |
 
 #### Usage Warnings
@@ -716,6 +711,14 @@ All display options can be toggled individually. Here's a complete reference:
 
 **Note:** Reducing `maxTools` and `maxAgents` can improve performance on slower systems or with very long sessions.
 
+### Additional Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `rightMargin` | 2 | Right margin columns reserved to prevent terminal wrapping |
+| `maxActivityWidgets` | 8 | Maximum number of activity widgets per line |
+| `pathLevels` | 1 | Number of parent directory levels to show in project path |
+
 ### Example Configuration Presets
 
 #### Minimal (Performance-focused)
@@ -735,8 +738,7 @@ All display options can be toggled individually. Here's a complete reference:
     "showViolations": false,
     "showWorkflowPhase": false,
     "showTestCoverage": false,
-    "showPassAtK": false,
-    "showSecurityDashboard": false
+    "showPassAtK": false
   },
   "performance": {
     "maxTools": 10,
@@ -749,6 +751,7 @@ All display options can be toggled individually. Here's a complete reference:
 ```json
 {
   "theme": "aurora",
+  "preset": "full",
   "detailMode": true,
   "display": {
     "showGit": true,
@@ -765,7 +768,6 @@ All display options can be toggled individually. Here's a complete reference:
     "showTestCoverage": true,
     "showPassAtK": true,
     "showMcpStatus": true,
-    "showSecurityDashboard": true,
     "showGitActivity": true,
     "showToolStats": true,
     "showBashErrors": true
@@ -784,10 +786,9 @@ All display options can be toggled individually. Here's a complete reference:
   "detailMode": true,
   "display": {
     "showViolations": true,
-    "showSecurityDashboard": true,
     "showBashErrors": true,
-    "showMcpImpact": true,
-    "showWorkflowPhase": true
+    "showMcpImpact": false,
+    "showWorkflowPhase": false
   }
 }
 ```
@@ -895,7 +896,7 @@ pnpm test:update-snapshots
 
 ### Testing
 
-Claude Code Cockpit has **comprehensive test coverage** with 309 tests across 26 test files:
+Claude Code Cockpit has **comprehensive test coverage** with 321 tests across 27 test files:
 
 | Test Suite | Tests | Coverage |
 |------------|-------|----------|
@@ -1097,14 +1098,21 @@ claude-code-cockpit/
 │       ├── debug.ts         # Debug logging
 │       ├── constants.ts     # Constants (model IDs, pricing, etc.)
 │       ├── cache.ts         # File caching
-│       └── font-detect.ts   # Terminal font detection
+│       ├── font-detect.ts   # Terminal font detection
+│       └── terminal-width.ts # Terminal width utilities
 │
 ├── tests/                   # Test suite (Vitest)
 │   ├── unit/                # Unit tests
-│   ├── integration/         # Integration tests
+│   │   ├── config/
+│   │   ├── data/
+│   │   ├── input/
+│   │   ├── render/
+│   │   └── themes/
 │   ├── fixtures/            # Test fixtures
-│   ├── snapshots/           # Snapshot tests
-│   └── *.test.ts            # Feature tests (309 tests total)
+│   │   ├── config/
+│   │   ├── stdin/
+│   │   └── transcript/
+│   └── *.test.ts            # Feature tests (321 tests total)
 │
 ├── docs/                    # Documentation
 │   ├── ARCHITECTURE.md      # Technical architecture
@@ -1120,9 +1128,6 @@ claude-code-cockpit/
 │   ├── theme-zen.svg
 │   └── theme-retro.svg
 │
-├── scripts/                 # Build and utility scripts
-│   └── hooks/               # Git hooks
-│
 ├── dist/                    # Build output (generated)
 │   ├── index.js             # Compiled entry point
 │   └── ...                  # Compiled modules
@@ -1130,7 +1135,6 @@ claude-code-cockpit/
 ├── package.json             # NPM package configuration
 ├── tsconfig.json            # TypeScript configuration
 ├── vitest.config.ts         # Vitest test configuration
-├── CHANGELOG.md             # Version history
 ├── LICENSE                  # MIT license
 └── README.md                # This file
 ```
@@ -1142,13 +1146,11 @@ claude-code-cockpit/
   - **`data/`**: Extract and calculate metrics
   - **`themes/`**: Theme rendering logic
   - **`output/`**: Write statusline and session file
-- **`tests/`**: Comprehensive test suite (309 tests)
+- **`tests/`**: Comprehensive test suite (321 tests)
 - **`commands/`**: Interactive command scripts for Claude Code
 - **`docs/`**: Technical documentation and implementation plans
 
 ## 📋 Changelog
-
-For detailed version history and release notes, see [CHANGELOG.md](./CHANGELOG.md).
 
 ### Recent Changes (Unreleased v2.0)
 
@@ -1160,8 +1162,6 @@ For detailed version history and release notes, see [CHANGELOG.md](./CHANGELOG.m
 - 📊 Pass@k metrics for AI code quality
 - 🌳 Git worktree support
 - 🔌 MCP status and per-server statistics
-- 🛡️ Security dashboard with scoring
-- 📚 Learning tracker for pattern analysis
 - 🔗 Instance synchronization (experimental)
 
 **v1.0.0 Initial Release:**
@@ -1211,9 +1211,9 @@ A: Detail mode enables additional advanced features like workflow phase detectio
 
 **Q: What are the different tiers?**
 A: Claude Code Cockpit has 3 responsive tiers based on terminal width:
-- **Tier 1 (< 100 cols)**: Minimal - Model, context, git, time
-- **Tier 2 (100-140 cols)**: Compact - Tier 1 + tools, agents, todos
-- **Tier 3 (140+ cols)**: Full - Tier 2 + box layout, tokens, cost, advanced features
+- **Tier 1 (< 80 cols)**: Minimal - Model, context, git, time
+- **Tier 2 (80-120 cols)**: Compact - Tier 1 + tools, agents, todos
+- **Tier 3 (120+ cols)**: Full - Tier 2 + box layout, tokens, cost, advanced features
 
 **Q: How does cost estimation work?**
 A: Cost is calculated based on token usage and official Anthropic pricing for each model (Opus/Sonnet/Haiku). It includes both input and output tokens.

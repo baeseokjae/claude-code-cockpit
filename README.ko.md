@@ -6,7 +6,7 @@
 
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/baeseokjae/claude-code-cockpit)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
-[![Tests](https://img.shields.io/badge/tests-309%20passing-brightgreen.svg)](#-개발)
+[![Tests](https://img.shields.io/badge/tests-321%20passing-brightgreen.svg)](#-개발)
 [![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org)
 
 [English](./README.md) • [한국어](./README.ko.md)
@@ -105,7 +105,7 @@ Claude Code Cockpit은 AI 기반 개발 세션의 **모든 측면을 실시간�
 #### 🚀 기술적 우수성
 - **제로 디펜던시**: Node.js 내장 모듈만 사용
 - **빠른 성능**: < 50ms 렌더링 주기, < 50MB 메모리
-- **309개 테스트 통과**: Vitest를 통한 포괄적인 테스트 커버리지
+- **321개 테스트 통과**: Vitest를 통한 포괄적인 테스트 커버리지
 - **타입 안전**: TypeScript 5.x로 작성
 
 ### 고급 기능 (v2.0)
@@ -123,11 +123,6 @@ Claude Code Cockpit은 파워 유저를 위한 최첨단 분석 기능을 포함
   - 대용량 파일 (>1MB)
   - TODO/FIXME 주석
   - 심각도 기반 아이콘 (🔴 치명적, 🟡 중간, 🔵 낮음)
-- **보안 대시보드**: 통합 보안 점수 (0-100) 및 하위 점수:
-  - 시크릿 관리
-  - 코드 품질
-  - 의존성 보안
-  - 이슈 심각도 분류 및 권장사항
 
 #### 🔄 워크플로우 인텔리전스
 - **워크플로우 단계 감지**: PLAN/IMPLEMENT/REVIEW 단계 자동 감지
@@ -155,13 +150,6 @@ Claude Code Cockpit은 파워 유저를 위한 최첨단 분석 기능을 포함
   - 가장 많이 사용된 MCP 도구 식별
   - 표시: `MCP: 3 servers (45 calls)`
 - **MCP 영향 추적**: 설정 및 도구 개수 추정
-
-#### 📚 학습 & 성능
-- **학습 추적기**: 세션 패턴 분석
-  - Read-Edit-Write 패턴 감지 (모범 사례)
-  - 도구 재시도 패턴 식별
-  - 오류 연속 감지
-  - 개선 제안
 - **성능 메트릭**: 빌드 및 테스트 성능 추적 (실험적)
 
 #### 🌳 고급 Git 기능
@@ -529,16 +517,6 @@ export COCKPIT_THEME=neon
 - **평균 시도 횟수** - 성공에 필요한 평균 시도 횟수 표시
 - **최근 성공률** - 최근 10번 시도의 성공 추적
 
-#### 보안 대시보드
-- **보안 점수** - 시크릿, 코드 품질, 의존성에 대한 하위 점수가 있는 전체 점수 (0-100)
-- **이슈 심각도** - 치명적 (🔴), 높음 (🟠), 중간 (🟡), 낮음 (🔵)
-- **권장사항** - 각 보안 이슈에 대한 실행 가능한 제안
-
-#### 학습 추적기
-- **패턴 감지** - Read-Edit-Write 패턴, 재시도 패턴 식별
-- **오류 분석** - 연속 오류 연속 추적
-- **개선 제안** - 패턴 기반 실행 가능한 권장사항 제공
-
 ---
 
 ## ⚙️ 설정
@@ -562,6 +540,9 @@ Claude Code Cockpit은 고도로 설정 가능합니다. 대화형 마법사, �
 # 테마 선택
 export COCKPIT_THEME=aurora        # 옵션: aurora, neon, mono, zen, retro
 
+# Preset 선택 (표시 설정 묶음 적용)
+export COCKPIT_PRESET=developer    # 옵션: minimal, developer, full
+
 # 상세 모드 활성화 (고급 기능)
 export COCKPIT_DETAIL=1            # 0=끔, 1=켬
 
@@ -578,39 +559,41 @@ export COCKPIT_PATH_LEVELS=2       # 표시할 디렉토리 레벨 수
 ```json
 {
   "theme": "aurora",
+  "preset": "developer",
   "detailMode": false,
+  "pathLevels": 1,
+  "rightMargin": 2,
+  "maxActivityWidgets": 8,
   "display": {
     "showGit": true,
     "showTools": true,
     "showAgents": true,
     "showTodos": true,
-    "showSkills": true,
+    "showSkills": false,
     "showUsage": true,
-    "showConfigCounts": true,
+    "showConfigCounts": false,
     "showCost": true,
     "showAbsoluteTokens": false,
     "showSessionName": true,
-    "showTokenSpeed": true,
+    "showTokenSpeed": false,
     "showGitFileStats": false,
     "showAllBranches": false,
     "showAllBranchesDepth": 2,
     "showLines": true,
-    "showCacheMetrics": true,
-    "showGitTag": true,
-    "showGitActivity": true,
-    "showToolStats": true,
+    "showCacheMetrics": false,
+    "showGitTag": false,
+    "showGitActivity": false,
+    "showToolStats": false,
     "showBashErrors": true,
     "showCompactSuggestion": true,
     "showViolations": true,
-    "showMcpImpact": true,
-    "showWorkflowPhase": true,
-    "showTestCoverage": true,
-    "showPassAtK": true,
+    "showMcpImpact": false,
+    "showWorkflowPhase": false,
+    "showTestCoverage": false,
+    "showPassAtK": false,
     "showGitWorktrees": false,
     "showPerformanceMetrics": false,
-    "showMcpStatus": true,
-    "showSecurityDashboard": true,
-    "showLearningTracker": false,
+    "showMcpStatus": false,
     "showInstanceSync": false,
     "sevenDayThreshold": 80
   },
@@ -631,6 +614,20 @@ export COCKPIT_PATH_LEVELS=2       # 표시할 디렉토리 레벨 수
 }
 ```
 
+### Presets
+
+Preset은 미리 정의된 표시 설정 묶음을 적용합니다. 개별 표시 옵션은 여전히 preset 값을 재정의할 수 있습니다.
+
+| Preset | 설명 |
+|--------|------|
+| `minimal` | 핵심만: 모델, 컨텍스트%, 비용, 시간. 대부분의 위젯 꺼짐 |
+| `developer` | 기본 + gitActivity, toolStats 활성화 |
+| `full` | 모든 표시 옵션 활성화 |
+
+설정 파일(`"preset": "developer"`) 또는 환경 변수(`COCKPIT_PRESET=developer`)를 통해 설정.
+
+**우선순위:** 기본값 → Preset → 사용자 재정의
+
 ### 표시 옵션
 
 모든 표시 옵션을 개별적으로 토글할 수 있습니다. 다음은 완전한 참조입니다:
@@ -643,7 +640,7 @@ export COCKPIT_PATH_LEVELS=2       # 표시할 디렉토리 레벨 수
 | `showTools` | ✅ true | 도구 사용량 (Read, Edit, Bash 등) |
 | `showAgents` | ✅ true | 에이전트 실행 상태 |
 | `showTodos` | ✅ true | Todo 진행률 추적 |
-| `showSkills` | ✅ true | Skill 호출 (/commit, /review-pr) |
+| `showSkills` | ❌ false | Skill 호출 (/commit, /review-pr) |
 | `showUsage` | ✅ true | API 사용량 통계 |
 | `showCost` | ✅ true | 비용 추정 |
 
@@ -652,15 +649,15 @@ export COCKPIT_PATH_LEVELS=2       # 표시할 디렉토리 레벨 수
 | 옵션 | 기본값 | 설명 |
 |------|--------|------|
 | `showAbsoluteTokens` | ❌ false | 퍼센티지 대신 절대 토큰 수 표시 |
-| `showTokenSpeed` | ✅ true | 토큰 생성 속도 (tok/s) |
+| `showTokenSpeed` | ❌ false | 토큰 생성 속도 (tok/s) |
 | `showSessionName` | ✅ true | 상태 표시줄의 세션/플랜 이름 |
 
 #### Git 정보
 
 | 옵션 | 기본값 | 설명 |
 |------|--------|------|
-| `showGitTag` | ✅ true | 브랜치 옆 최신 git 태그 |
-| `showGitActivity` | ✅ true | 세션 중 생성된 커밋 및 PR |
+| `showGitTag` | ❌ false | 브랜치 옆 최신 git 태그 |
+| `showGitActivity` | ❌ false | 세션 중 생성된 커밋 및 PR |
 | `showGitFileStats` | ❌ false | 수정/추가/삭제된 파일 개수 |
 | `showAllBranches` | ❌ false | 하위 디렉토리의 브랜치 (모노레포) |
 | `showAllBranchesDepth` | 2 | 하위 디렉토리 스캔 최대 깊이 |
@@ -671,14 +668,14 @@ export COCKPIT_PATH_LEVELS=2       # 표시할 디렉토리 레벨 수
 | 옵션 | 기본값 | 설명 |
 |------|--------|------|
 | `showLines` | ✅ true | 코드 추가/삭제 (+152 -48) |
-| `showCacheMetrics` | ✅ true | 캐시 히트율 및 절약 금액 |
-| `showConfigCounts` | ✅ true | .claude.md, rules, MCP, hooks 개수 |
+| `showCacheMetrics` | ❌ false | 캐시 히트율 및 절약 금액 |
+| `showConfigCounts` | ❌ false | .claude.md, rules, MCP, hooks 개수 |
 
 #### 활동 추적
 
 | 옵션 | 기본값 | 설명 |
 |------|--------|------|
-| `showToolStats` | ✅ true | 전체 도구 성공/실패율 |
+| `showToolStats` | ❌ false | 전체 도구 성공/실패율 |
 | `showBashErrors` | ✅ true | exit code와 함께 실패한 bash 명령어 |
 
 #### 고급 분석 (v2.0)
@@ -687,14 +684,12 @@ export COCKPIT_PATH_LEVELS=2       # 표시할 디렉토리 레벨 수
 |------|--------|------|
 | `showCompactSuggestion` | ✅ true | 임계값 초과 시 `/compact` 제안 |
 | `showViolations` | ✅ true | 코드 위반 (시크릿, console.log) |
-| `showMcpImpact` | ✅ true | MCP 서버 설정 및 도구 개수 |
-| `showWorkflowPhase` | ✅ true | 현재 워크플로우 단계 (PLAN/IMPLEMENT/REVIEW) |
-| `showTestCoverage` | ✅ true | 테스트 커버리지 퍼센티지 |
-| `showPassAtK` | ✅ true | Pass@k 코드 생성 품질 메트릭 |
-| `showMcpStatus` | ✅ true | MCP 서버 사용량 통계 |
-| `showSecurityDashboard` | ✅ true | 보안 점수 및 이슈 |
+| `showMcpImpact` | ❌ false | MCP 서버 설정 및 도구 개수 |
+| `showWorkflowPhase` | ❌ false | 현재 워크플로우 단계 (PLAN/IMPLEMENT/REVIEW) |
+| `showTestCoverage` | ❌ false | 테스트 커버리지 퍼센티지 |
+| `showPassAtK` | ❌ false | Pass@k 코드 생성 품질 메트릭 |
+| `showMcpStatus` | ❌ false | MCP 서버 사용량 통계 |
 | `showPerformanceMetrics` | ❌ false | 빌드/테스트 성능 (실험적) |
-| `showLearningTracker` | ❌ false | 패턴 감지 및 제안 (실험적) |
 | `showInstanceSync` | ❌ false | 멀티 인스턴스 동기화 (실험적) |
 
 #### 사용량 경고
@@ -728,6 +723,14 @@ export COCKPIT_PATH_LEVELS=2       # 표시할 디렉토리 레벨 수
 
 **참고:** `maxTools` 및 `maxAgents`를 줄이면 느린 시스템이나 매우 긴 세션에서 성능을 향상시킬 수 있습니다.
 
+### 추가 옵션
+
+| 옵션 | 기본값 | 설명 |
+|------|--------|------|
+| `rightMargin` | 2 | 터미널 줄바꿈 방지를 위해 예약된 오른쪽 여백 열 |
+| `maxActivityWidgets` | 8 | 라인당 최대 활동 위젯 수 |
+| `pathLevels` | 1 | 프로젝트 경로에 표시할 상위 디렉토리 레벨 수 |
+
 ### 예시 설정 프리셋
 
 #### 미니멀 (성능 중심)
@@ -747,8 +750,7 @@ export COCKPIT_PATH_LEVELS=2       # 표시할 디렉토리 레벨 수
     "showViolations": false,
     "showWorkflowPhase": false,
     "showTestCoverage": false,
-    "showPassAtK": false,
-    "showSecurityDashboard": false
+    "showPassAtK": false
   },
   "performance": {
     "maxTools": 10,
@@ -761,6 +763,7 @@ export COCKPIT_PATH_LEVELS=2       # 표시할 디렉토리 레벨 수
 ```json
 {
   "theme": "aurora",
+  "preset": "full",
   "detailMode": true,
   "display": {
     "showGit": true,
@@ -777,7 +780,6 @@ export COCKPIT_PATH_LEVELS=2       # 표시할 디렉토리 레벨 수
     "showTestCoverage": true,
     "showPassAtK": true,
     "showMcpStatus": true,
-    "showSecurityDashboard": true,
     "showGitActivity": true,
     "showToolStats": true,
     "showBashErrors": true
@@ -796,10 +798,9 @@ export COCKPIT_PATH_LEVELS=2       # 표시할 디렉토리 레벨 수
   "detailMode": true,
   "display": {
     "showViolations": true,
-    "showSecurityDashboard": true,
     "showBashErrors": true,
-    "showMcpImpact": true,
-    "showWorkflowPhase": true
+    "showMcpImpact": false,
+    "showWorkflowPhase": false
   }
 }
 ```
@@ -911,7 +912,7 @@ pnpm test:update-snapshots
 
 ### 테스트
 
-Claude Code Cockpit은 26개 테스트 파일에 걸쳐 309개 테스트로 **포괄적인 테스트 커버리지**를 가지고 있습니다:
+Claude Code Cockpit은 27개 테스트 파일에 걸쳐 321개 테스트로 **포괄적인 테스트 커버리지**를 가지고 있습니다:
 
 | 테스트 스위트 | 테스트 수 | 커버리지 |
 |--------------|----------|----------|
@@ -1115,14 +1116,21 @@ claude-code-cockpit/
 │       ├── debug.ts         # 디버그 로깅
 │       ├── constants.ts     # 상수 (모델 ID, 가격 등)
 │       ├── cache.ts         # 파일 캐싱
-│       └── font-detect.ts   # 터미널 폰트 감지
+│       ├── font-detect.ts   # 터미널 폰트 감지
+│       └── terminal-width.ts # 터미널 너비 유틸리티
 │
 ├── tests/                   # 테스트 스위트 (Vitest)
 │   ├── unit/                # 단위 테스트
-│   ├── integration/         # 통합 테스트
+│   │   ├── config/
+│   │   ├── data/
+│   │   ├── input/
+│   │   ├── render/
+│   │   └── themes/
 │   ├── fixtures/            # 테스트 픽스처
-│   ├── snapshots/           # 스냅샷 테스트
-│   └── *.test.ts            # 기능 테스트 (총 309개 테스트)
+│   │   ├── config/
+│   │   ├── stdin/
+│   │   └── transcript/
+│   └── *.test.ts            # 기능 테스트 (총 321개 테스트)
 │
 ├── docs/                    # 문서
 │   ├── ARCHITECTURE.md      # 기술 아키텍처
@@ -1138,9 +1146,6 @@ claude-code-cockpit/
 │   ├── theme-zen.svg
 │   └── theme-retro.svg
 │
-├── scripts/                 # 빌드 및 유틸리티 스크립트
-│   └── hooks/               # Git 훅
-│
 ├── dist/                    # 빌드 출력 (생성됨)
 │   ├── index.js             # 컴파일된 진입점
 │   └── ...                  # 컴파일된 모듈
@@ -1148,7 +1153,6 @@ claude-code-cockpit/
 ├── package.json             # NPM 패키지 설정
 ├── tsconfig.json            # TypeScript 설정
 ├── vitest.config.ts         # Vitest 테스트 설정
-├── CHANGELOG.md             # 버전 히스토리
 ├── LICENSE                  # MIT 라이선스
 └── README.md                # 이 파일
 ```
@@ -1160,15 +1164,13 @@ claude-code-cockpit/
   - **`data/`**: 메트릭 추출 및 계산
   - **`themes/`**: 테마 렌더링 로직
   - **`output/`**: 상태표시줄 및 세션 파일 쓰기
-- **`tests/`**: 포괄적인 테스트 스위트 (309개 테스트)
+- **`tests/`**: 포괄적인 테스트 스위트 (321개 테스트)
 - **`commands/`**: Claude Code용 대화형 커맨드 스크립트
 - **`docs/`**: 기술 문서 및 구현 계획
 
 ---
 
 ## 📋 변경 로그
-
-상세한 버전 히스토리 및 릴리스 노트는 [CHANGELOG.md](./CHANGELOG.md)를 참조하세요.
 
 ### 최근 변경사항 (미공개 v2.0)
 
@@ -1180,8 +1182,6 @@ claude-code-cockpit/
 - 📊 AI 코드 품질을 위한 Pass@k 메트릭
 - 🌳 Git worktree 지원
 - 🔌 MCP 상태 및 서버별 통계
-- 🛡️ 점수가 있는 보안 대시보드
-- 📚 패턴 분석을 위한 학습 추적기
 - 🔗 인스턴스 동기화 (실험적)
 
 **v1.0.0 초기 릴리스:**
@@ -1233,9 +1233,9 @@ A: 상세 모드는 워크플로우 단계 감지, 테스트 커버리지, Pass@
 
 **Q: 다양한 tier가 무엇인가요?**
 A: Claude Code Cockpit은 터미널 너비에 따라 3가지 반응형 tier를 가지고 있습니다:
-- **Tier 1 (< 100 cols)**: 미니멀 - 모델, 컨텍스트, git, 시간
-- **Tier 2 (100-140 cols)**: 컴팩트 - Tier 1 + 도구, 에이전트, 할일
-- **Tier 3 (140+ cols)**: 전체 - Tier 2 + 박스 레이아웃, 토큰, 비용, 고급 기능
+- **Tier 1 (< 80 cols)**: 미니멀 - 모델, 컨텍스트, git, 시간
+- **Tier 2 (80-120 cols)**: 컴팩트 - Tier 1 + 도구, 에이전트, 할일
+- **Tier 3 (120+ cols)**: 전체 - Tier 2 + 박스 레이아웃, 토큰, 비용, 고급 기능
 
 **Q: 비용 추정은 어떻게 작동하나요?**
 A: 비용은 각 모델(Opus/Sonnet/Haiku)에 대한 토큰 사용량 및 공식 Anthropic 가격을 기반으로 계산됩니다. 입력 및 출력 토큰을 모두 포함합니다.
