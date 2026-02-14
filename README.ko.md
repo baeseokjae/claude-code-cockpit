@@ -989,14 +989,6 @@ DEBUG=main,git,transcript node dist/index.js < sample.json
 # - usage: API 사용량 가져오기
 ```
 
-### 아키텍처
-
-상세한 기술 문서는 [ARCHITECTURE.md](./docs/ARCHITECTURE.md)를 참조하세요:
-- 시스템 아키텍처
-- 데이터 흐름
-- 테마 시스템
-- 성능 최적화
-- 플러그인 API
 
 ### 기여하기
 
@@ -1132,13 +1124,6 @@ claude-code-cockpit/
 │   │   └── transcript/
 │   └── *.test.ts            # 기능 테스트 (총 321개 테스트)
 │
-├── docs/                    # 문서
-│   ├── ARCHITECTURE.md      # 기술 아키텍처
-│   ├── P2-IMPLEMENTATION-PLAN.md
-│   ├── P3-IMPLEMENTATION-PLAN.md
-│   ├── P4-IMPLEMENTATION-PLAN.md
-│   └── phase-reports/       # 구현 단계 보고서
-│
 ├── assets/                  # 테마 스크린샷
 │   ├── theme-aurora.svg
 │   ├── theme-neon.svg
@@ -1166,7 +1151,6 @@ claude-code-cockpit/
   - **`output/`**: 상태표시줄 및 세션 파일 쓰기
 - **`tests/`**: 포괄적인 테스트 스위트 (321개 테스트)
 - **`commands/`**: Claude Code용 대화형 커맨드 스크립트
-- **`docs/`**: 기술 문서 및 구현 계획
 
 ---
 

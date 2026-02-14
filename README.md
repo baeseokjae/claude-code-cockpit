@@ -973,14 +973,6 @@ DEBUG=main,git,transcript node dist/index.js < sample.json
 # - usage: API usage fetching
 ```
 
-### Architecture
-
-See [ARCHITECTURE.md](./docs/ARCHITECTURE.md) for detailed technical documentation:
-- System architecture
-- Data flow
-- Theme system
-- Performance optimizations
-- Plugin API
 
 ### Contributing
 
@@ -1114,13 +1106,6 @@ claude-code-cockpit/
 │   │   └── transcript/
 │   └── *.test.ts            # Feature tests (321 tests total)
 │
-├── docs/                    # Documentation
-│   ├── ARCHITECTURE.md      # Technical architecture
-│   ├── P2-IMPLEMENTATION-PLAN.md
-│   ├── P3-IMPLEMENTATION-PLAN.md
-│   ├── P4-IMPLEMENTATION-PLAN.md
-│   └── phase-reports/       # Implementation phase reports
-│
 ├── assets/                  # Theme screenshots
 │   ├── theme-aurora.svg
 │   ├── theme-neon.svg
@@ -1148,7 +1133,6 @@ claude-code-cockpit/
   - **`output/`**: Write statusline and session file
 - **`tests/`**: Comprehensive test suite (321 tests)
 - **`commands/`**: Interactive command scripts for Claude Code
-- **`docs/`**: Technical documentation and implementation plans
 
 ## 📋 Changelog
 
