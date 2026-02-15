@@ -324,8 +324,8 @@ API 사용량 정보 표시:
 **예시:**
 ```json
 {
-  "statusline": {
-    "enabled": true,
+  "statusLine": {
+    "type": "command",
     "command": "node ~/.claude/plugins/claude-code-cockpit/dist/index.js"
   }
 }
@@ -620,7 +620,7 @@ Preset은 미리 정의된 표시 설정 묶음을 적용합니다. 개별 표�
 
 | Preset | 설명 |
 |--------|------|
-| `minimal` | 핵심만: 모델, 컨텍스트%, 비용, 시간. 대부분의 위젯 꺼짐 |
+| `minimal` | 핵심만: 모델, 컨텍스트%, 비용, 시간. 알림(bashErrors, compactSuggestion, violations)은 항상 켜짐 |
 | `developer` | 기본 + gitActivity, toolStats 활성화 |
 | `full` | 모든 표시 옵션 활성화 |
 
@@ -746,8 +746,9 @@ Preset은 미리 정의된 표시 설정 묶음을 적용합니다. 개별 표�
     "showSkills": false,
     "showUsage": false,
     "showCost": true,
-    "showCompactSuggestion": false,
-    "showViolations": false,
+    "showBashErrors": true,
+    "showCompactSuggestion": true,
+    "showViolations": true,
     "showWorkflowPhase": false,
     "showTestCoverage": false,
     "showPassAtK": false
@@ -782,7 +783,14 @@ Preset은 미리 정의된 표시 설정 묶음을 적용합니다. 개별 표�
     "showMcpStatus": true,
     "showGitActivity": true,
     "showToolStats": true,
-    "showBashErrors": true
+    "showBashErrors": true,
+    "showGitTag": true,
+    "showAllBranches": true,
+    "showGitWorktrees": true,
+    "showPerformanceMetrics": true,
+    "showInstanceSync": true,
+    "showCacheMetrics": true,
+    "showTokenSpeed": true
   },
   "performance": {
     "maxTools": 50,
@@ -791,7 +799,7 @@ Preset은 미리 정의된 표시 설정 묶음을 적용합니다. 개별 표�
 }
 ```
 
-#### 보안 중심
+#### 보안 중심 (사용자 정의 예시)
 ```json
 {
   "theme": "neon",
@@ -804,6 +812,7 @@ Preset은 미리 정의된 표시 설정 묶음을 적용합니다. 개별 표�
   }
 }
 ```
+**참고:** 이것은 사용자 정의 예시이며 내장 preset이 아닙니다. 사용 가능한 preset: `minimal`, `developer`, `full`
 
 ---
 
@@ -954,13 +963,7 @@ echo '{"model":{"display_name":"Sonnet"},"transcript_path":"./tests/fixtures/sam
 
 ### 테마 미리보기
 
-Claude Code를 실행하지 않고 모든 테마 미리보기:
-
-```bash
-pnpm preview:themes
-```
-
-이것은 모든 5가지 테마에 대한 샘플 출력을 나란히 생성합니다.
+**참고:** 테마 미리보기 스크립트는 현재 사용할 수 없습니다. config에서 `theme` 설정을 변경하고 샘플 stdin으로 수동 테스트를 실행하여 테마를 테스트할 수 있습니다 (위의 예시 참조).
 
 ### 타입 체크
 
@@ -980,13 +983,14 @@ DEBUG=* node dist/index.js < sample.json
 # 특정 모듈
 DEBUG=main,git,transcript node dist/index.js < sample.json
 
-# 사용 가능한 디버그 네임스페이스:
+# 일반적인 디버그 네임스페이스:
 # - main: 메인 진입점
 # - git: Git 작업
 # - transcript: Transcript 파싱
 # - config: 설정 로딩
-# - theme: 테마 렌더링
-# - usage: API 사용량 가져오기
+# - themes: 테마 렌더링
+# - usage-api: API 사용량 가져오기
+# (총 27개 네임스페이스 사용 가능 - 모두 보려면 DEBUG=* 사용)
 ```
 
 
@@ -1013,7 +1017,6 @@ DEBUG=main,git,transcript node dist/index.js < sample.json
 - [ ] 테스트 통과 (`pnpm test`)
 - [ ] 타입 체크 통과 (`pnpm lint`)
 - [ ] 문서 업데이트
-- [ ] CHANGELOG.md 업데이트 (해당하는 경우)
 - [ ] 기존 코드 스타일 준수
 
 ---
@@ -1023,7 +1026,8 @@ DEBUG=main,git,transcript node dist/index.js < sample.json
 ```
 claude-code-cockpit/
 ├── .claude-plugin/          # 플러그인 메타데이터
-│   └── plugin.json          # 플러그인 매니페스트 (이름, 버전, 커맨드)
+│   ├── plugin.json          # 플러그인 매니페스트 (이름, 버전, 커맨드)
+│   └── marketplace.json     # 마켓플레이스 메타데이터
 │
 ├── commands/                # 대화형 커맨드 스크립트
 │   ├── dashboard.md         # /claude-code-cockpit:dashboard
@@ -1070,7 +1074,8 @@ claude-code-cockpit/
 │   │   ├── pass-at-k.ts         # Pass@k 메트릭
 │   │   ├── mcp-status.ts        # MCP 서버 통계
 │   │   ├── performance-metrics.ts # 빌드/테스트 성능
-│   │   └── instance-sync.ts     # 멀티 인스턴스 동기화
+│   │   ├── instance-sync.ts     # 멀티 인스턴스 동기화
+│   │   └── session-time.ts      # 세션 시간 계산
 │   │
 │   ├── config/              # 설정 관리
 │   │   ├── loader.ts        # 파일/환경에서 설정 로드

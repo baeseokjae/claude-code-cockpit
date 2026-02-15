@@ -318,8 +318,8 @@ Automatically configures your `~/.claude/settings.json` to use claude-code-cockp
 **Example:**
 ```json
 {
-  "statusline": {
-    "enabled": true,
+  "statusLine": {
+    "type": "command",
     "command": "node ~/.claude/plugins/claude-code-cockpit/dist/index.js"
   }
 }
@@ -608,7 +608,7 @@ Presets apply a predefined bundle of display settings. Individual display option
 
 | Preset | Description |
 |--------|-------------|
-| `minimal` | Core only: model, context%, cost, duration. Most widgets off |
+| `minimal` | Core only: model, context%, cost, duration. Alerts (bashErrors, compactSuggestion, violations) always on |
 | `developer` | Default + gitActivity, toolStats enabled |
 | `full` | All display options enabled |
 
@@ -734,8 +734,9 @@ All display options can be toggled individually. Here's a complete reference:
     "showSkills": false,
     "showUsage": false,
     "showCost": true,
-    "showCompactSuggestion": false,
-    "showViolations": false,
+    "showBashErrors": true,
+    "showCompactSuggestion": true,
+    "showViolations": true,
     "showWorkflowPhase": false,
     "showTestCoverage": false,
     "showPassAtK": false
@@ -770,7 +771,14 @@ All display options can be toggled individually. Here's a complete reference:
     "showMcpStatus": true,
     "showGitActivity": true,
     "showToolStats": true,
-    "showBashErrors": true
+    "showBashErrors": true,
+    "showGitTag": true,
+    "showAllBranches": true,
+    "showGitWorktrees": true,
+    "showPerformanceMetrics": true,
+    "showInstanceSync": true,
+    "showCacheMetrics": true,
+    "showTokenSpeed": true
   },
   "performance": {
     "maxTools": 50,
@@ -779,7 +787,7 @@ All display options can be toggled individually. Here's a complete reference:
 }
 ```
 
-#### Security-Focused
+#### Security-Focused (Custom Example)
 ```json
 {
   "theme": "neon",
@@ -792,6 +800,7 @@ All display options can be toggled individually. Here's a complete reference:
   }
 }
 ```
+**Note:** This is a user configuration example, not a built-in preset. Available presets are: `minimal`, `developer`, `full`.
 
 ## 🚨 Smart Alerts
 
@@ -938,13 +947,7 @@ echo '{"model":{"display_name":"Sonnet"},"transcript_path":"./tests/fixtures/sam
 
 ### Theme Preview
 
-Preview all themes without running Claude Code:
-
-```bash
-pnpm preview:themes
-```
-
-This generates sample output for all 5 themes side-by-side.
+**Note:** The theme preview script is currently unavailable. You can test themes by changing the `theme` setting in your config and running manual tests with sample stdin (see examples above).
 
 ### Type Checking
 
@@ -964,13 +967,14 @@ DEBUG=* node dist/index.js < sample.json
 # Specific modules
 DEBUG=main,git,transcript node dist/index.js < sample.json
 
-# Available debug namespaces:
+# Common debug namespaces:
 # - main: Main entry point
 # - git: Git operations
 # - transcript: Transcript parsing
 # - config: Configuration loading
-# - theme: Theme rendering
-# - usage: API usage fetching
+# - themes: Theme rendering
+# - usage-api: API usage fetching
+# (27 namespaces available - use DEBUG=* to see all)
 ```
 
 
@@ -997,7 +1001,6 @@ Contributions are welcome! Please follow these guidelines:
 - [ ] Tests pass (`pnpm test`)
 - [ ] Type check passes (`pnpm lint`)
 - [ ] Documentation updated
-- [ ] CHANGELOG.md updated (if applicable)
 - [ ] Follows existing code style
 
 ## 📁 Project Structure
@@ -1005,7 +1008,8 @@ Contributions are welcome! Please follow these guidelines:
 ```
 claude-code-cockpit/
 ├── .claude-plugin/          # Plugin metadata
-│   └── plugin.json          # Plugin manifest (name, version, commands)
+│   ├── plugin.json          # Plugin manifest (name, version, commands)
+│   └── marketplace.json     # Marketplace metadata
 │
 ├── commands/                # Interactive command scripts
 │   ├── dashboard.md         # /claude-code-cockpit:dashboard
@@ -1052,7 +1056,8 @@ claude-code-cockpit/
 │   │   ├── pass-at-k.ts         # Pass@k metrics
 │   │   ├── mcp-status.ts        # MCP server statistics
 │   │   ├── performance-metrics.ts # Build/test performance
-│   │   └── instance-sync.ts     # Multi-instance sync
+│   │   ├── instance-sync.ts     # Multi-instance sync
+│   │   └── session-time.ts      # Session time calculation
 │   │
 │   ├── config/              # Configuration management
 │   │   ├── loader.ts        # Load config from file/env
