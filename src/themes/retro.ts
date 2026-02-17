@@ -8,7 +8,7 @@ import { FALLBACK_ICONS } from './icons.js';
 import { hex, bold, dim, underline } from '../render/colors.js';
 import { createProgressBar, formatPercent, visualLength } from '../render/utils.js';
 import { formatTokenSpeed } from '../data/speed-tracker.js';
-import { getModelName, getContextPercent, getAbsoluteTokens } from '../input/stdin.js';
+import { getModelName, getContextPercent } from '../input/stdin.js';
 import {
   formatLinesDisplay,
   formatCacheDisplay,
@@ -23,6 +23,8 @@ import {
   summarizeAgentsPlain,
   summarizeTodosPlain,
   summarizeSkillsPlain,
+  getSessionName,
+  formatContextText,
   formatContextHint,
 } from './helpers.js';
 
@@ -63,15 +65,9 @@ export const retroTheme: Theme = {
   },
 
   render(ctx: RenderContext): string[] {
-    const width = ctx.width;
-
-    if (width < this.layout.compactWidth) {
-      return this.renderMinimal(ctx);
-    } else if (width < this.layout.fullWidth) {
-      return this.renderCompact(ctx);
-    } else {
-      return this.renderFull(ctx);
-    }
+    if (ctx.tier === 1) return this.renderMinimal(ctx);
+    else if (ctx.tier === 2) return this.renderCompact(ctx);
+    else return this.renderFull(ctx);
   },
 
   renderMinimal(ctx: RenderContext): string[] {
@@ -80,18 +76,9 @@ export const retroTheme: Theme = {
     const percentStr = percent !== null ? formatPercent(percent) : '??%';
     const duration = ctx.sessionDuration;
 
-    // Context display (absolute tokens or percentage)
-    const absoluteTokens = getAbsoluteTokens(ctx.stdin);
-    let contextStr = '';
-    if (ctx.config.display.showAbsoluteTokens && absoluteTokens) {
-      contextStr = `${Math.round(absoluteTokens.used / 1000)}K/${Math.round(absoluteTokens.total / 1000)}K`;
-    } else {
-      contextStr = percentStr;
-    }
+    const contextStr = formatContextText(ctx, percentStr, { uppercase: true });
 
-    const sessionName = ctx.config.display.showSessionName
-      ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
-      : null;
+    const sessionName = getSessionName(ctx);
     const sessionText = sessionName ? ` [${sessionName}]` : '';
 
     const projectGit = formatProjectGit(ctx, null, null, {
@@ -117,18 +104,9 @@ export const retroTheme: Theme = {
     const percent = getContextPercent(ctx.stdin);
     const percentStr = percent !== null ? formatPercent(percent) : '??%';
 
-    // Context display (absolute tokens or percentage)
-    const absoluteTokens = getAbsoluteTokens(ctx.stdin);
-    let contextStr = '';
-    if (ctx.config.display.showAbsoluteTokens && absoluteTokens) {
-      contextStr = `${Math.round(absoluteTokens.used / 1000)}K/${Math.round(absoluteTokens.total / 1000)}K`;
-    } else {
-      contextStr = percentStr;
-    }
+    const contextStr = formatContextText(ctx, percentStr, { uppercase: true });
 
-    const sessionName = ctx.config.display.showSessionName
-      ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
-      : null;
+    const sessionName = getSessionName(ctx);
     const sessionText = sessionName ? ` [${sessionName}]` : '';
 
     const progressBar = createProgressBar(percent || 0, 10, this.chars.progressFilled, this.chars.progressEmpty);
@@ -251,18 +229,9 @@ export const retroTheme: Theme = {
     const percentStr = percent !== null ? formatPercent(percent) : '??%';
     const progressBar = createProgressBar(percent || 0, 20, this.chars.progressFilled, this.chars.progressEmpty);
 
-    // Context display (absolute tokens or percentage)
-    const absoluteTokens = getAbsoluteTokens(ctx.stdin);
-    let contextStr = '';
-    if (ctx.config.display.showAbsoluteTokens && absoluteTokens) {
-      contextStr = `${Math.round(absoluteTokens.used / 1000)}K/${Math.round(absoluteTokens.total / 1000)}K`;
-    } else {
-      contextStr = percentStr;
-    }
+    const contextStr = formatContextText(ctx, percentStr, { uppercase: true });
 
-    const sessionName = ctx.config.display.showSessionName
-      ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
-      : null;
+    const sessionName = getSessionName(ctx);
     const sessionText = sessionName ? ` [${sessionName}]` : '';
 
     const warningColor = percent !== null && percent >= 75 ? this.palette.red : color;

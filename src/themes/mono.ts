@@ -27,6 +27,8 @@ import {
   renderAgentsLinePlain,
   renderTodosLinePlain,
   renderSkillsLinePlain,
+  getSessionName,
+  formatContextText,
   formatContextHintPlain,
 } from './helpers.js';
 
@@ -67,15 +69,9 @@ export const monoTheme: Theme = {
   },
 
   render(ctx: RenderContext): string[] {
-    const width = ctx.width;
-
-    if (width < this.layout.compactWidth) {
-      return this.renderMinimal(ctx);
-    } else if (width < this.layout.fullWidth) {
-      return this.renderCompact(ctx);
-    } else {
-      return this.renderFull(ctx);
-    }
+    if (ctx.tier === 1) return this.renderMinimal(ctx);
+    else if (ctx.tier === 2) return this.renderCompact(ctx);
+    else return this.renderFull(ctx);
   },
 
   renderMinimal(ctx: RenderContext): string[] {
@@ -84,9 +80,7 @@ export const monoTheme: Theme = {
     const percentStr = percent !== null ? formatPercent(percent) : '??%';
     const duration = ctx.sessionDuration;
 
-    const sessionName = ctx.config.display.showSessionName
-      ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
-      : null;
+    const sessionName = getSessionName(ctx);
     const sessionText = sessionName ? ` [${sessionName}]` : '';
 
     const projectGit = formatProjectGit(ctx, null, null, { prefix: ' | ' });
@@ -106,18 +100,9 @@ export const monoTheme: Theme = {
     const percent = getContextPercent(ctx.stdin);
     const percentStr = percent !== null ? formatPercent(percent) : '??%';
 
-    // Context display (absolute tokens or percentage)
-    const absoluteTokens = getAbsoluteTokens(ctx.stdin);
-    let contextStr = '';
-    if (ctx.config.display.showAbsoluteTokens && absoluteTokens) {
-      contextStr = `${Math.round(absoluteTokens.used / 1000)}k/${Math.round(absoluteTokens.total / 1000)}k`;
-    } else {
-      contextStr = percentStr;
-    }
+    const contextStr = formatContextText(ctx, percentStr);
 
-    const sessionName = ctx.config.display.showSessionName
-      ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
-      : null;
+    const sessionName = getSessionName(ctx);
     const sessionText = sessionName ? ` [${sessionName}]` : '';
 
     const progressBar = createProgressBar(percent || 0, 10, this.chars.progressFilled, this.chars.progressEmpty);
@@ -228,9 +213,7 @@ export const monoTheme: Theme = {
     const percentStr = percent !== null ? formatPercent(percent) : '??%';
     const progressBar = createProgressBar(percent || 0, 15, this.chars.progressFilled, this.chars.progressEmpty);
 
-    const sessionName = ctx.config.display.showSessionName
-      ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
-      : null;
+    const sessionName = getSessionName(ctx);
     const sessionStr = sessionName ? ` [${sessionName}]` : '';
 
     const absoluteTokens = getAbsoluteTokens(ctx.stdin);

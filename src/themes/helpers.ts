@@ -4,6 +4,7 @@
  */
 
 import type { RenderContext, ColorPalette, IconSet } from '../types/index.js';
+import { getAbsoluteTokens } from '../input/stdin.js';
 import { fileUrl, githubBranchUrl } from '../render/links.js';
 import { hex, bold, underline } from '../render/colors.js';
 import { formatCount } from '../render/superscript.js';
@@ -171,6 +172,38 @@ export function getSessionName(ctx: RenderContext): string | null {
   if (!name) return null;
   const maxLen = ctx.tier === 1 ? 10 : ctx.tier === 2 ? 20 : 30;
   return name.length > maxLen ? name.substring(0, maxLen - 1) + '\u2026' : name;
+}
+
+// ============================================
+// Context Text (absolute tokens vs percentage)
+// ============================================
+
+export interface FormatContextTextOptions {
+  uppercase?: boolean;    // 'K' vs 'k' for token suffix
+  wrap?: (text: string) => string;  // e.g., bold() for neon
+}
+
+/**
+ * Format context display text: absolute tokens (e.g. "45k/200k") or percentage.
+ * Returns plain string (caller wraps with color).
+ */
+export function formatContextText(
+  ctx: RenderContext,
+  percentStr: string,
+  options: FormatContextTextOptions = {}
+): string {
+  const { uppercase = false, wrap } = options;
+  const absoluteTokens = getAbsoluteTokens(ctx.stdin);
+  const suffix = uppercase ? 'K' : 'k';
+
+  let text: string;
+  if (ctx.config.display.showAbsoluteTokens && absoluteTokens) {
+    text = `${Math.round(absoluteTokens.used / 1000)}${suffix}/${Math.round(absoluteTokens.total / 1000)}${suffix}`;
+  } else {
+    text = percentStr;
+  }
+
+  return wrap ? wrap(text) : text;
 }
 
 // ============================================
@@ -702,37 +735,6 @@ export function formatGitWorktreesDisplay(
 }
 
 // ============================================
-// Performance Metrics Display Helper
-// ============================================
-
-export function formatPerformanceMetricsDisplay(
-  ctx: RenderContext,
-  palette: ColorPalette
-): string | null {
-  if (!ctx.performanceMetrics || !ctx.performanceMetrics.hasData) {
-    return null;
-  }
-
-  const parts: string[] = [];
-
-  if (ctx.performanceMetrics.build.hasBuildScript && ctx.performanceMetrics.build.lastBuildTime) {
-    const timeS = Math.round(ctx.performanceMetrics.build.lastBuildTime / 1000);
-    parts.push(hex(palette.text, `Build: ${timeS}s`));
-  }
-
-  if (ctx.performanceMetrics.test.hasTestScript && ctx.performanceMetrics.test.lastTestTime) {
-    const timeS = Math.round(ctx.performanceMetrics.test.lastTestTime / 1000);
-    const status = ctx.performanceMetrics.test.lastTestStatus;
-    const color = status === 'pass' ? palette.green :
-      status === 'fail' ? palette.red :
-        palette.muted;
-    parts.push(hex(color, `Test: ${timeS}s`));
-  }
-
-  return parts.length > 0 ? parts.join(' ') : null;
-}
-
-// ============================================
 // MCP Status Display Helper
 // ============================================
 
@@ -838,11 +840,6 @@ export function collectActivityWidgets(
   if (ctx.config.display.showPassAtK) {
     const t = formatPassAtKDisplay(ctx, palette);
     if (t) widgets.push({ text: t, category: 'analytics', priority: 70 });
-  }
-
-  if (ctx.config.display.showPerformanceMetrics) {
-    const t = formatPerformanceMetricsDisplay(ctx, palette);
-    if (t) widgets.push({ text: t, category: 'analytics', priority: 75 });
   }
 
   // P4: Low priority (priority 80-99)

@@ -15,7 +15,7 @@ import { createProgressBar, formatPercent, visualLength } from '../render/utils.
 import { getUsageColor } from '../render/usage.js';
 import { formatResetTime } from '../data/usage-api.js';
 import { formatTokenSpeed } from '../data/speed-tracker.js';
-import { getModelName, getContextPercent, getAbsoluteTokens } from '../input/stdin.js';
+import { getModelName, getContextPercent } from '../input/stdin.js';
 import {
   formatLinesDisplay,
   formatCacheDisplay,
@@ -35,6 +35,8 @@ import {
   renderAgentsLineStyled,
   renderTodosLineStyled,
   renderSkillsLineStyled,
+  getSessionName,
+  formatContextText,
   formatContextHint,
 } from './helpers.js';
 
@@ -75,15 +77,9 @@ export const neonTheme: Theme = {
   },
 
   render(ctx: RenderContext): string[] {
-    const width = ctx.width;
-
-    if (width < this.layout.compactWidth) {
-      return this.renderMinimal(ctx);
-    } else if (width < this.layout.fullWidth) {
-      return this.renderCompact(ctx);
-    } else {
-      return this.renderFull(ctx);
-    }
+    if (ctx.tier === 1) return this.renderMinimal(ctx);
+    else if (ctx.tier === 2) return this.renderCompact(ctx);
+    else return this.renderFull(ctx);
   },
 
   renderMinimal(ctx: RenderContext): string[] {
@@ -94,9 +90,7 @@ export const neonTheme: Theme = {
 
     const modelText = hex(this.palette.blue, bold(model));
 
-    const sessionName = ctx.config.display.showSessionName
-      ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
-      : null;
+    const sessionName = getSessionName(ctx);
     const sessionText = sessionName ? hex(this.palette.muted, ` [${sessionName}]`) : '';
 
     const percentColor = getPercentColor(percent, this.palette);
@@ -125,23 +119,14 @@ export const neonTheme: Theme = {
 
     const modelText = hex(this.palette.blue, bold(model));
 
-    const sessionName = ctx.config.display.showSessionName
-      ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
-      : null;
+    const sessionName = getSessionName(ctx);
     const sessionText = sessionName ? hex(this.palette.muted, ` [${sessionName}]`) : '';
 
     const progressBar = createProgressBar(percent || 0, 10, this.chars.progressFilled, this.chars.progressEmpty);
     const progressColor = getPercentColor(percent, this.palette);
     const progressText = hex(progressColor, progressBar);
 
-    // Context display (absolute tokens or percentage)
-    const absoluteTokens = getAbsoluteTokens(ctx.stdin);
-    let contextText = '';
-    if (ctx.config.display.showAbsoluteTokens && absoluteTokens) {
-      contextText = hex(progressColor, bold(`${Math.round(absoluteTokens.used / 1000)}K/${Math.round(absoluteTokens.total / 1000)}K`));
-    } else {
-      contextText = hex(progressColor, bold(percentStr));
-    }
+    const contextText = hex(progressColor, formatContextText(ctx, percentStr, { uppercase: true, wrap: bold }));
     const compactContextHint = formatContextHint(percent, this.palette) || '';
 
     const projectGit = formatProjectGit(ctx, this.palette, this.icons, {
@@ -259,23 +244,14 @@ export const neonTheme: Theme = {
 
     const modelText = hex(this.palette.blue, bold(model));
 
-    const sessionName = ctx.config.display.showSessionName
-      ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
-      : null;
+    const sessionName = getSessionName(ctx);
     const sessionText = sessionName ? hex(this.palette.muted, ` [${sessionName}]`) : '';
 
     const progressBar = createProgressBar(percent || 0, 10, this.chars.progressFilled, this.chars.progressEmpty);
     const progressColor = getPercentColor(percent, this.palette);
     const progressText = hex(progressColor, progressBar);
 
-    // Context display (absolute tokens or percentage)
-    const absoluteTokens = getAbsoluteTokens(ctx.stdin);
-    let contextText = '';
-    if (ctx.config.display.showAbsoluteTokens && absoluteTokens) {
-      contextText = hex(progressColor, bold(`${Math.round(absoluteTokens.used / 1000)}K/${Math.round(absoluteTokens.total / 1000)}K`));
-    } else {
-      contextText = hex(progressColor, bold(percentStr));
-    }
+    const contextText = hex(progressColor, formatContextText(ctx, percentStr, { uppercase: true, wrap: bold }));
 
     // Warning for high usage
     let warningText = '';

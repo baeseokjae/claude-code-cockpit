@@ -38,7 +38,6 @@ export const DEFAULT_CONFIG: CockpitConfig = {
     showTestCoverage: false,
     showPassAtK: false,
     showGitWorktrees: false,
-    showPerformanceMetrics: false,
     showMcpStatus: false,
     showInstanceSync: false,
   },

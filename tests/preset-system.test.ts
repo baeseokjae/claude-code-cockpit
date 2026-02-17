@@ -44,7 +44,6 @@ describe('Preset System', () => {
     expect(display.showToolStats).toBe(true);
     expect(display.showTestCoverage).toBe(true);
     expect(display.showPassAtK).toBe(true);
-    expect(display.showPerformanceMetrics).toBe(true);
     expect(display.showInstanceSync).toBe(true);
   });
 

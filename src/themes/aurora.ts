@@ -39,6 +39,8 @@ import {
   renderAgentsLineStyled,
   renderTodosLineStyled,
   renderSkillsLineStyled,
+  getSessionName,
+  formatContextText,
   formatContextHint,
   formatBashErrorsDisplay,
   formatViolationsDisplay,
@@ -97,10 +99,7 @@ export const auroraTheme: Theme = {
 
     const modelText = hex(this.palette.blue, model);
 
-    // Session/Plan name
-    const sessionName = ctx.config.display.showSessionName
-      ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
-      : null;
+    const sessionName = getSessionName(ctx);
     const sessionText = sessionName ? hex(this.palette.muted, ` [${sessionName}]`) : '';
 
     const percentColor = getPercentColor(percent, this.palette);
@@ -133,20 +132,12 @@ export const auroraTheme: Theme = {
 
     const modelText = hex(p.blue, model);
 
-    const sessionName = ctx.config.display.showSessionName
-      ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
-      : null;
+    const sessionName = getSessionName(ctx);
     const sessionText = sessionName ? hex(p.muted, ` [${sessionName}]`) : '';
 
     const progressColor = getPercentColor(percent, p);
 
-    const absoluteTokens = getAbsoluteTokens(ctx.stdin);
-    let contextText = '';
-    if (ctx.config.display.showAbsoluteTokens && absoluteTokens) {
-      contextText = hex(progressColor, `${Math.round(absoluteTokens.used / 1000)}k/${Math.round(absoluteTokens.total / 1000)}k`);
-    } else {
-      contextText = hex(progressColor, percentStr);
-    }
+    const contextText = hex(progressColor, formatContextText(ctx, percentStr));
     const compactContextHint = formatContextHint(percent, p) || '';
 
     const { project: projectText, branch: branchText } = formatProjectGitParts(ctx, p, this.icons, { showFileStats: true });
@@ -447,10 +438,7 @@ export const auroraTheme: Theme = {
 
     const modelText = hex(this.palette.blue, model);
 
-    // Session/Plan name
-    const sessionName = ctx.config.display.showSessionName
-      ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
-      : null;
+    const sessionName = getSessionName(ctx);
     const sessionText = sessionName ? hex(this.palette.muted, ` [${sessionName}]`) : '';
 
     // Project and git with parentheses and links (for line 2)

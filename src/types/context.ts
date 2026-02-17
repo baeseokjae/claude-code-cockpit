@@ -17,7 +17,6 @@ import type { McpToolInfo } from '../input/mcp-reader.js';
 import type { WorkflowState } from './workflow.js';
 import type { CoverageSummary } from './test-coverage.js';
 import type { PassAtKSummary } from './pass-at-k.js';
-import type { PerformanceMetrics } from './performance.js';
 import type { McpStatus } from './mcp-status.js';
 import type { InstanceSync } from './instance-sync.js';
 
@@ -55,8 +54,6 @@ export interface RenderContext {
   // Phase 4 features
   testCoverage: CoverageSummary | null;
   passAtK: PassAtKSummary | null;
-  performanceMetrics: PerformanceMetrics | null;
-
   // Phase 5 features
   mcpStatus: McpStatus | null;
   instanceSync: InstanceSync | null;

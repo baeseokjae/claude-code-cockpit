@@ -1,5 +1,7 @@
 /**
  * Preset configurations for display settings
+ * Only differences from DEFAULT_CONFIG.display are listed.
+ * Applied via spread: { ...DEFAULT_CONFIG.display, ...PRESETS[preset] }
  */
 
 import type { CockpitConfig } from '../types/index.js';
@@ -9,99 +11,36 @@ export type PresetName = 'minimal' | 'developer' | 'full';
 export const PRESETS: Record<PresetName, Partial<CockpitConfig['display']>> = {
   minimal: {
     // Core only: Model, Context%, Cost, Duration
+    // Disables features that are true by default
     showGit: false,
     showTools: false,
     showAgents: false,
     showTodos: false,
-    showSkills: false,
-    showUsage: true,
-    showConfigCounts: false,
-    showCost: true,
-    showAbsoluteTokens: false,
-    showSessionName: true,
-    showTokenSpeed: false,
-    showGitFileStats: false,
-    showAllBranches: false,
     showLines: false,
-    showCacheMetrics: false,
-    showGitTag: false,
-    showGitActivity: false,
-    showToolStats: false,
-    showBashErrors: true,        // 항상 표시
-    showCompactSuggestion: true,  // 항상 표시
-    showViolations: true,         // 항상 표시
-    showMcpImpact: false,
-    showWorkflowPhase: false,
-    showTestCoverage: false,
-    showPassAtK: false,
-    showGitWorktrees: false,
-    showPerformanceMetrics: false,
-    showMcpStatus: false,
-    showInstanceSync: false,
   },
 
   developer: {
-    // DEFAULT_CONFIG + 2개 추가 (gitActivity, toolStats)
-    showGit: true,
-    showTools: true,
-    showAgents: true,
-    showTodos: true,
-    showSkills: false,
-    showUsage: true,
-    showConfigCounts: false,
-    showCost: true,
-    showAbsoluteTokens: false,
-    showSessionName: true,
-    showTokenSpeed: false,
-    showGitFileStats: false,
-    showAllBranches: false,
-    showLines: true,
-    showCacheMetrics: false,
-    showGitTag: false,
-    showGitActivity: true,   // 추가
-    showToolStats: true,      // 추가
-    showBashErrors: true,
-    showCompactSuggestion: true,
-    showViolations: true,
-    showMcpImpact: false,
-    showWorkflowPhase: false,
-    showTestCoverage: false,
-    showPassAtK: false,
-    showGitWorktrees: false,
-    showPerformanceMetrics: false,
-    showMcpStatus: false,
-    showInstanceSync: false,
+    // DEFAULT_CONFIG + git activity & tool stats
+    showGitActivity: true,
+    showToolStats: true,
   },
 
   full: {
-    // 모든 옵션 true
-    showGit: true,
-    showTools: true,
-    showAgents: true,
-    showTodos: true,
+    // Enable all optional features (keeps showAbsoluteTokens: false intentionally)
     showSkills: true,
-    showUsage: true,
     showConfigCounts: true,
-    showCost: true,
-    showAbsoluteTokens: false,
-    showSessionName: true,
     showTokenSpeed: true,
     showGitFileStats: true,
     showAllBranches: true,
-    showLines: true,
     showCacheMetrics: true,
     showGitTag: true,
     showGitActivity: true,
     showToolStats: true,
-    showBashErrors: true,
-    showCompactSuggestion: true,
-    showViolations: true,
     showMcpImpact: true,
     showWorkflowPhase: true,
     showTestCoverage: true,
     showPassAtK: true,
     showGitWorktrees: true,
-    showPerformanceMetrics: true,
     showMcpStatus: true,
     showInstanceSync: true,
   },

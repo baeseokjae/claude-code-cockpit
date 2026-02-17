@@ -39,7 +39,6 @@ export interface CockpitConfig {
     showTestCoverage: boolean;
     showPassAtK: boolean;
     showGitWorktrees: boolean;
-    showPerformanceMetrics: boolean;
     showMcpStatus: boolean;
     showInstanceSync: boolean;
   };

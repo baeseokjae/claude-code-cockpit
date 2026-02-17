@@ -13,7 +13,7 @@ import { getIcons } from './icons.js';
 import { hex } from '../render/colors.js';
 import { formatPercent } from '../render/utils.js';
 import { formatTokenSpeed } from '../data/speed-tracker.js';
-import { getModelName, getContextPercent, getAbsoluteTokens } from '../input/stdin.js';
+import { getModelName, getContextPercent } from '../input/stdin.js';
 import {
   formatLinesDisplay,
   formatCacheDisplay,
@@ -21,6 +21,8 @@ import {
   getVisibleWidgets,
   hasAbnormalState,
   formatProjectGit,
+  getSessionName,
+  formatContextText,
   formatContextHint,
 } from './helpers.js';
 
@@ -61,15 +63,9 @@ export const zenTheme: Theme = {
   },
 
   render(ctx: RenderContext): string[] {
-    const width = ctx.width;
-
-    if (width < this.layout.compactWidth) {
-      return this.renderMinimal(ctx);
-    } else if (width < this.layout.fullWidth) {
-      return this.renderCompact(ctx);
-    } else {
-      return this.renderFull(ctx);
-    }
+    if (ctx.tier === 1) return this.renderMinimal(ctx);
+    else if (ctx.tier === 2) return this.renderCompact(ctx);
+    else return this.renderFull(ctx);
   },
 
   renderMinimal(ctx: RenderContext): string[] {
@@ -78,18 +74,9 @@ export const zenTheme: Theme = {
     const percentStr = percent !== null ? formatPercent(percent) : '?';
     const duration = ctx.sessionDuration;
 
-    // Context display (absolute tokens or percentage)
-    const absoluteTokens = getAbsoluteTokens(ctx.stdin);
-    let contextStr = '';
-    if (ctx.config.display.showAbsoluteTokens && absoluteTokens) {
-      contextStr = `${Math.round(absoluteTokens.used / 1000)}k/${Math.round(absoluteTokens.total / 1000)}k`;
-    } else {
-      contextStr = percentStr;
-    }
+    const contextStr = formatContextText(ctx, percentStr);
 
-    const sessionName = ctx.config.display.showSessionName
-      ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
-      : null;
+    const sessionName = getSessionName(ctx);
     const sessionText = sessionName ? `[${sessionName}] ` : '';
 
     const linesText = formatLinesDisplay(ctx, this.palette, this.icons, 'compact');
@@ -105,18 +92,9 @@ export const zenTheme: Theme = {
     const percent = getContextPercent(ctx.stdin);
     const percentStr = percent !== null ? formatPercent(percent) : '?';
 
-    // Context display (absolute tokens or percentage)
-    const absoluteTokens = getAbsoluteTokens(ctx.stdin);
-    let contextStr = '';
-    if (ctx.config.display.showAbsoluteTokens && absoluteTokens) {
-      contextStr = `${Math.round(absoluteTokens.used / 1000)}k/${Math.round(absoluteTokens.total / 1000)}k`;
-    } else {
-      contextStr = percentStr;
-    }
+    const contextStr = formatContextText(ctx, percentStr);
 
-    const sessionName = ctx.config.display.showSessionName
-      ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
-      : null;
+    const sessionName = getSessionName(ctx);
     const sessionText = sessionName ? `[${sessionName}] ` : '';
 
     const projectGit = formatProjectGit(ctx, null, null, { subrepoStyle: 'minimal' });
@@ -147,18 +125,9 @@ export const zenTheme: Theme = {
     const percent = getContextPercent(ctx.stdin);
     const percentStr = percent !== null ? formatPercent(percent) : '?';
 
-    // Context display (absolute tokens or percentage)
-    const absoluteTokens = getAbsoluteTokens(ctx.stdin);
-    let contextStr = '';
-    if (ctx.config.display.showAbsoluteTokens && absoluteTokens) {
-      contextStr = `${Math.round(absoluteTokens.used / 1000)}k/${Math.round(absoluteTokens.total / 1000)}k`;
-    } else {
-      contextStr = percentStr;
-    }
+    const contextStr = formatContextText(ctx, percentStr);
 
-    const sessionName = ctx.config.display.showSessionName
-      ? (ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8))
-      : null;
+    const sessionName = getSessionName(ctx);
     const sessionPart = sessionName ? `[${sessionName}]` : null;
 
     const projectGit = formatProjectGit(ctx, null, null, { subrepoStyle: 'minimal' });

@@ -305,35 +305,6 @@ function generateSessionMarkdown(ctx: RenderContext): string {
     md += `---\n\n`;
   }
 
-  // Performance Metrics
-  if (ctx.performanceMetrics && ctx.performanceMetrics.hasData) {
-    md += `## Performance Metrics\n\n`;
-    if (ctx.performanceMetrics.build.hasBuildScript) {
-      md += `### Build\n`;
-      md += `- **Has Script**: Yes\n`;
-      if (ctx.performanceMetrics.build.lastBuildTime) {
-        md += `- **Last Build**: ${Math.round(ctx.performanceMetrics.build.lastBuildTime / 1000)}s\n`;
-      }
-      if (ctx.performanceMetrics.build.averageBuildTime) {
-        md += `- **Average**: ${Math.round(ctx.performanceMetrics.build.averageBuildTime / 1000)}s\n`;
-      }
-      md += `\n`;
-    }
-    if (ctx.performanceMetrics.test.hasTestScript) {
-      md += `### Tests\n`;
-      md += `- **Has Script**: Yes\n`;
-      if (ctx.performanceMetrics.test.lastTestTime) {
-        md += `- **Last Test**: ${Math.round(ctx.performanceMetrics.test.lastTestTime / 1000)}s\n`;
-      }
-      if (ctx.performanceMetrics.test.averageTestTime) {
-        md += `- **Average**: ${Math.round(ctx.performanceMetrics.test.averageTestTime / 1000)}s\n`;
-      }
-      md += `- **Last Status**: ${ctx.performanceMetrics.test.lastTestStatus}\n`;
-      md += `\n`;
-    }
-    md += `---\n\n`;
-  }
-
   // MCP Status
   if (ctx.mcpStatus && ctx.mcpStatus.hasServers) {
     md += `## MCP Status\n\n`;
@@ -419,13 +390,13 @@ function generateSessionMarkdown(ctx: RenderContext): string {
 
   if (ctx.violations && ctx.violations.total > 0) {
     md += `### Recommended Actions\n`;
-    if (ctx.violations.byType.get('hardcoded_secret') || 0 > 0) {
+    if ((ctx.violations.byType.get('hardcoded_secret') || 0) > 0) {
       md += `- ⚠️ **Remove hardcoded secrets** before committing\n`;
     }
-    if (ctx.violations.byType.get('console_log') || 0 > 0) {
+    if ((ctx.violations.byType.get('console_log') || 0) > 0) {
       md += `- 🔍 **Remove debug console.log statements** for production\n`;
     }
-    if (ctx.violations.byType.get('large_file') || 0 > 0) {
+    if ((ctx.violations.byType.get('large_file') || 0) > 0) {
       md += `- 📦 **Review large files** for optimization opportunities\n`;
     }
     md += `\n`;

@@ -22,7 +22,6 @@ import { readMcpConfig } from './input/mcp-reader.js';
 import { detectWorkflowPhase } from './data/workflow-phase.js';
 import { getTestCoverageSummary } from './data/test-coverage.js';
 import { getPassAtKSummary } from './data/pass-at-k.js';
-import { getPerformanceMetrics } from './data/performance-metrics.js';
 import { analyzeMcpStatus } from './data/mcp-status.js';
 import { getInstanceSync } from './data/instance-sync.js';
 import { loadConfig } from './config/loader.js';
@@ -67,10 +66,11 @@ const defaultDeps: MainDeps = {
 };
 
 export async function main(deps: MainDeps = defaultDeps): Promise<void> {
+  let stdin: Awaited<ReturnType<typeof readStdin>> | undefined;
   try {
     debug('starting claude-code-cockpit');
 
-    const stdin = await deps.readStdin();
+    stdin = await deps.readStdin();
     if (!stdin) {
       debug('no stdin data, exiting');
       return;
@@ -146,10 +146,6 @@ export async function main(deps: MainDeps = defaultDeps): Promise<void> {
       ? getPassAtKSummary(transcript.tools)
       : null;
 
-    const performanceMetrics = isDetailed && config.display.showPerformanceMetrics
-      ? getPerformanceMetrics(cwd || undefined)
-      : null;
-
     const mcpStatus = isDetailed && config.display.showMcpStatus
       ? analyzeMcpStatus(transcript.tools, mcpInfo)
       : null;
@@ -179,7 +175,6 @@ export async function main(deps: MainDeps = defaultDeps): Promise<void> {
       workflowState,
       testCoverage,
       passAtK,
-      performanceMetrics,
       mcpStatus,
       instanceSync,
       sessionDuration,
@@ -205,6 +200,10 @@ export async function main(deps: MainDeps = defaultDeps): Promise<void> {
     debug('claude-code-cockpit finished');
   } catch (error) {
     debug('error:', error);
+    try {
+      const msg = stdin?.model?.display_name || 'cockpit';
+      deps.writeOutput([`[${msg}] render error`]);
+    } catch { /* silent */ }
   }
 }
 if (import.meta.url === `file://${process.argv[1]}`) {
