@@ -17,6 +17,7 @@ import type {
   TodoStatus,
 } from '../types/index.js';
 import { createDebug } from '../utils/debug.js';
+import { getCachedByMtime, setCacheByMtime } from '../utils/cache.js';
 import {
   MAX_TOOLS_DISPLAY,
   MAX_AGENTS_DISPLAY,
@@ -41,6 +42,19 @@ export async function parseTranscript(
   if (!transcriptPath || !existsSync(transcriptPath)) {
     debug('transcript file not found:', transcriptPath);
     return emptyData;
+  }
+
+  // Check mtime-based cache before parsing
+  const cacheKey = `transcript-${transcriptPath}`;
+  const cached = getCachedByMtime<TranscriptData>(cacheKey, transcriptPath);
+  if (cached) {
+    const revived = reviveDates(cached);
+    if (revived) {
+      debug('returning cached transcript data');
+      return revived;
+    }
+    // Cache corrupted (invalid dates), fall through to re-parse
+    debug('cached transcript has invalid dates, re-parsing');
   }
 
   debug('parsing transcript:', transcriptPath);
@@ -104,7 +118,7 @@ export async function parseTranscript(
   const toolStats = calculateToolStats(allTools);
   const bashErrors = extractBashErrors(allTools);
 
-  return {
+  const result: TranscriptData = {
     tools,
     agents,
     todos: currentTodos,
@@ -113,6 +127,10 @@ export async function parseTranscript(
     toolStats: toolStats || undefined,
     bashErrors: bashErrors || undefined,
   };
+
+  setCacheByMtime(cacheKey, result, transcriptPath);
+
+  return result;
 }
 
 function processEntry(
@@ -402,4 +420,43 @@ function extractModelFromPrompt(prompt: string, input?: Record<string, unknown>)
   if (lower.includes('haiku')) return 'haiku';
 
   return undefined;
+}
+
+/**
+ * Revive Date fields after JSON round-trip (JSON.parse returns strings, not Dates).
+ * Must cover all Date fields in TranscriptData that downstream consumers call .getTime() on.
+ * Returns null if any Date field fails to parse (corrupted cache).
+ */
+function reviveDates(data: TranscriptData): TranscriptData | null {
+  let valid = true;
+
+  const revive = (d: unknown): Date => {
+    if (d instanceof Date) return d;
+    const parsed = new Date(d as string);
+    if (isNaN(parsed.getTime())) {
+      valid = false;
+      return new Date(0);
+    }
+    return parsed;
+  };
+
+  for (const t of data.tools) {
+    t.startTime = revive(t.startTime);
+    if (t.endTime) t.endTime = revive(t.endTime);
+  }
+  for (const a of data.agents) {
+    a.startTime = revive(a.startTime);
+    if (a.endTime) a.endTime = revive(a.endTime);
+  }
+  for (const s of data.skills) {
+    s.startTime = revive(s.startTime);
+    if (s.endTime) s.endTime = revive(s.endTime);
+  }
+  if (data.bashErrors) {
+    for (const e of data.bashErrors) {
+      e.timestamp = revive(e.timestamp);
+    }
+  }
+
+  return valid ? data : null;
 }

@@ -30,6 +30,7 @@ import { writeOutput } from './output/writer.js';
 import { writeSessionFile } from './output/session-file.js';
 import { createDebug } from './utils/debug.js';
 import { getTerminalWidth } from './utils/terminal-width.js';
+import { flushCache } from './utils/cache.js';
 
 const debug = createDebug('main');
 
@@ -204,6 +205,8 @@ export async function main(deps: MainDeps = defaultDeps): Promise<void> {
       const msg = stdin?.model?.display_name || 'cockpit';
       deps.writeOutput([`[${msg}] render error`]);
     } catch { /* silent */ }
+  } finally {
+    flushCache();
   }
 }
 if (import.meta.url === `file://${process.argv[1]}`) {

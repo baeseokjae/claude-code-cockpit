@@ -1,8 +1,9 @@
 /**
  * Extract Git status information
+ * Uses async parallel execution for independent git commands.
  */
 
-import { execSync } from 'node:child_process';
+import { execSync, execFile } from 'node:child_process';
 import { readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import type { GitStatus, FileStats, SubRepoStatus, WorktreeInfo } from '../types/index.js';
@@ -23,6 +24,22 @@ function execGit(cmd: string, cwd?: string): string {
   } catch {
     throw new Error('git command failed');
   }
+}
+
+/**
+ * Async git command execution using execFile (no shell overhead, no command injection).
+ */
+function execGitAsync(args: string[], cwd?: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    execFile('git', args, {
+      cwd: cwd || process.cwd(),
+      encoding: 'utf8',
+      timeout: 5000,
+    }, (error, stdout, stderr) => {
+      if (error) reject(new Error(`git ${args[0]} failed: ${stderr?.trim() || error.message}`));
+      else resolve(stdout);
+    });
+  });
 }
 
 /**
@@ -80,7 +97,7 @@ function parseRemoteUrl(remoteUrl: string): string | null {
  * Parse file stats from git status --porcelain output
  * Format: XY filename
  * X = staged status, Y = working tree status
- * 
+ *
  * Priority order (most significant change first):
  * 1. Renamed (R) - file was renamed
  * 2. Added (A) - new file added to index
@@ -196,134 +213,133 @@ function scanSubRepos(basePath: string, depth: number, maxDepth: number): SubRep
   return subRepos;
 }
 
-function getLatestTag(cwd?: string): string | null {
-  try {
-    const tag = execGit('git describe --tags --abbrev=0', cwd).trim();
-    return tag || null;
-  } catch {
-    return null;
-  }
-}
-
 /**
- * Get list of git worktrees
+ * Parse worktree list --porcelain output into WorktreeInfo[].
+ * isDirty check uses sync execGit (1 call per worktree, typically 1-3).
  */
-function getWorktrees(cwd?: string): WorktreeInfo[] {
-  try {
-    const output = execGit('git worktree list --porcelain', cwd);
-    const worktrees: WorktreeInfo[] = [];
+function parseWorktreeOutput(output: string): WorktreeInfo[] {
+  const worktrees: WorktreeInfo[] = [];
+  let currentWorktree: Partial<WorktreeInfo> = {};
 
-    // Parse porcelain output
-    let currentWorktree: Partial<WorktreeInfo> = {};
-
-    for (const line of output.split('\n')) {
-      if (line.startsWith('worktree ')) {
-        const path = line.substring(9).trim();
-        currentWorktree.path = path;
-      } else if (line.startsWith('branch ')) {
-        const branch = line.substring(7).replace('refs/heads/', '').trim();
-        currentWorktree.branch = branch;
-      } else if (line.startsWith('HEAD ')) {
-        const commit = line.substring(5).trim();
-        currentWorktree.commit = commit;
-      } else if (line === '') {
-        // Empty line marks end of worktree entry
-        if (currentWorktree.path && currentWorktree.branch && currentWorktree.commit) {
-          // Check if worktree is dirty
-          let isDirty = false;
-          try {
-            const status = execGit('git status --porcelain', currentWorktree.path);
-            isDirty = status.trim().length > 0;
-          } catch {
-            isDirty = false;
-          }
-
-          worktrees.push({
-            path: currentWorktree.path,
-            branch: currentWorktree.branch,
-            commit: currentWorktree.commit.substring(0, 8),
-            isDirty,
-            isMain: worktrees.length === 0, // First worktree is main
-          });
+  for (const line of output.split('\n')) {
+    if (line.startsWith('worktree ')) {
+      const path = line.substring(9).trim();
+      currentWorktree.path = path;
+    } else if (line.startsWith('branch ')) {
+      const branch = line.substring(7).replace('refs/heads/', '').trim();
+      currentWorktree.branch = branch;
+    } else if (line.startsWith('HEAD ')) {
+      const commit = line.substring(5).trim();
+      currentWorktree.commit = commit;
+    } else if (line === '') {
+      // Empty line marks end of worktree entry
+      if (currentWorktree.path && currentWorktree.branch && currentWorktree.commit) {
+        // Check if worktree is dirty (sync — typically 1-3 worktrees)
+        let isDirty = false;
+        try {
+          const status = execGit('git status --porcelain', currentWorktree.path);
+          isDirty = status.trim().length > 0;
+        } catch {
+          isDirty = false;
         }
-        currentWorktree = {};
-      }
-    }
 
-    return worktrees;
-  } catch {
-    return [];
+        worktrees.push({
+          path: currentWorktree.path,
+          branch: currentWorktree.branch,
+          commit: currentWorktree.commit.substring(0, 8),
+          isDirty,
+          isMain: worktrees.length === 0, // First worktree is main
+        });
+      }
+      currentWorktree = {};
+    }
   }
+
+  return worktrees;
 }
 
 export async function getGitStatus(cwd?: string, options?: { showAllBranches?: boolean; showAllBranchesDepth?: number; includeTag?: boolean; includeWorktrees?: boolean }): Promise<GitStatus | null> {
-  const cacheKey = `git-status-${cwd || process.cwd()}`;
+  const optsSuffix = options
+    ? `-t${options.includeTag ? 1 : 0}w${options.includeWorktrees ? 1 : 0}b${options.showAllBranches ? 1 : 0}`
+    : '';
+  const cacheKey = `git-status-${cwd || process.cwd()}${optsSuffix}`;
   const cached = getCached<GitStatus>(cacheKey);
   if (cached) return cached;
 
   try {
-    const branch = execGit('git rev-parse --abbrev-ref HEAD', cwd).trim();
+    // Group 1: Independent git commands — run in parallel
+    const [branchResult, statusResult, remoteResult, tagResult, worktreeResult] =
+      await Promise.allSettled([
+        execGitAsync(['rev-parse', '--abbrev-ref', 'HEAD'], cwd),
+        execGitAsync(['status', '--porcelain'], cwd),
+        execGitAsync(['remote', 'get-url', 'origin'], cwd),
+        options?.includeTag
+          ? execGitAsync(['describe', '--tags', '--abbrev=0'], cwd)
+          : Promise.resolve(null),
+        options?.includeWorktrees
+          ? execGitAsync(['worktree', 'list', '--porcelain'], cwd)
+          : Promise.resolve(null),
+      ]);
 
-    const status = execGit('git status --porcelain', cwd);
-    const isDirty = status.trim().length > 0;
-    const fileStats = parseFileStats(status);
-    
+    // branch is required — fail if missing
+    if (branchResult.status !== 'fulfilled' || !branchResult.value) return null;
+    const branch = branchResult.value.trim();
+
+    // status (fallback to empty)
+    const statusOutput = statusResult.status === 'fulfilled' ? statusResult.value : '';
+    const isDirty = statusOutput.trim().length > 0;
+    const fileStats = parseFileStats(statusOutput);
+
+    // remote URL (optional)
+    let remoteUrl: string | undefined;
+    if (remoteResult.status === 'fulfilled' && remoteResult.value) {
+      remoteUrl = parseRemoteUrl(remoteResult.value.trim()) || undefined;
+    }
+
+    // tag (optional)
+    let tag: string | undefined;
+    if (options?.includeTag && tagResult.status === 'fulfilled' && tagResult.value) {
+      tag = (tagResult.value as string).trim() || undefined;
+    }
+
+    // Group 2: branch-dependent commands (sequential)
     let ahead = 0;
     let behind = 0;
-
     try {
-      const upstream = execGit(`git rev-parse --abbrev-ref ${branch}@{upstream}`, cwd).trim();
-      const counts = execGit(`git rev-list --left-right --count ${branch}...${upstream}`, cwd).trim();
+      const upstream = (await execGitAsync(
+        ['rev-parse', '--abbrev-ref', `${branch}@{upstream}`], cwd
+      )).trim();
+      const counts = (await execGitAsync(
+        ['rev-list', '--left-right', '--count', `${branch}...${upstream}`], cwd
+      )).trim();
       const parts = counts.split(/\s+/);
       if (parts.length === 2) {
         ahead = parseInt(parts[0], 10) || 0;
         behind = parseInt(parts[1], 10) || 0;
       }
     } catch {
-      // No upstream or other error - ignore
+      // No upstream or other error — ignore
     }
 
-    // Get remote URL
-    let remoteUrl: string | undefined;
-    try {
-      const rawRemoteUrl = execGit('git remote get-url origin', cwd).trim();
-      const parsedUrl = parseRemoteUrl(rawRemoteUrl);
-      if (parsedUrl) {
-        remoteUrl = parsedUrl;
+    // worktree parsing (from Group 1 result)
+    let worktrees: WorktreeInfo[] | undefined;
+    if (options?.includeWorktrees && worktreeResult.status === 'fulfilled' && worktreeResult.value) {
+      const worktreeList = parseWorktreeOutput(worktreeResult.value as string);
+      if (worktreeList.length > 0) {
+        worktrees = worktreeList;
+        debug(`found ${worktrees.length} worktrees`);
       }
-    } catch {
-      // No remote or other error - ignore
     }
 
     debug(`git status: branch=${branch}, dirty=${isDirty}, ahead=${ahead}, behind=${behind}, remoteUrl=${remoteUrl}, fileStats=${JSON.stringify(fileStats)}`);
 
-    // Scan subdirectories if enabled
+    // scanSubRepos: stays synchronous (complex recursive, tier 3 only)
     let subRepos: SubRepoStatus[] | undefined;
     if (options?.showAllBranches && cwd) {
       const depth = options.showAllBranchesDepth || 2;
       subRepos = scanSubRepos(cwd, 0, depth);
       if (subRepos.length > 0) {
         debug(`found ${subRepos.length} sub-repositories`);
-      }
-    }
-
-    // Get latest tag if enabled
-    let tag: string | undefined;
-    if (options?.includeTag) {
-      const latestTag = getLatestTag(cwd);
-      if (latestTag) {
-        tag = latestTag;
-        debug(`found tag: ${tag}`);
-      }
-    }
-
-    // Get worktrees if enabled
-    let worktrees: WorktreeInfo[] | undefined;
-    if (options?.includeWorktrees) {
-      const worktreeList = getWorktrees(cwd);
-      if (worktreeList.length > 0) {
-        worktrees = worktreeList;
-        debug(`found ${worktrees.length} worktrees`);
       }
     }
 
