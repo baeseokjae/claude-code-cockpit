@@ -6,28 +6,15 @@ import type { Theme, RenderContext } from '../types/index.js';
 import { MONO_PALETTE } from './palettes/mono.js';
 import { FALLBACK_ICONS } from './icons.js';
 import { dim, bold, underline } from '../render/colors.js';
-import { createProgressBar, formatPercent } from '../render/utils.js';
+import { createProgressBar } from '../render/utils.js';
 import { formatTokenSpeed } from '../data/speed-tracker.js';
-import { getModelName, getContextPercent, getAbsoluteTokens } from '../input/stdin.js';
+import { getAbsoluteTokens } from '../input/stdin.js';
 import {
   formatLinesDisplay,
   formatCacheDisplay,
-  collectActivityWidgets,
-  getVisibleWidgets,
-  hasAbnormalState,
   formatProjectGit,
-  formatDetailToolsSummary,
-  formatDetailAgentsSummary,
-  formatDetailTodosSummary,
-  summarizeToolsPlain,
-  summarizeAgentsPlain,
-  summarizeTodosPlain,
-  summarizeSkillsPlain,
-  renderToolsLinePlain,
-  renderAgentsLinePlain,
-  renderTodosLinePlain,
-  renderSkillsLinePlain,
-  getSessionName,
+  prepareRenderData,
+  renderActivityLines,
   formatContextText,
   formatContextHintPlain,
 } from './helpers.js';
@@ -75,12 +62,7 @@ export const monoTheme: Theme = {
   },
 
   renderMinimal(ctx: RenderContext): string[] {
-    const model = getModelName(ctx.stdin);
-    const percent = getContextPercent(ctx.stdin);
-    const percentStr = percent !== null ? formatPercent(percent) : '??%';
-    const duration = ctx.sessionDuration;
-
-    const sessionName = getSessionName(ctx);
+    const { model, percent, percentStr, duration, sessionName } = prepareRenderData(ctx);
     const sessionText = sessionName ? ` [${sessionName}]` : '';
 
     const projectGit = formatProjectGit(ctx, null, null, { prefix: ' | ' });
@@ -96,19 +78,13 @@ export const monoTheme: Theme = {
   renderCompact(ctx: RenderContext): string[] {
     const lines: string[] = [];
 
-    const model = getModelName(ctx.stdin);
-    const percent = getContextPercent(ctx.stdin);
-    const percentStr = percent !== null ? formatPercent(percent) : '??%';
-
+    const { model, percent, percentStr, duration, sessionName } = prepareRenderData(ctx);
     const contextStr = formatContextText(ctx, percentStr);
-
-    const sessionName = getSessionName(ctx);
     const sessionText = sessionName ? ` [${sessionName}]` : '';
 
     const progressBar = createProgressBar(percent || 0, 10, this.chars.progressFilled, this.chars.progressEmpty);
 
     const projectGit = formatProjectGit(ctx, null, null, { prefix: ' | ' });
-    const duration = ctx.sessionDuration;
 
     // Usage (Mono style: no color)
     const usage = ctx.config.display.showUsage && ctx.usageData
@@ -140,61 +116,15 @@ export const monoTheme: Theme = {
     lines.push(`${group1} | ${group2} | ${group3} | ${group4.trimStart()} | ${group5}`);
 
     // Activity line (detailMode or compact)
-    if (ctx.detailMode) {
-      const detailOpts = { palette: this.palette, icons: this.icons, useColor: false };
-
-      if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
-        const toolsSummary = formatDetailToolsSummary(ctx.transcript.tools, detailOpts);
-        if (toolsSummary) lines.push('  ' + toolsSummary);
-      }
-
-      if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
-        const agentsSummary = formatDetailAgentsSummary(ctx.transcript.agents, detailOpts);
-        if (agentsSummary) lines.push('  ' + agentsSummary);
-      }
-
-      if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
-        const todosSummary = formatDetailTodosSummary(ctx.transcript.todos, detailOpts);
-        if (todosSummary) lines.push('  ' + todosSummary);
-      }
-
-      const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
-      const abnormal = hasAbnormalState(ctx);
-      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal, ctx.config.maxActivityWidgets);
-      const advancedParts = visible.map(w => w.text);
-
-      if (advancedParts.length > 0) {
-        lines.push('  ' + advancedParts.join(' | '));
-      }
-    } else {
-      const activityParts: string[] = [];
-
-      if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
-        activityParts.push(summarizeToolsPlain(ctx));
-      }
-
-      if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
-        activityParts.push(summarizeAgentsPlain(ctx));
-      }
-
-      if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
-        activityParts.push(summarizeTodosPlain(ctx));
-      }
-
-      if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
-        activityParts.push(summarizeSkillsPlain(ctx));
-      }
-
-      // Activity widgets
-      const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
-      const abnormal = hasAbnormalState(ctx);
-      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal, ctx.config.maxActivityWidgets);
-      activityParts.push(...visible.map(w => w.text));
-
-      if (activityParts.length > 0) {
-        lines.push(activityParts.join(' | '));
-      }
-    }
+    const activityLines = renderActivityLines(ctx, {
+      style: 'plain',
+      palette: this.palette,
+      icons: this.icons,
+      separator: ' | ',
+      nonDetailStyle: 'summarize',
+      widgetsOnSeparateLines: false,
+    });
+    activityLines.forEach(l => lines.push(ctx.detailMode ? '  ' + l : l));
 
     return lines;
   },
@@ -208,12 +138,8 @@ export const monoTheme: Theme = {
     lines.push(dim(headerLine));
 
     // Line 1
-    const model = getModelName(ctx.stdin);
-    const percent = getContextPercent(ctx.stdin);
-    const percentStr = percent !== null ? formatPercent(percent) : '??%';
+    const { model, percent, percentStr, duration, sessionName } = prepareRenderData(ctx);
     const progressBar = createProgressBar(percent || 0, 15, this.chars.progressFilled, this.chars.progressEmpty);
-
-    const sessionName = getSessionName(ctx);
     const sessionStr = sessionName ? ` [${sessionName}]` : '';
 
     const absoluteTokens = getAbsoluteTokens(ctx.stdin);
@@ -233,8 +159,6 @@ export const monoTheme: Theme = {
     const usageStr = ctx.config.display.showUsage && ctx.usageData
       ? `5h:${Math.round(ctx.usageData.fiveHour)}%`
       : '';
-
-    const duration = ctx.sessionDuration;
 
     // Token speed (Mono style: no color)
     const speedStr = ctx.config.display.showTokenSpeed && ctx.tokenSpeed
@@ -274,51 +198,14 @@ export const monoTheme: Theme = {
     lines.push(dim(headerLine));
 
     // Activity (detailMode or default)
-    if (ctx.detailMode) {
-      const detailOpts = { palette: this.palette, icons: this.icons, useColor: false };
-
-      if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
-        const toolsSummary = formatDetailToolsSummary(ctx.transcript.tools, detailOpts);
-        if (toolsSummary) lines.push('  ' + toolsSummary);
-      }
-
-      if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
-        const agentsSummary = formatDetailAgentsSummary(ctx.transcript.agents, detailOpts);
-        if (agentsSummary) lines.push('  ' + agentsSummary);
-      }
-
-      if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
-        const todosSummary = formatDetailTodosSummary(ctx.transcript.todos, detailOpts);
-        if (todosSummary) lines.push('  ' + todosSummary);
-      }
-
-      const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
-      const abnormal = hasAbnormalState(ctx);
-      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal, ctx.config.maxActivityWidgets);
-      visible.forEach(w => lines.push('  ' + w.text));
-    } else {
-      if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
-        lines.push('  ' + renderToolsLinePlain(ctx));
-      }
-
-      if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
-        lines.push('  ' + renderAgentsLinePlain(ctx));
-      }
-
-      if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
-        lines.push('  ' + renderTodosLinePlain(ctx));
-      }
-
-      if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
-        lines.push('  ' + renderSkillsLinePlain(ctx));
-      }
-
-      // Activity widgets
-      const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
-      const abnormal = hasAbnormalState(ctx);
-      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal, ctx.config.maxActivityWidgets);
-      visible.forEach(w => lines.push('  ' + w.text));
-    }
+    const activityLinesFull = renderActivityLines(ctx, {
+      style: 'plain',
+      palette: this.palette,
+      icons: this.icons,
+      separator: ' | ',
+      nonDetailStyle: 'expanded',
+    });
+    activityLinesFull.forEach(l => lines.push('  ' + l));
 
     return lines;
   },

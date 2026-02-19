@@ -11,11 +11,10 @@ import type { Theme, RenderContext } from '../types/index.js';
 import { NEON_PALETTE } from './palettes/neon.js';
 import { getIcons } from './icons.js';
 import { hex, bold } from '../render/colors.js';
-import { createProgressBar, formatPercent, visualLength } from '../render/utils.js';
+import { createProgressBar, visualLength } from '../render/utils.js';
 import { getUsageColor } from '../render/usage.js';
 import { formatResetTime } from '../data/usage-api.js';
 import { formatTokenSpeed } from '../data/speed-tracker.js';
-import { getModelName, getContextPercent } from '../input/stdin.js';
 import {
   formatLinesDisplay,
   formatCacheDisplay,
@@ -27,15 +26,12 @@ import {
   formatDetailToolsSummary,
   formatDetailAgentsSummary,
   formatDetailTodosSummary,
-  summarizeToolsStyled,
-  summarizeAgentsStyled,
-  summarizeTodosStyled,
-  summarizeSkillsStyled,
   renderToolsLineStyled,
   renderAgentsLineStyled,
   renderTodosLineStyled,
   renderSkillsLineStyled,
-  getSessionName,
+  prepareRenderData,
+  renderActivityLines,
   formatContextText,
   formatContextHint,
 } from './helpers.js';
@@ -83,14 +79,9 @@ export const neonTheme: Theme = {
   },
 
   renderMinimal(ctx: RenderContext): string[] {
-    const model = getModelName(ctx.stdin).toUpperCase();
-    const percent = getContextPercent(ctx.stdin);
-    const percentStr = percent !== null ? formatPercent(percent) : '??%';
-    const duration = ctx.sessionDuration;
-
+    const { model: modelRaw, percent, percentStr, duration, sessionName } = prepareRenderData(ctx);
+    const model = modelRaw.toUpperCase();
     const modelText = hex(this.palette.blue, bold(model));
-
-    const sessionName = getSessionName(ctx);
     const sessionText = sessionName ? hex(this.palette.muted, ` [${sessionName}]`) : '';
 
     const percentColor = getPercentColor(percent, this.palette);
@@ -113,13 +104,9 @@ export const neonTheme: Theme = {
   renderCompact(ctx: RenderContext): string[] {
     const lines: string[] = [];
 
-    const model = getModelName(ctx.stdin).toUpperCase();
-    const percent = getContextPercent(ctx.stdin);
-    const percentStr = percent !== null ? formatPercent(percent) : '??%';
-
+    const { model: modelRaw, percent, percentStr, duration, sessionName } = prepareRenderData(ctx);
+    const model = modelRaw.toUpperCase();
     const modelText = hex(this.palette.blue, bold(model));
-
-    const sessionName = getSessionName(ctx);
     const sessionText = sessionName ? hex(this.palette.muted, ` [${sessionName}]`) : '';
 
     const progressBar = createProgressBar(percent || 0, 10, this.chars.progressFilled, this.chars.progressEmpty);
@@ -134,7 +121,6 @@ export const neonTheme: Theme = {
       branchColor: this.palette.mauve,
     });
 
-    const duration = ctx.sessionDuration;
     const durationText = hex(this.palette.muted, duration);
 
     // Usage (Neon style: uppercase)
@@ -168,62 +154,16 @@ export const neonTheme: Theme = {
     );
 
     // Line 2+: Activity (detailMode or compact)
-    if (ctx.detailMode) {
-      const detailOpts = { palette: this.palette, icons: this.icons, transform: { case: 'upper' as const } };
-
-      if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
-        const toolsSummary = formatDetailToolsSummary(ctx.transcript.tools, detailOpts);
-        if (toolsSummary) lines.push('  ' + toolsSummary);
-      }
-
-      if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
-        const agentsSummary = formatDetailAgentsSummary(ctx.transcript.agents, detailOpts);
-        if (agentsSummary) lines.push('  ' + agentsSummary);
-      }
-
-      if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
-        const todosSummary = formatDetailTodosSummary(ctx.transcript.todos, detailOpts);
-        if (todosSummary) lines.push('  ' + todosSummary);
-      }
-
-      const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
-      const abnormal = hasAbnormalState(ctx);
-      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal, ctx.config.maxActivityWidgets);
-      const advancedParts = visible.map(w => w.text);
-
-      if (advancedParts.length > 0) {
-        lines.push('  ' + advancedParts.join('  ' + hex(this.palette.muted, this.chars.separator) + '  '));
-      }
-    } else {
-      const neonOpts = { palette: this.palette, icons: this.icons, transform: { case: 'upper' as const } };
-      const activityParts: string[] = [];
-
-      if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
-        activityParts.push(summarizeToolsStyled(ctx, neonOpts));
-      }
-
-      if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
-        activityParts.push(summarizeAgentsStyled(ctx, neonOpts));
-      }
-
-      if (ctx.config.display.showTodos && ctx.transcript.todos.length > 0) {
-        activityParts.push(summarizeTodosStyled(ctx, neonOpts));
-      }
-
-      if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
-        activityParts.push(summarizeSkillsStyled(ctx, neonOpts));
-      }
-
-      // Activity widgets
-      const widgets = collectActivityWidgets(ctx, this.palette, this.icons);
-      const abnormal = hasAbnormalState(ctx);
-      const visible = getVisibleWidgets(widgets, ctx.detailMode, abnormal, ctx.config.maxActivityWidgets);
-      activityParts.push(...visible.map(w => w.text));
-
-      if (activityParts.length > 0) {
-        lines.push(activityParts.join('  ' + hex(this.palette.muted, this.chars.separator) + '  '));
-      }
-    }
+    const activityLines = renderActivityLines(ctx, {
+      style: 'styled',
+      palette: this.palette,
+      icons: this.icons,
+      transform: { case: 'upper' },
+      separator: hex(this.palette.muted, this.chars.separator),
+      nonDetailStyle: 'summarize',
+      widgetsOnSeparateLines: false,
+    });
+    activityLines.forEach(l => lines.push(ctx.detailMode ? '  ' + l : l));
 
     return lines;
   },
@@ -238,13 +178,9 @@ export const neonTheme: Theme = {
     lines.push(hex(this.palette.blue, topBorder));
 
     // Line 1: Model, Progress, Context
-    const model = getModelName(ctx.stdin).toUpperCase();
-    const percent = getContextPercent(ctx.stdin);
-    const percentStr = percent !== null ? formatPercent(percent) : '??%';
-
+    const { model: modelRaw, percent, percentStr, duration, sessionName } = prepareRenderData(ctx);
+    const model = modelRaw.toUpperCase();
     const modelText = hex(this.palette.blue, bold(model));
-
-    const sessionName = getSessionName(ctx);
     const sessionText = sessionName ? hex(this.palette.muted, ` [${sessionName}]`) : '';
 
     const progressBar = createProgressBar(percent || 0, 10, this.chars.progressFilled, this.chars.progressEmpty);
@@ -274,7 +210,6 @@ export const neonTheme: Theme = {
       })()
       : '';
 
-    const duration = ctx.sessionDuration;
     const durationText = hex(this.palette.muted, duration);
 
     // Token speed (Neon style: uppercase, bold)

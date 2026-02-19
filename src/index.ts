@@ -24,6 +24,9 @@ import { getTestCoverageSummary } from './data/test-coverage.js';
 import { getPassAtKSummary } from './data/pass-at-k.js';
 import { analyzeMcpStatus } from './data/mcp-status.js';
 import { getInstanceSync } from './data/instance-sync.js';
+import { extractGitActivity } from './data/git-activity.js';
+import { calculateToolStats } from './data/tool-stats.js';
+import { extractBashErrors } from './data/bash-errors.js';
 import { loadConfig } from './config/loader.js';
 import { loadTheme } from './themes/index.js';
 import { writeOutput } from './output/writer.js';
@@ -83,6 +86,9 @@ export async function main(deps: MainDeps = defaultDeps): Promise<void> {
 
     const transcriptPath = stdin.transcript_path || null;
     const transcript = await deps.parseTranscript(transcriptPath);
+    const gitActivity = extractGitActivity(transcript.tools) || null;
+    const toolStats = calculateToolStats(transcript.tools) || null;
+    const bashErrors = extractBashErrors(transcript.tools) || null;
 
     const cwd = getCwd(stdin);
     const rawWidth = getTerminalWidth();
@@ -167,9 +173,9 @@ export async function main(deps: MainDeps = defaultDeps): Promise<void> {
       extraLabel,
       linesData,
       cacheMetrics,
-      gitActivity: transcript.gitActivity || null,
-      toolStats: transcript.toolStats || null,
-      bashErrors: transcript.bashErrors || null,
+      gitActivity,
+      toolStats,
+      bashErrors,
       compactSuggestion,
       violations,
       mcpInfo,

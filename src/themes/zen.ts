@@ -11,9 +11,7 @@ import type { Theme, RenderContext } from '../types/index.js';
 import { ZEN_PALETTE } from './palettes/zen.js';
 import { getIcons } from './icons.js';
 import { hex } from '../render/colors.js';
-import { formatPercent } from '../render/utils.js';
 import { formatTokenSpeed } from '../data/speed-tracker.js';
-import { getModelName, getContextPercent } from '../input/stdin.js';
 import {
   formatLinesDisplay,
   formatCacheDisplay,
@@ -21,7 +19,7 @@ import {
   getVisibleWidgets,
   hasAbnormalState,
   formatProjectGit,
-  getSessionName,
+  prepareRenderData,
   formatContextText,
   formatContextHint,
 } from './helpers.js';
@@ -69,14 +67,9 @@ export const zenTheme: Theme = {
   },
 
   renderMinimal(ctx: RenderContext): string[] {
-    const model = getModelName(ctx.stdin).toLowerCase();
-    const percent = getContextPercent(ctx.stdin);
-    const percentStr = percent !== null ? formatPercent(percent) : '?';
-    const duration = ctx.sessionDuration;
-
+    const { model: modelRaw, percent, percentStr, duration, sessionName } = prepareRenderData(ctx, { fallbackPercent: '?' });
+    const model = modelRaw.toLowerCase();
     const contextStr = formatContextText(ctx, percentStr);
-
-    const sessionName = getSessionName(ctx);
     const sessionText = sessionName ? `[${sessionName}] ` : '';
 
     const linesText = formatLinesDisplay(ctx, this.palette, this.icons, 'compact');
@@ -88,17 +81,12 @@ export const zenTheme: Theme = {
   },
 
   renderCompact(ctx: RenderContext): string[] {
-    const model = getModelName(ctx.stdin).toLowerCase();
-    const percent = getContextPercent(ctx.stdin);
-    const percentStr = percent !== null ? formatPercent(percent) : '?';
-
+    const { model: modelRaw, percent, percentStr, duration, sessionName } = prepareRenderData(ctx, { fallbackPercent: '?' });
+    const model = modelRaw.toLowerCase();
     const contextStr = formatContextText(ctx, percentStr);
-
-    const sessionName = getSessionName(ctx);
     const sessionText = sessionName ? `[${sessionName}] ` : '';
 
     const projectGit = formatProjectGit(ctx, null, null, { subrepoStyle: 'minimal' });
-    const duration = ctx.sessionDuration;
 
     // Token speed (Zen style: minimal)
     const speed = ctx.config.display.showTokenSpeed && ctx.tokenSpeed
@@ -121,17 +109,12 @@ export const zenTheme: Theme = {
     const lines: string[] = [];
 
     // Line 1: Basic info
-    const model = getModelName(ctx.stdin).toLowerCase();
-    const percent = getContextPercent(ctx.stdin);
-    const percentStr = percent !== null ? formatPercent(percent) : '?';
-
+    const { model: modelRaw, percentStr, duration, sessionName } = prepareRenderData(ctx, { fallbackPercent: '?' });
+    const model = modelRaw.toLowerCase();
     const contextStr = formatContextText(ctx, percentStr);
-
-    const sessionName = getSessionName(ctx);
     const sessionPart = sessionName ? `[${sessionName}]` : null;
 
     const projectGit = formatProjectGit(ctx, null, null, { subrepoStyle: 'minimal' });
-    const duration = ctx.sessionDuration;
 
     // Usage (Zen style: minimal)
     const usage = ctx.config.display.showUsage && ctx.usageData

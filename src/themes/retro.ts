@@ -6,9 +6,8 @@ import type { Theme, RenderContext } from '../types/index.js';
 import { RETRO_PALETTE } from './palettes/retro.js';
 import { FALLBACK_ICONS } from './icons.js';
 import { hex, bold, dim, underline } from '../render/colors.js';
-import { createProgressBar, formatPercent, visualLength } from '../render/utils.js';
+import { createProgressBar, visualLength } from '../render/utils.js';
 import { formatTokenSpeed } from '../data/speed-tracker.js';
-import { getModelName, getContextPercent } from '../input/stdin.js';
 import {
   formatLinesDisplay,
   formatCacheDisplay,
@@ -23,7 +22,7 @@ import {
   summarizeAgentsPlain,
   summarizeTodosPlain,
   summarizeSkillsPlain,
-  getSessionName,
+  prepareRenderData,
   formatContextText,
   formatContextHint,
 } from './helpers.js';
@@ -71,14 +70,9 @@ export const retroTheme: Theme = {
   },
 
   renderMinimal(ctx: RenderContext): string[] {
-    const model = getModelName(ctx.stdin).toUpperCase();
-    const percent = getContextPercent(ctx.stdin);
-    const percentStr = percent !== null ? formatPercent(percent) : '??%';
-    const duration = ctx.sessionDuration;
-
+    const { model: modelRaw, percent, percentStr, duration, sessionName } = prepareRenderData(ctx);
+    const model = modelRaw.toUpperCase();
     const contextStr = formatContextText(ctx, percentStr, { uppercase: true });
-
-    const sessionName = getSessionName(ctx);
     const sessionText = sessionName ? ` [${sessionName}]` : '';
 
     const projectGit = formatProjectGit(ctx, null, null, {
@@ -100,13 +94,9 @@ export const retroTheme: Theme = {
     const color = this.palette.text;
     const dimColor = this.palette.muted;
 
-    const model = getModelName(ctx.stdin).toUpperCase();
-    const percent = getContextPercent(ctx.stdin);
-    const percentStr = percent !== null ? formatPercent(percent) : '??%';
-
+    const { model: modelRaw, percent, percentStr, duration, sessionName } = prepareRenderData(ctx);
+    const model = modelRaw.toUpperCase();
     const contextStr = formatContextText(ctx, percentStr, { uppercase: true });
-
-    const sessionName = getSessionName(ctx);
     const sessionText = sessionName ? ` [${sessionName}]` : '';
 
     const progressBar = createProgressBar(percent || 0, 10, this.chars.progressFilled, this.chars.progressEmpty);
@@ -116,7 +106,6 @@ export const retroTheme: Theme = {
       projectPrefix: 'DIR: ',
       branchPrefix: 'BRANCH:',
     });
-    const duration = ctx.sessionDuration;
 
     // Warning
     const warningColor = percent !== null && percent >= 75 ? this.palette.red : color;
@@ -224,14 +213,10 @@ export const retroTheme: Theme = {
     lines.push(hex(color, '╠' + '═'.repeat(innerWidth) + '╣'));
 
     // System info
-    const model = getModelName(ctx.stdin).toUpperCase();
-    const percent = getContextPercent(ctx.stdin);
-    const percentStr = percent !== null ? formatPercent(percent) : '??%';
+    const { model: modelRaw, percent, percentStr, duration, sessionName } = prepareRenderData(ctx);
+    const model = modelRaw.toUpperCase();
     const progressBar = createProgressBar(percent || 0, 20, this.chars.progressFilled, this.chars.progressEmpty);
-
     const contextStr = formatContextText(ctx, percentStr, { uppercase: true });
-
-    const sessionName = getSessionName(ctx);
     const sessionText = sessionName ? ` [${sessionName}]` : '';
 
     const warningColor = percent !== null && percent >= 75 ? this.palette.red : color;
@@ -250,7 +235,6 @@ export const retroTheme: Theme = {
       projectPrefix: 'DIR: ',
       branchPrefix: 'BRANCH:',
     });
-    const duration = ctx.sessionDuration;
     const cost = ctx.config.display.showCost ? ctx.stdin.cost?.total_cost_usd : undefined;
     const costStr = cost ? `$${cost.toFixed(2)}` : (ctx.config.display.showCost ? '$0.00' : '');
 

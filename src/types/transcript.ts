@@ -43,9 +43,6 @@ export interface TranscriptData {
   agents: AgentEntry[];
   todos: TodoItem[];
   skills: SkillEntry[];
-  gitActivity?: GitActivity;
-  toolStats?: ToolStats;
-  bashErrors?: BashError[];
 }
 
 export interface SkillEntry {

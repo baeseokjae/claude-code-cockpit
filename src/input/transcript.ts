@@ -23,9 +23,6 @@ import {
   MAX_AGENTS_DISPLAY,
   MAX_SKILLS_DISPLAY,
 } from '../utils/constants.js';
-import { extractGitActivity } from '../data/git-activity.js';
-import { calculateToolStats } from '../data/tool-stats.js';
-import { extractBashErrors } from '../data/bash-errors.js';
 
 const debug = createDebug('transcript');
 
@@ -112,20 +109,11 @@ export async function parseTranscript(
 
   debug(`parsed: ${tools.length} tools, ${agents.length} agents, ${skills.length} skills, ${currentTodos.length} todos`);
 
-  // Extract additional analytics from tools
-  const allTools = Array.from(toolsMap.values());
-  const gitActivity = extractGitActivity(allTools);
-  const toolStats = calculateToolStats(allTools);
-  const bashErrors = extractBashErrors(allTools);
-
   const result: TranscriptData = {
     tools,
     agents,
     todos: currentTodos,
     skills,
-    gitActivity: gitActivity || undefined,
-    toolStats: toolStats || undefined,
-    bashErrors: bashErrors || undefined,
   };
 
   setCacheByMtime(cacheKey, result, transcriptPath);
@@ -452,11 +440,5 @@ function reviveDates(data: TranscriptData): TranscriptData | null {
     s.startTime = revive(s.startTime);
     if (s.endTime) s.endTime = revive(s.endTime);
   }
-  if (data.bashErrors) {
-    for (const e of data.bashErrors) {
-      e.timestamp = revive(e.timestamp);
-    }
-  }
-
   return valid ? data : null;
 }

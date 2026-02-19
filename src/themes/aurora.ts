@@ -16,11 +16,11 @@ import type { Theme, RenderContext, ColorPalette } from '../types/index.js';
 import { AURORA_PALETTE } from './palettes/aurora.js';
 import { getIcons } from './icons.js';
 import { hex } from '../render/colors.js';
-import { createProgressBar, formatPercent, truncateAnsi, visualLength } from '../render/utils.js';
+import { createProgressBar, truncateAnsi, visualLength } from '../render/utils.js';
 import { formatUsageFull } from '../render/usage.js';
 import { formatResetTime } from '../data/usage-api.js';
 import { formatTokenSpeed } from '../data/speed-tracker.js';
-import { getModelName, getContextPercent, getAbsoluteTokens } from '../input/stdin.js';
+import { getAbsoluteTokens } from '../input/stdin.js';
 import {
   formatLinesDisplay,
   formatCacheDisplay,
@@ -39,7 +39,7 @@ import {
   renderAgentsLineStyled,
   renderTodosLineStyled,
   renderSkillsLineStyled,
-  getSessionName,
+  prepareRenderData,
   formatContextText,
   formatContextHint,
   formatBashErrorsDisplay,
@@ -92,14 +92,8 @@ export const auroraTheme: Theme = {
   },
 
   renderMinimal(ctx: RenderContext): string[] {
-    const model = getModelName(ctx.stdin);
-    const percent = getContextPercent(ctx.stdin);
-    const percentStr = percent !== null ? formatPercent(percent) : '??%';
-    const duration = ctx.sessionDuration;
-
+    const { model, percent, percentStr, duration, sessionName } = prepareRenderData(ctx);
     const modelText = hex(this.palette.blue, model);
-
-    const sessionName = getSessionName(ctx);
     const sessionText = sessionName ? hex(this.palette.muted, ` [${sessionName}]`) : '';
 
     const percentColor = getPercentColor(percent, this.palette);
@@ -126,13 +120,8 @@ export const auroraTheme: Theme = {
     const bullet = (color: string) => hex(color, '●') + ' ';
 
     // === Line 1: Model [session] | Progress Context | Project Git | Usage Duration ===
-    const model = getModelName(ctx.stdin);
-    const percent = getContextPercent(ctx.stdin);
-    const percentStr = percent !== null ? formatPercent(percent) : '??%';
-
+    const { model, percent, percentStr, duration, sessionName } = prepareRenderData(ctx);
     const modelText = hex(p.blue, model);
-
-    const sessionName = getSessionName(ctx);
     const sessionText = sessionName ? hex(p.muted, ` [${sessionName}]`) : '';
 
     const progressColor = getPercentColor(percent, p);
@@ -142,7 +131,6 @@ export const auroraTheme: Theme = {
 
     const { project: projectText, branch: branchText } = formatProjectGitParts(ctx, p, this.icons, { showFileStats: true });
 
-    const duration = ctx.sessionDuration;
     const durationText = duration ? hex(p.muted, duration) : '';
 
     // Progress bar (fixed 10-length)
@@ -432,13 +420,8 @@ export const auroraTheme: Theme = {
     lines.push(hex(this.palette.overlay, topBorder));
 
     // Line 1: Model, Progress, Context, Cost, Duration
-    const model = getModelName(ctx.stdin);
-    const percent = getContextPercent(ctx.stdin);
-    const percentStr = percent !== null ? formatPercent(percent) : '??%';
-
+    const { model, percent, percentStr, sessionName } = prepareRenderData(ctx);
     const modelText = hex(this.palette.blue, model);
-
-    const sessionName = getSessionName(ctx);
     const sessionText = sessionName ? hex(this.palette.muted, ` [${sessionName}]`) : '';
 
     // Project and git with parentheses and links (for line 2)
@@ -470,8 +453,7 @@ export const auroraTheme: Theme = {
       : '';
 
     // Duration
-    const duration = ctx.sessionDuration;
-    const durationText = hex(this.palette.muted, duration);
+    const durationText = hex(this.palette.muted, ctx.sessionDuration);
 
     // Token speed
     const speedText = ctx.config.display.showTokenSpeed && ctx.tokenSpeed
