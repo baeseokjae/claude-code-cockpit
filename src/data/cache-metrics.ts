@@ -36,7 +36,12 @@ const MODEL_PRICING: Record<string, CachePricing> = {
     cacheRead: 1.50,
     normalInput: 15.00,
   },
-  // Sonnet 4/4.5 — $3 input, $3.75 cache write, $0.30 cache read
+  // Sonnet 4/4.5/4.6 — $3 input, $3.75 cache write, $0.30 cache read
+  'claude-sonnet-4-6': {
+    cacheWrite: 3.75,
+    cacheRead: 0.30,
+    normalInput: 3.00,
+  },
   'claude-sonnet-4-5': {
     cacheWrite: 3.75,
     cacheRead: 0.30,

@@ -9,11 +9,11 @@ import { calculateCost, formatCost, formatCostShort, getShortModelName } from '.
 describe('calculateCost', () => {
   it('should calculate cost for Opus 4.5', () => {
     const result = calculateCost('claude-opus-4-5-20251101', 1000000, 100000);
-    // Input: 1M tokens * $15/M = $15
-    // Output: 100K tokens * $75/M = $7.5
-    expect(result.estimatedCost).toBe(22.5);
-    expect(result.pricePerInputMToken).toBe(15.0);
-    expect(result.pricePerOutputMToken).toBe(75.0);
+    // Input: 1M tokens * $5/M = $5
+    // Output: 100K tokens * $25/M = $2.5
+    expect(result.estimatedCost).toBe(7.5);
+    expect(result.pricePerInputMToken).toBe(5.0);
+    expect(result.pricePerOutputMToken).toBe(25.0);
   });
 
   it('should calculate cost for Sonnet 4', () => {
@@ -21,6 +21,15 @@ describe('calculateCost', () => {
     // Input: 1M tokens * $3/M = $3
     // Output: 100K tokens * $15/M = $1.5
     expect(result.estimatedCost).toBe(4.5);
+  });
+
+  it('should calculate cost for Sonnet 4.6', () => {
+    const result = calculateCost('claude-sonnet-4-6', 1000000, 100000);
+    // Input: 1M tokens * $3/M = $3
+    // Output: 100K tokens * $15/M = $1.5
+    expect(result.estimatedCost).toBe(4.5);
+    expect(result.pricePerInputMToken).toBe(3.0);
+    expect(result.pricePerOutputMToken).toBe(15.0);
   });
 
   it('should calculate cost for Haiku 3.5', () => {
@@ -102,9 +111,9 @@ describe('getShortModelName', () => {
 describe('new model pricing', () => {
   it('should calculate cost for Opus 4.6', () => {
     const result = calculateCost('claude-opus-4-6-20250610', 1000000, 100000);
-    expect(result.pricePerInputMToken).toBe(15.0);
-    expect(result.pricePerOutputMToken).toBe(75.0);
-    expect(result.estimatedCost).toBe(22.5);
+    expect(result.pricePerInputMToken).toBe(5.0);
+    expect(result.pricePerOutputMToken).toBe(25.0);
+    expect(result.estimatedCost).toBe(7.5);
   });
 
   it('should calculate cost for Sonnet 4.5', () => {
@@ -116,14 +125,26 @@ describe('new model pricing', () => {
 
   it('should calculate cost for Haiku 4.5', () => {
     const result = calculateCost('claude-haiku-4-5-20251001', 1000000, 100000);
-    expect(result.pricePerInputMToken).toBe(0.80);
-    expect(result.pricePerOutputMToken).toBe(4.0);
-    expect(result.estimatedCost).toBeCloseTo(1.2, 2);
+    expect(result.pricePerInputMToken).toBe(1.0);
+    expect(result.pricePerOutputMToken).toBe(5.0);
+    expect(result.estimatedCost).toBe(1.5);
   });
 
   it('should match opus-4.6 pattern', () => {
     const result = calculateCost('some-opus-4.6-model', 1000000, 0);
-    expect(result.pricePerInputMToken).toBe(15.0);
+    expect(result.pricePerInputMToken).toBe(5.0);
+  });
+
+  it('should calculate cost for Sonnet 4.6', () => {
+    const result = calculateCost('claude-sonnet-4-6', 1000000, 100000);
+    expect(result.pricePerInputMToken).toBe(3.0);
+    expect(result.pricePerOutputMToken).toBe(15.0);
+    expect(result.estimatedCost).toBe(4.5);
+  });
+
+  it('should match sonnet-4.6 pattern', () => {
+    const result = calculateCost('some-sonnet-4.6-model', 1000000, 0);
+    expect(result.pricePerInputMToken).toBe(3.0);
   });
 
   it('should match sonnet-4.5 pattern', () => {
@@ -133,7 +154,7 @@ describe('new model pricing', () => {
 
   it('should match haiku-4.5 pattern', () => {
     const result = calculateCost('some-haiku-4.5-model', 1000000, 0);
-    expect(result.pricePerInputMToken).toBe(0.80);
+    expect(result.pricePerInputMToken).toBe(1.0);
   });
 
   it('should NOT return Sonnet 4 pricing for 3-sonnet', () => {
@@ -151,6 +172,10 @@ describe('new model short names', () => {
 
   it('should return sonnet-4.5 for Sonnet 4.5', () => {
     expect(getShortModelName('claude-sonnet-4-5-20250929')).toBe('sonnet-4.5');
+  });
+
+  it('should return sonnet-4.6 for Sonnet 4.6', () => {
+    expect(getShortModelName('claude-sonnet-4-6')).toBe('sonnet-4.6');
   });
 
   it('should return haiku-4.5 for Haiku 4.5', () => {

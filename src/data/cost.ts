@@ -7,17 +7,18 @@ import { createDebug } from '../utils/debug.js';
 const debug = createDebug('cost');
 
 const MODEL_PRICING: Record<string, { input: number; output: number }> = {
-  // Claude 4 Opus
-  'claude-opus-4-6-20250610': { input: 15.0, output: 75.0 },
-  'claude-opus-4-5-20251101': { input: 15.0, output: 75.0 },
-  'claude-opus-4-20250514': { input: 15.0, output: 75.0 },
+  // Claude 4.6
+  'claude-opus-4-6-20250610': { input: 5.0, output: 25.0 },
+  'claude-sonnet-4-6': { input: 3.0, output: 15.0 },
 
-  // Claude 4 Sonnet
+  // Claude 4.5
+  'claude-opus-4-5-20251101': { input: 5.0, output: 25.0 },
   'claude-sonnet-4-5-20250929': { input: 3.0, output: 15.0 },
-  'claude-sonnet-4-20250514': { input: 3.0, output: 15.0 },
+  'claude-haiku-4-5-20251001': { input: 1.0, output: 5.0 },
 
-  // Claude 4 Haiku
-  'claude-haiku-4-5-20251001': { input: 0.80, output: 4.0 },
+  // Claude 4
+  'claude-opus-4-20250514': { input: 15.0, output: 75.0 },
+  'claude-sonnet-4-20250514': { input: 3.0, output: 15.0 },
 
   // Claude 3.5 Series
   'claude-3-5-sonnet-20241022': { input: 3.0, output: 15.0 },
@@ -81,6 +82,9 @@ function getModelPricing(modelId: string): { input: number; output: number } {
   }
 
   // Sonnet variants (most specific first)
+  if (normalizedId.includes('sonnet-4-6') || normalizedId.includes('sonnet-4.6')) {
+    return MODEL_PRICING['claude-sonnet-4-6'];
+  }
   if (normalizedId.includes('sonnet-4-5') || normalizedId.includes('sonnet-4.5')) {
     return MODEL_PRICING['claude-sonnet-4-5-20250929'];
   }
@@ -114,7 +118,7 @@ function getModelPricing(modelId: string): { input: number; output: number } {
 
   // Generic fallbacks (latest version of each)
   if (normalizedId.includes('sonnet')) {
-    return MODEL_PRICING['claude-sonnet-4-5-20250929'];
+    return MODEL_PRICING['claude-sonnet-4-6'];
   }
   if (normalizedId.includes('haiku')) {
     return MODEL_PRICING['claude-haiku-4-5-20251001'];
@@ -150,6 +154,7 @@ export function getShortModelName(modelId: string): string {
   if (lower.includes('opus-4-6') || lower.includes('opus-4.6')) return 'opus-4.6';
   if (lower.includes('opus-4-5') || lower.includes('opus-4.5')) return 'opus-4.5';
   if (lower.includes('opus-4') || lower.includes('opus4')) return 'opus-4';
+  if (lower.includes('sonnet-4-6') || lower.includes('sonnet-4.6')) return 'sonnet-4.6';
   if (lower.includes('sonnet-4-5') || lower.includes('sonnet-4.5')) return 'sonnet-4.5';
   if (lower.includes('sonnet-4') || lower.includes('sonnet4')) return 'sonnet-4';
   if (lower.includes('haiku-4-5') || lower.includes('haiku-4.5')) return 'haiku-4.5';
