@@ -6,7 +6,7 @@
 
 import { readFileSync, writeFileSync, mkdirSync, renameSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { homedir, hostname } from 'node:os';
+import { hostname } from 'node:os';
 import type {
   InstanceSync,
   SyncStatus,
@@ -15,12 +15,13 @@ import type {
   InstanceConflict,
 } from '../types/instance-sync.js';
 import { createDebug } from '../utils/debug.js';
+import { getClaudeConfigDir } from '../utils/paths.js';
 
 const debug = createDebug('instance-sync');
 
-const INSTANCES_DIR = join(homedir(), '.claude');
+const INSTANCES_DIR = getClaudeConfigDir();
 const INSTANCES_FILE = join(INSTANCES_DIR, 'cockpit-instances.json');
-const TEAMS_DIR = join(homedir(), '.claude', 'teams');
+const TEAMS_DIR = join(INSTANCES_DIR, 'teams');
 const STALE_THRESHOLD_MS = 15_000; // 15 seconds
 const READ_CACHE_MS = 3_000; // re-read file at most every 3 seconds
 

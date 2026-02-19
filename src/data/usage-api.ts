@@ -5,11 +5,11 @@
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync, existsSync, realpathSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { request as httpsRequest } from 'node:https';
 import type { UsageData } from '../types/index.js';
 import { createDebug } from '../utils/debug.js';
+import { getClaudeConfigDir } from '../utils/paths.js';
 
 const debug = createDebug('usage-api');
 
@@ -157,8 +157,8 @@ function readKeychainCredentials(): Credentials | null {
 
 function readFileCredentials(): Credentials | null {
   try {
-    // Start with .claude directory
-    const claudeDir = join(homedir(), '.claude');
+    // Start with .claude directory (respects CLAUDE_CONFIG_DIR)
+    const claudeDir = getClaudeConfigDir();
     
     // Resolve .claude directory if it's a symlink
     let resolvedClaudeDir = claudeDir;

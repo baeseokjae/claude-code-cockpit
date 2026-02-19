@@ -4,17 +4,17 @@
 
 import { readFileSync, existsSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
-import { homedir } from 'node:os';
 import type { CockpitConfig, ThemeName } from '../types/index.js';
 import { DEFAULT_CONFIG, getDefaultDisplay } from './defaults.js';
 import { PRESETS, type PresetName } from './presets.js';
 import { createDebug } from '../utils/debug.js';
+import { getClaudeConfigDir } from '../utils/paths.js';
 
 const debug = createDebug('config');
 
 function getConfigPath(): string {
-  // Start with base path
-  const claudeDir = join(homedir(), '.claude');
+  // Start with base path (respects CLAUDE_CONFIG_DIR)
+  const claudeDir = getClaudeConfigDir();
   
   // Resolve .claude directory if it's a symlink
   let resolvedClaudeDir = claudeDir;
