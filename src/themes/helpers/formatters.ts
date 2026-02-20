@@ -51,17 +51,44 @@ export function formatDetailAgentsSummary(
 ): string | null {
   if (agents.length === 0) return null;
   const { palette, icons } = options;
-  const counts = new Map<string, number>();
+
+  // Dedup by type with models, tools, status
+  const agentMap = new Map<string, { count: number; totalTools: number; isRunning: boolean; errorCount: number; models: Set<string> }>();
   for (const agent of agents) {
-    counts.set(agent.type, (counts.get(agent.type) || 0) + 1);
+    const key = agent.type;
+    const existing = agentMap.get(key);
+    const modelChar = agent.model ? agent.model[0].toUpperCase() : '';
+    const toolCount = agent.subagentToolCount || 0;
+    const isRunning = agent.status === 'running';
+    const hasError = agent.status === 'error';
+    if (existing) {
+      existing.count++;
+      existing.totalTools += toolCount;
+      if (isRunning) existing.isRunning = true;
+      if (hasError) existing.errorCount++;
+      if (modelChar) existing.models.add(modelChar);
+    } else {
+      const models = new Set<string>();
+      if (modelChar) models.add(modelChar);
+      agentMap.set(key, { count: 1, totalTools: toolCount, isRunning, errorCount: hasError ? 1 : 0, models });
+    }
   }
-  const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
-  const items = sorted.slice(0, 3).map(([type, count]) => {
+
+  const sorted = [...agentMap.entries()].sort((a, b) => b[1].count - a[1].count);
+  const items = sorted.slice(0, 3).map(([type, info]) => {
     const displayType = options.transform?.case === 'upper' ? type.toUpperCase() : type;
-    return options.useColor !== false
-      ? hex(palette.text, `${displayType} x${count}`)
-      : `${displayType} x${count}`;
+    const modelStr = info.models.size > 0 ? `[${[...info.models].join('/')}]` : '';
+    const toolStr = info.totalTools > 0 ? `⚡${info.totalTools}` : '';
+    const errorStr = info.errorCount > 0 ? `✗${info.errorCount}` : '';
+    const detail = modelStr + toolStr + errorStr;
+
+    if (options.useColor !== false) {
+      return hex(palette.text, `${displayType} x${info.count}`) +
+        (detail ? ' ' + hex(palette.muted, detail) : '');
+    }
+    return `${displayType} x${info.count}` + (detail ? ` ${detail}` : '');
   });
+
   const label = options.useColor !== false
     ? hex(palette.categoryAgents, icons.categoryAgents + ' Agents: ')
     : icons.categoryAgents + ' Agents: ';

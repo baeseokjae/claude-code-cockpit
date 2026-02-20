@@ -119,7 +119,7 @@ export const auroraTheme: Theme = {
     const pipeSep = hex(p.muted, ' │ ');
     const bullet = (color: string) => hex(color, '●') + ' ';
 
-    // === Line 1: Model [session] | Progress Context | Project Git | Usage Duration ===
+    // === Line 1: Model [session] │ ▰▰▰▱▱ XX% │ Project(branch) ⇡3 +125 -30 │ 5m32s ===
     const { model, percent, percentStr, duration, sessionName } = prepareRenderData(ctx);
     const modelText = hex(p.blue, model);
     const sessionText = sessionName ? hex(p.muted, ` [${sessionName}]`) : '';
@@ -156,13 +156,12 @@ export const auroraTheme: Theme = {
       gitActivity += ' ' + hex(p.green, `+${fmtNum(added)}`) + ' ' + hex(p.red, `-${fmtNum(removed)}`);
     }
 
-    // Duration only (cost moved to Line 2 Usage)
+    // Duration only (cost is on Line 2 with Usage)
     const line1End: string[] = [];
     if (durationText) {
       line1End.push(durationText);
     }
 
-    // Line 1: Model [session] │ ▰▰▰▱▱ XX% │ Project(branch) ⇡3 1PR │ 5m32s
     const line1EndText = line1End.length > 0 ? pipeSep + line1End.join(' ') : '';
 
     // Width-aware assembly: fixed parts first, then fit middle into remaining space
@@ -223,7 +222,7 @@ export const auroraTheme: Theme = {
         const fiveColor = fiveHour >= 90 ? p.red : fiveHour >= 75 ? p.peach : fiveHour >= 50 ? p.yellow : p.green;
         let fiveHourText = hex(fiveColor, `5h:${Math.round(fiveHour)}%`);
         if (fiveHour >= 50) {
-          const fiveReset = formatResetTime(ctx.usageData.fiveHourResetAt, 'compact');
+          const fiveReset = formatResetTime(ctx.usageData.fiveHourResetAt);
           if (fiveReset) {
             fiveHourText += hex(p.muted, ` ↻${fiveReset}`);
           }
@@ -249,7 +248,7 @@ export const auroraTheme: Theme = {
     }
     lines.push(usageLine);
 
-    // === Line 3: ● Tools: Read+12  Edit+8  Bash+5  +87% -13% (28) ===
+    // === Line 3: ● Tools: Read+12  Edit+8  Bash+5  ✓98% ✗2% (28) ===
     if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
       const toolCounts = new Map<string, number>();
       let runningTool: string | null = null;
@@ -280,10 +279,10 @@ export const auroraTheme: Theme = {
       lines.push(bullet(p.blue) + line3);
     }
 
-    // === Line 4: ● Agents: [S]8xgeneral-purpose~⚡37  [O]Plan+  Explore+ ===
+    // === Line 4: ● Agents: 3×[S/O]general-purpose⚡37✗1  [O]Plan ===
     if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
       // Dedup agents by type
-      const agentMap = new Map<string, { count: number; totalTools: number; isRunning: boolean; hasError: boolean; modelChar: string }>();
+      const agentMap = new Map<string, { count: number; totalTools: number; isRunning: boolean; errorCount: number; models: Set<string> }>();
       for (const agent of ctx.transcript.agents) {
         const key = agent.type;
         const existing = agentMap.get(key);
@@ -295,25 +294,28 @@ export const auroraTheme: Theme = {
           existing.count++;
           existing.totalTools += toolCount;
           if (isRunning) existing.isRunning = true;
-          if (hasError) existing.hasError = true;
-          if (!existing.modelChar && modelChar) existing.modelChar = modelChar;
+          if (hasError) existing.errorCount++;
+          if (modelChar) existing.models.add(modelChar);
         } else {
-          agentMap.set(key, { count: 1, totalTools: toolCount, isRunning, hasError, modelChar });
+          const models = new Set<string>();
+          if (modelChar) models.add(modelChar);
+          agentMap.set(key, { count: 1, totalTools: toolCount, isRunning, errorCount: hasError ? 1 : 0, models });
         }
       }
 
       const agentItems: string[] = [];
       for (const [type, info] of agentMap) {
-        const statusColor = info.hasError ? p.red : info.isRunning ? p.yellow : p.green;
-        const modelStr = info.modelChar ? hex(p.muted, `[${info.modelChar}]`) : '';
-        const countStr = hex(p.muted, `${info.count}`);
+        const statusColor = info.isRunning ? p.yellow : info.errorCount > 0 ? p.text : p.green;
+        const modelStr = info.models.size > 0 ? hex(p.muted, `[${[...info.models].join('/')}]`) : '';
+        const countStr = info.count > 1 ? hex(p.muted, `${info.count}×`) : '';
         const subToolsStr = info.totalTools > 0 ? hex(p.teal, `⚡${info.totalTools}`) : '';
-        agentItems.push(countStr + ' ' + modelStr + hex(statusColor, type) + subToolsStr);
+        const errorStr = info.errorCount > 0 ? hex(p.red, `✗${info.errorCount}`) : '';
+        agentItems.push(countStr + modelStr + hex(statusColor, type) + subToolsStr + errorStr);
       }
       lines.push(bullet(p.mauve) + hex(p.mauve, 'Agents:') + ' ' + agentItems.join(gap));
     }
 
-    // === Line 5: ● Phase: [IMPLEMENT] conf:57%  Tests: +87%  Cost: $15.04 -$0.69  Cache: 87%  125 tok/s ===
+    // === Line 5: ● Phase: [IMPLEMENT] conf:57%  Tests: + 87%  Config: 2 .md  3 MCP  Cache: 87%  125 tok/s ===
     const metaParts: string[] = [];
 
     if (ctx.config.display.showWorkflowPhase && ctx.workflowState && ctx.workflowState.currentPhase !== 'UNKNOWN') {
@@ -358,8 +360,6 @@ export const auroraTheme: Theme = {
       }
     }
 
-    // Cost moved to Line 1
-
     if (ctx.config.display.showCacheMetrics && ctx.cacheMetrics) {
       const hitRate = Math.round(ctx.cacheMetrics.cacheHitRate);
       if (hitRate < 95) {
@@ -379,22 +379,22 @@ export const auroraTheme: Theme = {
     }
 
     // === Line 6: Alerts (errors, violations, compact suggestion, MCP) ===
-    const line7Parts: string[] = [];
+    const line6Parts: string[] = [];
 
     const bashErrorsText = formatBashErrorsDisplay(ctx, p, this.icons);
-    if (bashErrorsText) line7Parts.push(bashErrorsText);
+    if (bashErrorsText) line6Parts.push(bashErrorsText);
 
     const violationsText = formatViolationsDisplay(ctx, p, this.icons);
-    if (violationsText) line7Parts.push(violationsText);
+    if (violationsText) line6Parts.push(violationsText);
 
     const compactText = formatCompactSuggestionDisplay(ctx, p, this.icons);
-    if (compactText) line7Parts.push(compactText);
+    if (compactText) line6Parts.push(compactText);
 
     const mcpStatusText = formatMcpStatusDisplay(ctx, p);
-    if (mcpStatusText) line7Parts.push(mcpStatusText);
+    if (mcpStatusText) line6Parts.push(mcpStatusText);
 
-    if (line7Parts.length > 0) {
-      lines.push(line7Parts.join(gap));
+    if (line6Parts.length > 0) {
+      lines.push(line6Parts.join(gap));
     }
 
     // === Extra: Todos + Skills ===
@@ -419,7 +419,7 @@ export const auroraTheme: Theme = {
     const topBorder = this.chars.boxCornerTL + this.chars.boxHorizontal.repeat(width - 2) + this.chars.boxCornerTR;
     lines.push(hex(this.palette.overlay, topBorder));
 
-    // Line 1: Model, Progress, Context, Cost, Duration
+    // Line 1: Model [session] ▰▰▰▱▱ XX% (tokens) ~$cost +lines cache  Usage  duration speed
     const { model, percent, percentStr, sessionName } = prepareRenderData(ctx);
     const modelText = hex(this.palette.blue, model);
     const sessionText = sessionName ? hex(this.palette.muted, ` [${sessionName}]`) : '';
