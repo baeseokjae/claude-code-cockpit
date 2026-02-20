@@ -31,7 +31,6 @@ export interface RenderContext {
   gitStatus: GitStatus | null;
   usageData: UsageData | null;
   tokenSpeed: TokenSpeed | null;
-  extraLabel: string | null;
 
   linesData: LinesData | null;
   cacheMetrics: CacheMetrics | null;

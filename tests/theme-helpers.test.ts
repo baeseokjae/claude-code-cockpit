@@ -269,7 +269,6 @@ function createMockContext(
     gitStatus: null,
     usageData: null,
     tokenSpeed: null,
-    extraLabel: null,
     sessionDuration: '1m',
     theme: {} as any,
     detailMode: false,

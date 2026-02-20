@@ -199,7 +199,6 @@ describe('theme rendering', () => {
       gitStatus: { branch: 'main', isDirty: true } as GitStatus,
       usageData: null,
       tokenSpeed: null,
-      extraLabel: null,
       sessionDuration: '1m',
       theme: auroraTheme,
       detailMode: false,

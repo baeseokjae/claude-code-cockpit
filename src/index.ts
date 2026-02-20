@@ -16,14 +16,6 @@ import { calculateTokenSpeed } from './data/speed-tracker.js';
 import { calculateSessionDuration } from './data/session-time.js';
 import { getLinesData } from './data/lines.js';
 import { calculateCacheMetrics } from './data/cache-metrics.js';
-import { calculateCompactSuggestion } from './data/compact-suggestion.js';
-import { extractViolations } from './data/rule-violations.js';
-import { readMcpConfig } from './input/mcp-reader.js';
-import { detectWorkflowPhase } from './data/workflow-phase.js';
-import { getTestCoverageSummary } from './data/test-coverage.js';
-import { getPassAtKSummary } from './data/pass-at-k.js';
-import { analyzeMcpStatus } from './data/mcp-status.js';
-import { getInstanceSync } from './data/instance-sync.js';
 import { extractGitActivity } from './data/git-activity.js';
 import { calculateToolStats } from './data/tool-stats.js';
 import { extractBashErrors } from './data/bash-errors.js';
@@ -34,6 +26,8 @@ import { writeSessionFile } from './output/session-file.js';
 import { createDebug } from './utils/debug.js';
 import { getTerminalWidth } from './utils/terminal-width.js';
 import { flushCache } from './utils/cache.js';
+import { collectFeatures } from './features/collector.js';
+import { FEATURE_REGISTRY } from './features/registry.js';
 
 const debug = createDebug('main');
 
@@ -86,9 +80,6 @@ export async function main(deps: MainDeps = defaultDeps): Promise<void> {
 
     const transcriptPath = stdin.transcript_path || null;
     const transcript = await deps.parseTranscript(transcriptPath);
-    const gitActivity = extractGitActivity(transcript.tools) || null;
-    const toolStats = calculateToolStats(transcript.tools) || null;
-    const bashErrors = extractBashErrors(transcript.tools) || null;
 
     const cwd = getCwd(stdin);
     const rawWidth = getTerminalWidth();
@@ -96,98 +87,43 @@ export async function main(deps: MainDeps = defaultDeps): Promise<void> {
     const tier = getTier(rawWidth, theme.layout);
     const isDetailed = tier >= 3 || config.detailMode || config.preset === 'full';
 
-    // Tier 2+: config counts require filesystem reads
-    const configCounts = tier >= 2
-      ? deps.countConfigs(cwd)
-      : { claudeMdCount: 0, rulesCount: 0, mcpCount: 0, hooksCount: 0 };
-
-    // Git: limit expensive options by tier
-    const gitStatus = await deps.getGitStatus(cwd || undefined, {
-      showAllBranches: tier >= 3 && config.display.showAllBranches,
-      showAllBranchesDepth: config.display.showAllBranchesDepth,
-      includeTag: tier >= 2 && config.display.showGitTag,
-      includeWorktrees: tier >= 3 && config.display.showGitWorktrees,
-    });
+    // Core derived: 순수 계산, 항상 실행
+    const gitActivity = extractGitActivity(transcript.tools) || null;
+    const toolStats = calculateToolStats(transcript.tools) || null;
+    const bashErrors = extractBashErrors(transcript.tools) || null;
 
     const durationMs = stdin.cost?.total_duration_ms ||
       stdin.cost?.total_api_duration_ms ||
       calculateSessionDuration(stdin.session_id);
     const sessionDuration = formatSessionDuration(durationMs);
-
-    const extraLabel = null;
-
-    // Tier 2+: usage API call
-    const usageData = tier >= 2 && config.display.showUsage ? await deps.fetchUsage() : null;
-
     const tokenSpeed = calculateTokenSpeed(stdin, durationMs);
-
     const linesData = getLinesData(stdin);
     const cacheMetrics = calculateCacheMetrics(stdin);
 
-    const compactSuggestion = config.display.showCompactSuggestion
-      ? calculateCompactSuggestion(
-          transcript.tools,
-          config.notifications.compactSuggestionThreshold
-        )
-      : null;
-
-    const violations = config.display.showViolations
-      ? extractViolations(transcript.tools)
-      : null;
-
-    // Tier 2+: MCP config requires filesystem reads
-    const mcpInfo = tier >= 2 && config.display.showMcpImpact
-      ? readMcpConfig(cwd || undefined)
-      : null;
-
-    // Analytics: Tier 3 or detailMode
-    const workflowState = isDetailed && config.display.showWorkflowPhase
-      ? detectWorkflowPhase(transcript.tools, transcript.agents, transcript.todos)
-      : null;
-
-    const testCoverage = isDetailed && config.display.showTestCoverage
-      ? getTestCoverageSummary(cwd || undefined)
-      : null;
-
-    const passAtK = isDetailed && config.display.showPassAtK
-      ? getPassAtKSummary(transcript.tools)
-      : null;
-
-    const mcpStatus = isDetailed && config.display.showMcpStatus
-      ? analyzeMcpStatus(transcript.tools, mcpInfo)
-      : null;
-
-    const instanceSync = isDetailed && config.display.showInstanceSync
-      ? getInstanceSync(stdin.session_id, cwd || undefined, gitStatus?.branch)
-      : null;
+    // Feature collection: 레지스트리 기반 조건부 수집
+    const features = await collectFeatures(FEATURE_REGISTRY, {
+      stdin, transcript, config, cwd, tier, isDetailed, durationMs, deps,
+    });
 
     const ctx: RenderContext = {
       width,
       stdin,
       transcript,
       config,
-      configCounts,
-      gitStatus,
-      usageData,
-      tokenSpeed,
-      extraLabel,
-      linesData,
-      cacheMetrics,
-      gitActivity,
-      toolStats,
-      bashErrors,
-      compactSuggestion,
-      violations,
-      mcpInfo,
-      workflowState,
-      testCoverage,
-      passAtK,
-      mcpStatus,
-      instanceSync,
       sessionDuration,
       theme,
       detailMode: config.detailMode,
       tier,
+      gitActivity,
+      toolStats,
+      bashErrors,
+      tokenSpeed,
+      linesData,
+      cacheMetrics,
+      ...(features as Pick<RenderContext,
+        'configCounts' | 'gitStatus' | 'usageData' | 'compactSuggestion' | 'violations' |
+        'mcpInfo' | 'workflowState' | 'testCoverage' | 'passAtK' | 'mcpStatus' | 'instanceSync'
+      >),
     };
 
     const lines = theme.render(ctx);
