@@ -131,24 +131,6 @@ export function aggregateToolCounts(ctx: RenderContext): ToolCounts {
 }
 
 // ============================================
-// Agent Aggregation (pure logic)
-// ============================================
-
-export interface AgentSummary {
-  type: string;
-  model: string | null;
-  isRunning: boolean;
-}
-
-export function aggregateAgents(ctx: RenderContext, limit = 2): AgentSummary[] {
-  return ctx.transcript.agents.slice(0, limit).map((agent) => ({
-    type: agent.type,
-    model: agent.model || null,
-    isRunning: agent.status === 'running',
-  }));
-}
-
-// ============================================
 // Todo Aggregation (pure logic)
 // ============================================
 

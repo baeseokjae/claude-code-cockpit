@@ -8,7 +8,6 @@ import {
   applyTextTransform,
   aggregateToolCounts,
   aggregateTodos,
-  aggregateAgents,
   getSessionName,
   extractProjectGitData,
   formatContextHint,
@@ -104,24 +103,6 @@ describe('theme helpers', () => {
       expect(result.counts.size).toBe(0);
       expect(result.runningTool).toBe(null);
       expect(result.total).toBe(0);
-    });
-  });
-
-  describe('aggregateAgents', () => {
-    it('should summarize agents correctly', () => {
-      const ctx = createMockContext({
-        agents: [
-          { id: '1', type: 'Explore', model: 'sonnet', status: 'running' },
-          { id: '2', type: 'Plan', model: null, status: 'completed' },
-          { id: '3', type: 'TDD', model: 'haiku', status: 'pending' },
-        ],
-      });
-
-      const result = aggregateAgents(ctx, 2);
-
-      expect(result).toHaveLength(2);
-      expect(result[0]).toEqual({ type: 'Explore', model: 'sonnet', isRunning: true });
-      expect(result[1]).toEqual({ type: 'Plan', model: null, isRunning: false });
     });
   });
 
