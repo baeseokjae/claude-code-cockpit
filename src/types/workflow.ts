@@ -1,7 +1,3 @@
-/**
- * Workflow phase type definitions
- */
-
 export type WorkflowPhase = 'PLAN' | 'IMPLEMENT' | 'REVIEW' | 'UNKNOWN';
 
 export interface WorkflowState {

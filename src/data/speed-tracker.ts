@@ -1,7 +1,3 @@
-/**
- * Token generation speed tracking
- */
-
 import type { StdinData } from '../types/index.js';
 import { createDebug } from '../utils/debug.js';
 

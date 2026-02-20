@@ -1,7 +1,3 @@
-/**
- * CLI argument parsing
- */
-
 import { createDebug } from '../utils/debug.js';
 
 const debug = createDebug('cli');

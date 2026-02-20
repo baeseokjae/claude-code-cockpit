@@ -1,7 +1,3 @@
-/**
- * Configuration types
- */
-
 import type { PresetName } from '../config/presets.js';
 
 export type ThemeName = 'aurora' | 'neon' | 'mono' | 'zen' | 'retro';

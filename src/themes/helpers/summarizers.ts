@@ -7,10 +7,6 @@ import { formatCount } from '../../render/superscript.js';
 import { bold, underline, hex } from '../../render/colors.js';
 import type { TextTransform } from './data-extraction.js';
 
-// ============================================
-// Compact Summarize Functions (styled: aurora/neon)
-// ============================================
-
 export interface CompactStyledOptions {
   palette: ColorPalette;
   icons: IconSet;
@@ -117,10 +113,6 @@ export function summarizeSkillsStyled(ctx: RenderContext, opts: CompactStyledOpt
   return hex(palette.mauve, icons.skill) + ' ' + skillItems.join(' ');
 }
 
-// ============================================
-// Expanded Line Functions (styled: aurora/neon)
-// ============================================
-
 export function renderToolsLineStyled(ctx: RenderContext, opts: CompactStyledOptions): string {
   const { palette, icons, transform } = opts;
   const parts: string[] = [];
@@ -198,10 +190,6 @@ export function renderSkillsLineStyled(ctx: RenderContext, opts: CompactStyledOp
   const labelText = transform?.case === 'upper' ? 'SKILLS: ' : 'Skills: ';
   return hex(palette.mauve, icons.skill + ' ' + labelText) + parts.join('   ');
 }
-
-// ============================================
-// Compact Summarize Functions (plain: mono/retro)
-// ============================================
 
 export interface CompactPlainOptions {
   transform?: TextTransform;
@@ -282,10 +270,6 @@ export function summarizeSkillsPlain(ctx: RenderContext, opts: CompactPlainOptio
 
   return '\u25CF ' + skillItems;
 }
-
-// ============================================
-// Expanded Line Functions (plain: mono)
-// ============================================
 
 export function renderToolsLinePlain(ctx: RenderContext): string {
   const tools = ctx.transcript.tools

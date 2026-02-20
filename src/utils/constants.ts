@@ -1,7 +1,3 @@
-/**
- * Global constants
- */
-
 export const AUTOCOMPACT_BUFFER_PERCENT = 25;
 
 export const CONTEXT_WARNING_THRESHOLD = 75;

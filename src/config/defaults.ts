@@ -1,7 +1,3 @@
-/**
- * Default configuration values
- */
-
 import type { CockpitConfig } from '../types/index.js';
 import { PRESETS, type PresetName } from './presets.js';
 

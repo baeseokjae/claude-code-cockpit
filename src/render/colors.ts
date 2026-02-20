@@ -1,7 +1,3 @@
-/**
- * ANSI color functions
- */
-
 export const RESET = '\x1b[0m';
 
 export function red(text: string): string {

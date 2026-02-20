@@ -1,7 +1,3 @@
-/**
- * Cache metrics types
- */
-
 export interface CacheMetrics {
   cacheCreationTokens: number;
   cacheReadTokens: number;

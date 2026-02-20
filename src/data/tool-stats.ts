@@ -1,7 +1,3 @@
-/**
- * Calculate tool execution statistics
- */
-
 import type { ToolEntry, ToolStats } from '../types/index.js';
 import { createDebug } from '../utils/debug.js';
 

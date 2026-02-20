@@ -1,7 +1,3 @@
-/**
- * MCP (Model Context Protocol) status type definitions
- */
-
 export interface McpToolUsage {
   toolName: string;
   serverName: string;

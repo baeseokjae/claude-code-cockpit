@@ -14,7 +14,6 @@ export function writeOutput(lines: string[]): void {
   }
 }
 
-// ANSI escape sequence regex
 const ANSI_RE = /\x1b\[[0-9;]*m/g;
 
 /**

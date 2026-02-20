@@ -1,7 +1,3 @@
-/**
- * Usage API response types
- */
-
 export interface UsageData {
   planName: string;
   fiveHour: number;

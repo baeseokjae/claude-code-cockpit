@@ -1,7 +1,3 @@
-/**
- * Rule violation type definitions
- */
-
 export type ViolationType =
   | 'console_log'
   | 'hardcoded_secret'

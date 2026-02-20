@@ -1,7 +1,3 @@
-/**
- * Configuration loader and merger
- */
-
 import { readFileSync, existsSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import type { CockpitConfig, ThemeName } from '../types/index.js';

@@ -1,7 +1,3 @@
-/**
- * Test coverage type definitions
- */
-
 export interface CoverageMetrics {
   statements: number;
   branches: number;

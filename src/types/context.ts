@@ -35,25 +35,19 @@ export interface RenderContext {
   linesData: LinesData | null;
   cacheMetrics: CacheMetrics | null;
 
-  // New features from transcript analysis
   gitActivity: GitActivity | null;
   toolStats: ToolStats | null;
   bashErrors: BashError[] | null;
 
-  // Strategic compact suggestion
   compactSuggestion: CompactSuggestion | null;
 
-  // Rule violations and MCP impact
   violations: ViolationSummary | null;
   mcpInfo: McpToolInfo | null;
 
-  // Workflow phase tracking
   workflowState: WorkflowState | null;
 
-  // Phase 4 features
   testCoverage: CoverageSummary | null;
   passAtK: PassAtKSummary | null;
-  // Phase 5 features
   mcpStatus: McpStatus | null;
   instanceSync: InstanceSync | null;
 

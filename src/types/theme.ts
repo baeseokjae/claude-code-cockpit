@@ -1,7 +1,3 @@
-/**
- * Theme system types
- */
-
 import type { RenderContext } from './context.js';
 import type { ThemeName } from './config.js';
 

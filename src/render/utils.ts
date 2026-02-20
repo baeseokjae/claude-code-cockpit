@@ -1,7 +1,3 @@
-/**
- * Rendering utility functions
- */
-
 import { basename, dirname } from 'node:path';
 
 export function visualLength(text: string): number {

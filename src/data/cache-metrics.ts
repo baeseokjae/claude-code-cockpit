@@ -1,6 +1,3 @@
-/**
- * Calculate cache metrics from stdin context window data
- */
 import type { StdinData, CacheMetrics } from '../types/index.js';
 import { createDebug } from '../utils/debug.js';
 import { getModelInfo } from './models.js';

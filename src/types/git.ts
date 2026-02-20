@@ -1,7 +1,3 @@
-/**
- * Git status information types
- */
-
 export interface GitStatus {
   branch: string;
   isDirty: boolean;

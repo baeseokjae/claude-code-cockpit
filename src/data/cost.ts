@@ -1,6 +1,3 @@
-/**
- * Cost estimation logic based on model pricing
- */
 import { createDebug } from '../utils/debug.js';
 import { getModelInfo } from './models.js';
 

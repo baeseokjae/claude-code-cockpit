@@ -1,7 +1,3 @@
-/**
- * Superscript unicode conversion
- */
-
 const SUPERSCRIPT_DIGITS = '⁰¹²³⁴⁵⁶⁷⁸⁹';
 
 /**
