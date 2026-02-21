@@ -472,7 +472,7 @@ export const auroraTheme: Theme = {
     lines.push(this.chars.boxVertical + line1Content + ' '.repeat(Math.max(0, width - 2 - visualLength(line1Content))) + this.chars.boxVertical);
 
     // Middle border
-    const middleBorder = hex(this.palette.overlay, this.chars.boxHorizontal.repeat(width));
+    const middleBorder = hex(this.palette.overlay, this.chars.boxHorizontal.repeat(width - 2));
     lines.push(middleBorder);
 
     // Line 2: Project/Git, Config counts

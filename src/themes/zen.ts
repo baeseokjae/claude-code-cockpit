@@ -164,8 +164,9 @@ export const zenTheme: Theme = {
 
       if (current) {
         activityParts.push(hex(this.palette.categoryTodos, 'todos ') + hex(this.palette.yellow, `${current.content.substring(0, 20).toLowerCase()}`));
+      } else {
+        activityParts.push(hex(this.palette.categoryTodos, 'todos ') + hex(this.palette.muted, `${completed}/${total}`));
       }
-      activityParts.push(hex(this.palette.categoryTodos, 'todos ') + hex(this.palette.muted, `${completed}/${total}`));
     }
 
     if (ctx.config.display.showSkills && ctx.transcript.skills.length > 0) {
