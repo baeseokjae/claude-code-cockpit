@@ -59,11 +59,6 @@ export interface CockpitConfig {
   rightMargin: number;
 
   maxActivityWidgets?: number;
-
-  performance: {
-    maxTools: number;
-    maxAgents: number;
-  };
 }
 
 export interface ConfigCounts {

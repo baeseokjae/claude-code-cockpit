@@ -47,7 +47,7 @@ interface CacheEntry {
 let cache: CacheEntry | null = null;
 let keychainLastFailure = 0;
 
-export class UsageAPIError extends Error {
+class UsageAPIError extends Error {
   constructor(
     message: string,
     public readonly code: string
@@ -275,10 +275,6 @@ function sanitizePercent(value: unknown): number {
     return 0;
   }
   return Math.max(0, Math.min(100, value));
-}
-
-export function formatUsagePercent(percent: number): string {
-  return `${Math.round(percent)}%`;
 }
 
 export function formatResetTime(isoTimestamp: string | null): string {

@@ -65,7 +65,7 @@ export const monoTheme: Theme = {
     const { model, percent, percentStr, duration, sessionName } = prepareRenderData(ctx);
     const sessionText = sessionName ? ` [${sessionName}]` : '';
 
-    const projectGit = formatProjectGit(ctx, null, null, { prefix: ' | ' });
+    const projectGit = formatProjectGit(ctx, null, { prefix: ' | ' });
 
     const linesText = formatLinesDisplay(ctx, this.palette, this.icons, 'compact');
     const linesDisplay = linesText ? ` ${linesText}` : '';
@@ -84,7 +84,7 @@ export const monoTheme: Theme = {
 
     const progressBar = createProgressBar(percent || 0, 10, this.chars.progressFilled, this.chars.progressEmpty);
 
-    const projectGit = formatProjectGit(ctx, null, null, { prefix: ' | ' });
+    const projectGit = formatProjectGit(ctx, null, { prefix: ' | ' });
 
     // Usage (Mono style: no color)
     const usage = ctx.config.display.showUsage && ctx.usageData
@@ -183,7 +183,7 @@ export const monoTheme: Theme = {
     lines.push(`  ${parts.join('  ')}`);
 
     // Line 2
-    const projectGit = formatProjectGit(ctx, null, null, { prefix: ' | ' });
+    const projectGit = formatProjectGit(ctx, null, { prefix: ' | ' });
 
     const configParts: string[] = [];
     if (ctx.config.display.showConfigCounts) {

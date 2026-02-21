@@ -101,7 +101,7 @@ export const auroraTheme: Theme = {
     const contextHint = formatContextHint(percent, this.palette) || '';
 
     // Project and git with parentheses and links
-    const projectGit = formatProjectGit(ctx, this.palette, this.icons, { showFileStats: true });
+    const projectGit = formatProjectGit(ctx, this.palette, { showFileStats: true });
 
     const durationText = hex(this.palette.muted, ` ${duration}`);
 
@@ -129,7 +129,7 @@ export const auroraTheme: Theme = {
     const contextText = hex(progressColor, formatContextText(ctx, percentStr));
     const compactContextHint = formatContextHint(percent, p) || '';
 
-    const { project: projectText, branch: branchText } = formatProjectGitParts(ctx, p, this.icons, { showFileStats: true });
+    const { project: projectText, branch: branchText } = formatProjectGitParts(ctx, p, { showFileStats: true });
 
     const durationText = duration ? hex(p.muted, duration) : '';
 
@@ -425,7 +425,7 @@ export const auroraTheme: Theme = {
     const sessionText = sessionName ? hex(this.palette.muted, ` [${sessionName}]`) : '';
 
     // Project and git with parentheses and links (for line 2)
-    const projectGit = formatProjectGit(ctx, this.palette, this.icons, { showFileStats: true });
+    const projectGit = formatProjectGit(ctx, this.palette, { showFileStats: true });
 
     const progressBar = createProgressBar(percent || 0, 10, this.chars.progressFilled, this.chars.progressEmpty);
     const progressColor = getPercentColor(percent, this.palette);

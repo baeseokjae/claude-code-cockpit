@@ -86,7 +86,7 @@ export const zenTheme: Theme = {
     const contextStr = formatContextText(ctx, percentStr);
     const sessionText = sessionName ? `[${sessionName}] ` : '';
 
-    const projectGit = formatProjectGit(ctx, null, null, { subrepoStyle: 'minimal' });
+    const projectGit = formatProjectGit(ctx, null, { subrepoStyle: 'minimal' });
 
     // Token speed (Zen style: minimal)
     const speed = ctx.config.display.showTokenSpeed && ctx.tokenSpeed
@@ -114,7 +114,7 @@ export const zenTheme: Theme = {
     const contextStr = formatContextText(ctx, percentStr);
     const sessionPart = sessionName ? `[${sessionName}]` : null;
 
-    const projectGit = formatProjectGit(ctx, null, null, { subrepoStyle: 'minimal' });
+    const projectGit = formatProjectGit(ctx, null, { subrepoStyle: 'minimal' });
 
     // Usage (Zen style: minimal)
     const usage = ctx.config.display.showUsage && ctx.usageData

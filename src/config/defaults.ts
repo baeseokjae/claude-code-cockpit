@@ -59,11 +59,6 @@ export const DEFAULT_CONFIG: CockpitConfig = {
   rightMargin: 2,
 
   maxActivityWidgets: 8,
-
-  performance: {
-    maxTools: 20,
-    maxAgents: 20,
-  },
 };
 
 /**

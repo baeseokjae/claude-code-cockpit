@@ -88,7 +88,7 @@ export const neonTheme: Theme = {
     const percentText = hex(percentColor, bold(percentStr));
     const contextHint = formatContextHint(percent, this.palette) || '';
 
-    const projectGit = formatProjectGit(ctx, this.palette, this.icons, {
+    const projectGit = formatProjectGit(ctx, this.palette, {
       transform: { case: 'upper' },
       branchColor: this.palette.mauve,
     });
@@ -116,7 +116,7 @@ export const neonTheme: Theme = {
     const contextText = hex(progressColor, formatContextText(ctx, percentStr, { uppercase: true, wrap: bold }));
     const compactContextHint = formatContextHint(percent, this.palette) || '';
 
-    const projectGit = formatProjectGit(ctx, this.palette, this.icons, {
+    const projectGit = formatProjectGit(ctx, this.palette, {
       transform: { case: 'upper' },
       branchColor: this.palette.mauve,
     });
@@ -233,7 +233,7 @@ export const neonTheme: Theme = {
     lines.push(hex(this.palette.blue, midBorder));
 
     // Line 2: Project/Git, Config
-    const projectGit = formatProjectGit(ctx, this.palette, this.icons, {
+    const projectGit = formatProjectGit(ctx, this.palette, {
       transform: { case: 'upper' },
       branchColor: this.palette.mauve,
     });

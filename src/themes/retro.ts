@@ -75,7 +75,7 @@ export const retroTheme: Theme = {
     const contextStr = formatContextText(ctx, percentStr, { uppercase: true });
     const sessionText = sessionName ? ` [${sessionName}]` : '';
 
-    const projectGit = formatProjectGit(ctx, null, null, {
+    const projectGit = formatProjectGit(ctx, null, {
       transform: { case: 'upper' },
       projectPrefix: 'DIR: ',
       branchPrefix: 'BRANCH:',
@@ -101,7 +101,7 @@ export const retroTheme: Theme = {
 
     const progressBar = createProgressBar(percent || 0, 10, this.chars.progressFilled, this.chars.progressEmpty);
 
-    const projectGit = formatProjectGit(ctx, null, null, {
+    const projectGit = formatProjectGit(ctx, null, {
       transform: { case: 'upper' },
       projectPrefix: 'DIR: ',
       branchPrefix: 'BRANCH:',
@@ -230,7 +230,7 @@ export const retroTheme: Theme = {
     lines.push(hex(color, '║') + hex(warningColor, line1) + ' '.repeat(Math.max(0, innerWidth - visualLength(line1))) + hex(color, '║'));
 
     // Project info
-    const projectGit = formatProjectGit(ctx, null, null, {
+    const projectGit = formatProjectGit(ctx, null, {
       transform: { case: 'upper' },
       projectPrefix: 'DIR: ',
       branchPrefix: 'BRANCH:',

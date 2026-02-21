@@ -6,15 +6,12 @@ import { describe, it, expect } from 'vitest';
 import {
   getPercentColor,
   applyTextTransform,
-  aggregateToolCounts,
-  aggregateTodos,
   getSessionName,
-  extractProjectGitData,
   formatContextHint,
   formatContextHintPlain,
 } from '../src/themes/helpers.js';
 import { AURORA_PALETTE } from '../src/themes/palettes/aurora.js';
-import type { RenderContext, StdinData, TranscriptData, GitStatus } from '../src/types/index.js';
+import type { RenderContext, StdinData, TranscriptData } from '../src/types/index.js';
 import { DEFAULT_CONFIG } from '../src/config/defaults.js';
 
 describe('theme helpers', () => {
@@ -75,107 +72,6 @@ describe('theme helpers', () => {
       const ctx = createMockContext({}, { showSessionName: false });
       ctx.stdin.plan_name = 'my-plan';
       expect(getSessionName(ctx)).toBe(null);
-    });
-  });
-
-  describe('aggregateToolCounts', () => {
-    it('should count tools correctly', () => {
-      const ctx = createMockContext({
-        tools: [
-          { id: '1', name: 'Read', status: 'completed' },
-          { id: '2', name: 'Read', status: 'completed' },
-          { id: '3', name: 'Edit', status: 'running' },
-        ],
-      });
-
-      const result = aggregateToolCounts(ctx);
-
-      expect(result.counts.get('Read')).toBe(2);
-      expect(result.counts.get('Edit')).toBe(1);
-      expect(result.runningTool).toBe('Edit');
-      expect(result.total).toBe(3);
-    });
-
-    it('should handle empty tools', () => {
-      const ctx = createMockContext({ tools: [] });
-      const result = aggregateToolCounts(ctx);
-
-      expect(result.counts.size).toBe(0);
-      expect(result.runningTool).toBe(null);
-      expect(result.total).toBe(0);
-    });
-  });
-
-  describe('aggregateTodos', () => {
-    it('should summarize todos correctly', () => {
-      const ctx = createMockContext({
-        todos: [
-          { id: '1', content: 'Task 1', status: 'completed', activeForm: 'Task 1' },
-          { id: '2', content: 'Task 2', status: 'in_progress', activeForm: 'Task 2' },
-          { id: '3', content: 'Task 3', status: 'pending', activeForm: 'Task 3' },
-        ],
-      });
-
-      const result = aggregateTodos(ctx);
-
-      expect(result.total).toBe(3);
-      expect(result.completed).toBe(1);
-      expect(result.inProgress?.content).toBe('Task 2');
-    });
-
-    it('should handle no in_progress todo', () => {
-      const ctx = createMockContext({
-        todos: [
-          { id: '1', content: 'Task 1', status: 'completed', activeForm: 'Task 1' },
-          { id: '2', content: 'Task 2', status: 'pending', activeForm: 'Task 2' },
-        ],
-      });
-
-      const result = aggregateTodos(ctx);
-
-      expect(result.total).toBe(2);
-      expect(result.completed).toBe(1);
-      expect(result.inProgress).toBe(null);
-    });
-  });
-
-  describe('extractProjectGitData', () => {
-    it('should extract project and git data', () => {
-      const ctx = createMockContext({});
-      ctx.stdin.cwd = '/Users/patrick/project';
-      ctx.gitStatus = {
-        branch: 'main',
-        isDirty: true,
-        remoteUrl: 'https://github.com/user/repo',
-        ahead: 0,
-        behind: 0,
-        fileStats: { modified: 0, added: 0, deleted: 0, untracked: 0 },
-        subRepos: [
-          { path: 'sub1', branch: 'dev', isDirty: false },
-        ],
-      };
-
-      const result = extractProjectGitData(ctx);
-
-      expect(result.project).toBe('project');
-      expect(result.projectUrl).toBe('file:///Users/patrick/project');
-      expect(result.branch).toBe('main');
-      expect(result.branchUrl).toContain('github.com');
-      expect(result.dirty).toBe(true);
-      expect(result.subRepos).toHaveLength(1);
-    });
-
-    it('should handle no git status', () => {
-      const ctx = createMockContext({});
-      ctx.stdin.cwd = '/Users/patrick/project';
-      ctx.gitStatus = null;
-
-      const result = extractProjectGitData(ctx);
-
-      expect(result.project).toBe('project');
-      expect(result.branch).toBe(null);
-      expect(result.dirty).toBe(false);
-      expect(result.subRepos).toHaveLength(0);
     });
   });
 

@@ -4,7 +4,6 @@
 
 import type { RenderContext, ColorPalette } from '../../types/index.js';
 import { getModelName, getContextPercent, getAbsoluteTokens } from '../../input/stdin.js';
-import { fileUrl, githubBranchUrl } from '../../render/links.js';
 import { hex, bold } from '../../render/colors.js';
 import { formatPercent } from '../../render/utils.js';
 
@@ -107,81 +106,6 @@ export function formatContextText(
 }
 
 // ============================================
-// Tool Count Aggregation (pure logic)
-// ============================================
-
-export interface ToolCounts {
-  counts: Map<string, number>;
-  runningTool: string | null;
-  total: number;
-}
-
-export function aggregateToolCounts(ctx: RenderContext): ToolCounts {
-  const counts = new Map<string, number>();
-  let runningTool: string | null = null;
-
-  for (const tool of ctx.transcript.tools) {
-    counts.set(tool.name, (counts.get(tool.name) || 0) + 1);
-    if (tool.status === 'running') {
-      runningTool = tool.name;
-    }
-  }
-
-  return { counts, runningTool, total: ctx.transcript.tools.length };
-}
-
-// ============================================
-// Todo Aggregation (pure logic)
-// ============================================
-
-export interface TodoSummary {
-  total: number;
-  completed: number;
-  inProgress: { content: string } | null;
-}
-
-export function aggregateTodos(ctx: RenderContext): TodoSummary {
-  const total = ctx.transcript.todos.length;
-  const completed = ctx.transcript.todos.filter((t) => t.status === 'completed').length;
-  const inProgressTodo = ctx.transcript.todos.find((t) => t.status === 'in_progress');
-
-  return {
-    total,
-    completed,
-    inProgress: inProgressTodo ? { content: inProgressTodo.content } : null,
-  };
-}
-
-// ============================================
-// Project/Git Data Extraction (pure data)
-// ============================================
-
-export interface ProjectGitResult {
-  project: string | null;
-  projectUrl: string | null;
-  branch: string | null;
-  branchUrl: string | null;
-  dirty: boolean;
-  subRepos: Array<{ path: string; branch: string; isDirty: boolean }>;
-}
-
-/**
- * Extract project/git data from context (pure data, no formatting)
- */
-export function extractProjectGitData(ctx: RenderContext): ProjectGitResult {
-  const project = ctx.stdin.cwd ? ctx.stdin.cwd.split('/').pop() || null : null;
-  const projectUrl = ctx.stdin.cwd ? fileUrl(ctx.stdin.cwd) : null;
-  const branch = ctx.gitStatus?.branch || null;
-  const branchUrl = ctx.gitStatus?.remoteUrl && branch
-    ? githubBranchUrl(ctx.gitStatus.remoteUrl, branch)
-    : null;
-  const dirty = ctx.gitStatus?.isDirty || false;
-  const subRepos = ctx.gitStatus?.subRepos || [];
-
-  return { project, projectUrl, branch, branchUrl, dirty, subRepos };
-}
-
-// ============================================
 // Project/Git Formatting
 // ============================================
 
@@ -208,7 +132,6 @@ export interface ProjectGitParts {
 export function formatProjectGitParts(
   ctx: RenderContext,
   palette: ColorPalette | null,
-  _icons: any | null,
   options: FormatProjectGitOptions = {}
 ): ProjectGitParts {
   const {
@@ -324,10 +247,9 @@ export function formatProjectGitParts(
 export function formatProjectGit(
   ctx: RenderContext,
   palette: ColorPalette | null,
-  icons: any | null,
   options: FormatProjectGitOptions = {}
 ): string {
-  const parts = formatProjectGitParts(ctx, palette, icons, options);
+  const parts = formatProjectGitParts(ctx, palette, options);
   return parts.project + parts.branch;
 }
 
