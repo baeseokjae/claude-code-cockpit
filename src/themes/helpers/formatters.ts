@@ -105,8 +105,8 @@ export function formatDetailTodosSummary(
   if (todos.length === 0) return null;
   const { palette, icons } = options;
   const total = todos.length;
-  const completed = todos.filter((t: any) => t.status === 'completed').length;
-  const inProgress = todos.find((t: any) => t.status === 'in_progress');
+  const completed = todos.filter((t) => t.status === 'completed').length;
+  const inProgress = todos.find((t) => t.status === 'in_progress');
   const label = options.useColor !== false
     ? hex(palette.categoryTodos, icons.categoryTodos + ' Todos: ')
     : icons.categoryTodos + ' Todos: ';

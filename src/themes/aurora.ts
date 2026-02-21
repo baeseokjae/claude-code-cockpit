@@ -12,7 +12,7 @@
  * - >= 120: Tier 3 (full)
  */
 
-import type { Theme, RenderContext, ColorPalette } from '../types/index.js';
+import type { Theme, RenderContext, ColorPalette, UsageData } from '../types/index.js';
 import { AURORA_PALETTE } from './palettes/aurora.js';
 import { getIcons } from './icons.js';
 import { hex } from '../render/colors.js';
@@ -567,7 +567,7 @@ export const auroraTheme: Theme = {
 /**
  * Format usage summary line
  */
-function formatUsageSummaryLine(usageData: any, palette: ColorPalette): string {
+function formatUsageSummaryLine(usageData: UsageData, palette: ColorPalette): string {
   const fiveReset = formatResetTime(usageData.fiveHourResetAt);
   const sevenReset = formatResetTime(usageData.sevenDayResetAt);
 

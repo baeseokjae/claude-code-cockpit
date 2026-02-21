@@ -5,6 +5,7 @@
 
 import { writeFileSync } from 'node:fs';
 import type { RenderContext } from '../types/index.js';
+import type { ViolationType } from '../types/violations.js';
 import { getModelName, getContextPercent } from '../input/stdin.js';
 import { formatResetTime } from '../data/usage-api.js';
 import { createDebug } from '../utils/debug.js';
@@ -204,17 +205,17 @@ function generateSessionMarkdown(ctx: RenderContext): string {
   if (ctx.violations && ctx.violations.total > 0) {
     md += `## Code Violations (${ctx.violations.total})\n\n`;
 
-    const violationsByType = [
-      { type: 'hardcoded_secret', label: '🔴 Hardcoded Secrets', emoji: '🔴' },
-      { type: 'console_log', label: '🟡 Console Logs', emoji: '🟡' },
-      { type: 'large_file', label: '🟡 Large Files', emoji: '🟡' },
-      { type: 'debug_statement', label: '🟡 Debug Statements', emoji: '🟡' },
-      { type: 'todo_comment', label: '🔵 TODO Comments', emoji: '🔵' },
-      { type: 'fixme_comment', label: '🔵 FIXME Comments', emoji: '🔵' },
+    const violationsByType: Array<{ type: ViolationType; label: string }> = [
+      { type: 'hardcoded_secret', label: '🔴 Hardcoded Secrets' },
+      { type: 'console_log', label: '🟡 Console Logs' },
+      { type: 'large_file', label: '🟡 Large Files' },
+      { type: 'debug_statement', label: '🟡 Debug Statements' },
+      { type: 'todo_comment', label: '🔵 TODO Comments' },
+      { type: 'fixme_comment', label: '🔵 FIXME Comments' },
     ];
 
     violationsByType.forEach(({ type, label }) => {
-      const count = ctx.violations!.byType.get(type as any) || 0;
+      const count = ctx.violations!.byType.get(type) || 0;
       if (count > 0) {
         md += `- **${label}**: ${count}\n`;
       }
