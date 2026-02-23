@@ -7,11 +7,12 @@ import {
   getPercentColor,
   applyTextTransform,
   getSessionName,
+  deduplicateAgents,
   formatContextHint,
   formatContextHintPlain,
 } from '../src/themes/helpers.js';
 import { AURORA_PALETTE } from '../src/themes/palettes/aurora.js';
-import type { RenderContext, StdinData, TranscriptData } from '../src/types/index.js';
+import type { RenderContext, StdinData, TranscriptData, AgentEntry } from '../src/types/index.js';
 import { DEFAULT_CONFIG } from '../src/config/defaults.js';
 
 describe('theme helpers', () => {
@@ -72,6 +73,50 @@ describe('theme helpers', () => {
       const ctx = createMockContext({}, { showSessionName: false });
       ctx.stdin.plan_name = 'my-plan';
       expect(getSessionName(ctx)).toBe(null);
+    });
+  });
+
+  describe('deduplicateAgents', () => {
+    it('should group agents by type', () => {
+      const agents: AgentEntry[] = [
+        { id: '1', type: 'general-purpose', model: 'sonnet', status: 'completed', startTime: new Date(), subagentToolCount: 5 },
+        { id: '2', type: 'general-purpose', model: 'opus', status: 'running', startTime: new Date(), subagentToolCount: 3 },
+        { id: '3', type: 'Plan', model: 'opus', status: 'completed', startTime: new Date(), subagentToolCount: 0 },
+      ];
+
+      const result = deduplicateAgents(agents);
+
+      expect(result.size).toBe(2);
+
+      const gp = result.get('general-purpose')!;
+      expect(gp.count).toBe(2);
+      expect(gp.totalTools).toBe(8);
+      expect(gp.isRunning).toBe(true);
+      expect(gp.errorCount).toBe(0);
+      expect(gp.models).toEqual(new Set(['S', 'O']));
+
+      const plan = result.get('Plan')!;
+      expect(plan.count).toBe(1);
+      expect(plan.totalTools).toBe(0);
+      expect(plan.isRunning).toBe(false);
+      expect(plan.models).toEqual(new Set(['O']));
+    });
+
+    it('should track error count', () => {
+      const agents: AgentEntry[] = [
+        { id: '1', type: 'Bash', status: 'error', startTime: new Date() },
+        { id: '2', type: 'Bash', status: 'completed', startTime: new Date() },
+      ];
+
+      const result = deduplicateAgents(agents);
+      const bash = result.get('Bash')!;
+      expect(bash.errorCount).toBe(1);
+      expect(bash.count).toBe(2);
+    });
+
+    it('should return empty map for empty agents', () => {
+      const result = deduplicateAgents([]);
+      expect(result.size).toBe(0);
     });
   });
 

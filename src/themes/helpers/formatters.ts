@@ -7,6 +7,7 @@ import { hex } from '../../render/colors.js';
 import { formatLines, formatLinesCompact } from '../../data/lines.js';
 import { formatCacheHitRate, formatCacheSavings } from '../../data/cache-metrics.js';
 import type { TextTransform } from './data-extraction.js';
+import { deduplicateAgents } from './data-extraction.js';
 
 // ============================================
 // Detail Summary Types & Functions
@@ -52,27 +53,7 @@ export function formatDetailAgentsSummary(
   if (agents.length === 0) return null;
   const { palette, icons } = options;
 
-  // Dedup by type with models, tools, status
-  const agentMap = new Map<string, { count: number; totalTools: number; isRunning: boolean; errorCount: number; models: Set<string> }>();
-  for (const agent of agents) {
-    const key = agent.type;
-    const existing = agentMap.get(key);
-    const modelChar = agent.model ? agent.model[0].toUpperCase() : '';
-    const toolCount = agent.subagentToolCount || 0;
-    const isRunning = agent.status === 'running';
-    const hasError = agent.status === 'error';
-    if (existing) {
-      existing.count++;
-      existing.totalTools += toolCount;
-      if (isRunning) existing.isRunning = true;
-      if (hasError) existing.errorCount++;
-      if (modelChar) existing.models.add(modelChar);
-    } else {
-      const models = new Set<string>();
-      if (modelChar) models.add(modelChar);
-      agentMap.set(key, { count: 1, totalTools: toolCount, isRunning, errorCount: hasError ? 1 : 0, models });
-    }
-  }
+  const agentMap = deduplicateAgents(agents);
 
   const sorted = [...agentMap.entries()].sort((a, b) => b[1].count - a[1].count);
   const items = sorted.slice(0, 3).map(([type, info]) => {

@@ -9,6 +9,7 @@ export type {
   ProjectGitParts,
   RenderData,
   PrepareRenderDataOptions,
+  AgentDedup,
 } from './helpers/data-extraction.js';
 
 export {
@@ -18,6 +19,7 @@ export {
   applyTextTransform,
   getSessionName,
   formatContextText,
+  deduplicateAgents,
   formatProjectGitParts,
   formatProjectGit,
   prepareRenderData,

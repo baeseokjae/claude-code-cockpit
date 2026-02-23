@@ -30,6 +30,7 @@ import {
   getPercentColor,
   formatProjectGit,
   formatProjectGitParts,
+  deduplicateAgents,
   formatDetailToolsSummary,
   formatDetailAgentsSummary,
   formatDetailTodosSummary,
@@ -281,27 +282,7 @@ export const auroraTheme: Theme = {
 
     // === Line 4: ● Agents: 3×[S/O]general-purpose⚡37✗1  [O]Plan ===
     if (ctx.config.display.showAgents && ctx.transcript.agents.length > 0) {
-      // Dedup agents by type
-      const agentMap = new Map<string, { count: number; totalTools: number; isRunning: boolean; errorCount: number; models: Set<string> }>();
-      for (const agent of ctx.transcript.agents) {
-        const key = agent.type;
-        const existing = agentMap.get(key);
-        const isRunning = agent.status === 'running';
-        const hasError = agent.status === 'error';
-        const modelChar = agent.model ? agent.model[0].toUpperCase() : '';
-        const toolCount = agent.subagentToolCount || 0;
-        if (existing) {
-          existing.count++;
-          existing.totalTools += toolCount;
-          if (isRunning) existing.isRunning = true;
-          if (hasError) existing.errorCount++;
-          if (modelChar) existing.models.add(modelChar);
-        } else {
-          const models = new Set<string>();
-          if (modelChar) models.add(modelChar);
-          agentMap.set(key, { count: 1, totalTools: toolCount, isRunning, errorCount: hasError ? 1 : 0, models });
-        }
-      }
+      const agentMap = deduplicateAgents(ctx.transcript.agents);
 
       const agentItems: string[] = [];
       for (const [type, info] of agentMap) {

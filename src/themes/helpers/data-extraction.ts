@@ -2,7 +2,7 @@
  * Data extraction and transformation helpers
  */
 
-import type { RenderContext, ColorPalette } from '../../types/index.js';
+import type { RenderContext, ColorPalette, AgentEntry } from '../../types/index.js';
 import { getModelName, getContextPercent, getAbsoluteTokens } from '../../input/stdin.js';
 import { hex, bold } from '../../render/colors.js';
 import { formatPercent } from '../../render/utils.js';
@@ -103,6 +103,42 @@ export function formatContextText(
   }
 
   return wrap ? wrap(text) : text;
+}
+
+// ============================================
+// Agent Deduplication
+// ============================================
+
+export interface AgentDedup {
+  count: number;
+  totalTools: number;
+  isRunning: boolean;
+  errorCount: number;
+  models: Set<string>;
+}
+
+export function deduplicateAgents(agents: AgentEntry[]): Map<string, AgentDedup> {
+  const agentMap = new Map<string, AgentDedup>();
+  for (const agent of agents) {
+    const key = agent.type;
+    const existing = agentMap.get(key);
+    const modelChar = agent.model ? agent.model[0].toUpperCase() : '';
+    const toolCount = agent.subagentToolCount || 0;
+    const isRunning = agent.status === 'running';
+    const hasError = agent.status === 'error';
+    if (existing) {
+      existing.count++;
+      existing.totalTools += toolCount;
+      if (isRunning) existing.isRunning = true;
+      if (hasError) existing.errorCount++;
+      if (modelChar) existing.models.add(modelChar);
+    } else {
+      const models = new Set<string>();
+      if (modelChar) models.add(modelChar);
+      agentMap.set(key, { count: 1, totalTools: toolCount, isRunning, errorCount: hasError ? 1 : 0, models });
+    }
+  }
+  return agentMap;
 }
 
 // ============================================
