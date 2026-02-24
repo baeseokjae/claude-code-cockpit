@@ -1,6 +1,6 @@
 {
   "name": "claude-code-cockpit",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Next-generation real-time dashboard for Claude Code with themes, skill tracking, and detail mode",
   "type": "module",
   "main": "dist/index.js",
