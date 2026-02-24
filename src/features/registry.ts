@@ -36,7 +36,6 @@ export const FEATURE_REGISTRY: readonly FeatureDef[] = [
   {
     key: 'usageData',
     configFlag: 'showUsage',
-    minTier: 2,
     collect: (env) => env.deps.fetchUsage(),
   },
   {
