@@ -24,7 +24,6 @@ const KEYCHAIN_BACKOFF_MS = 60000;
 
 interface Credentials {
   accessToken: string;
-  expiresAt: number;
 }
 
 interface UsageAPIResponse {
@@ -70,12 +69,6 @@ export async function fetchUsage(): Promise<UsageData | null> {
     const credentials = getCredentials();
     if (!credentials) {
       debug('no credentials available');
-      cacheResult(null, false);
-      return null;
-    }
-
-    if (credentials.expiresAt <= Date.now()) {
-      debug('credentials expired');
       cacheResult(null, false);
       return null;
     }
@@ -136,18 +129,17 @@ function readKeychainCredentials(): Credentials | null {
       return null;
     }
 
-    const parsed = JSON.parse(trimmed) as { claudeAiOauth?: { accessToken?: string; expiresAt?: number } };
+    const parsed = JSON.parse(trimmed) as { claudeAiOauth?: { accessToken?: string } };
     const accessToken = parsed.claudeAiOauth?.accessToken;
-    const expiresAt = parsed.claudeAiOauth?.expiresAt;
 
-    if (!accessToken || typeof expiresAt !== 'number') {
+    if (!accessToken) {
       debug('invalid keychain credentials structure');
       keychainLastFailure = Date.now();
       return null;
     }
 
     debug('got credentials from keychain');
-    return { accessToken, expiresAt };
+    return { accessToken };
   } catch (error) {
     debug('keychain read failed');
     keychainLastFailure = Date.now();
@@ -185,17 +177,16 @@ function readFileCredentials(): Credentials | null {
     }
     
     const content = readFileSync(resolvedCredentialsPath, 'utf8');
-    const parsed = JSON.parse(content) as { claudeAiOauth?: { accessToken?: string; expiresAt?: number } };
+    const parsed = JSON.parse(content) as { claudeAiOauth?: { accessToken?: string } };
     const accessToken = parsed.claudeAiOauth?.accessToken;
-    const expiresAt = parsed.claudeAiOauth?.expiresAt;
 
-    if (!accessToken || typeof expiresAt !== 'number') {
+    if (!accessToken) {
       debug('invalid file credentials structure');
       return null;
     }
 
     debug('got credentials from file');
-    return { accessToken, expiresAt };
+    return { accessToken };
   } catch {
     debug('file credentials not found or invalid');
     return null;
