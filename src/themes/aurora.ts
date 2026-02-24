@@ -229,25 +229,35 @@ export const auroraTheme: Theme = {
           }
         }
         usageParts.push(fiveHourText);
+      } else {
+        usageParts.push(hex(p.green, '5h:0%'));
       }
       if (sevenDay > 0) {
         usageParts.push(hex(p.muted, `7d:${Math.round(sevenDay)}%`));
       }
     }
-    const usageContent = usageParts.length > 0 ? usageParts.join(gap) : hex(p.muted, '-');
 
-    // Add cost to usage line
-    let usageLine = bullet(p.teal) + hex(p.text, 'Usage:') + ' ' + usageContent;
     const cost = ctx.config.display.showCost ? ctx.stdin.cost?.total_cost_usd : undefined;
-    if (cost) {
-      let costPart = hex(p.peach, `$${cost.toFixed(2)}`);
-      if (ctx.config.display.showCacheMetrics && ctx.cacheMetrics && ctx.cacheMetrics.estimatedSavings >= 0.01) {
-        const savings = ctx.cacheMetrics.estimatedSavings;
-        costPart += hex(p.green, `-$${savings.toFixed(2)}`);
+    const hasUsageData = usageParts.length > 0;
+
+    if (hasUsageData || cost) {
+      let costPart = '';
+      if (cost) {
+        costPart = hex(p.peach, `$${cost.toFixed(2)}`);
+        if (ctx.config.display.showCacheMetrics && ctx.cacheMetrics && ctx.cacheMetrics.estimatedSavings >= 0.01) {
+          const savings = ctx.cacheMetrics.estimatedSavings;
+          costPart += hex(p.green, `-$${savings.toFixed(2)}`);
+        }
       }
-      usageLine += pipeSep + costPart;
-    }
-    if ((ctx.config.display.showUsage && ctx.usageData) || cost) {
+
+      let usageLine: string;
+      if (hasUsageData && costPart) {
+        usageLine = bullet(p.teal) + hex(p.text, 'Usage:') + ' ' + usageParts.join(gap) + pipeSep + costPart;
+      } else if (hasUsageData) {
+        usageLine = bullet(p.teal) + hex(p.text, 'Usage:') + ' ' + usageParts.join(gap);
+      } else {
+        usageLine = bullet(p.teal) + hex(p.text, 'Cost:') + ' ' + costPart;
+      }
       lines.push(usageLine);
     }
 

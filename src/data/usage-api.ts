@@ -1,10 +1,11 @@
 /**
  * Anthropic Usage API client
  * OAuth token from macOS Keychain or ~/.claude/.credentials.json
+ * Supports automatic token refresh when access token expires
  */
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync, existsSync, realpathSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import { request as httpsRequest } from 'node:https';
 import type { UsageData } from '../types/index.js';
@@ -13,17 +14,33 @@ import { getClaudeConfigDir } from '../utils/paths.js';
 
 const debug = createDebug('usage-api');
 
+// API endpoints
 const USAGE_API_URL = 'https://api.anthropic.com/api/oauth/usage';
+const TOKEN_ENDPOINT = 'https://platform.claude.com/v1/oauth/token';
+
+// OAuth config (from Claude Code binary oD9 production config)
+const OAUTH_CLIENT_ID = process.env.CLAUDE_CODE_OAUTH_CLIENT_ID || '9d1c250a-e61b-44d9-88ed-5944d1962f5e';
+const OAUTH_BETA_HEADER = 'oauth-2025-04-20';
+
+// Storage
 const KEYCHAIN_SERVICE = 'Claude Code-credentials';
 const CREDENTIALS_FILENAME = '.credentials.json';
 
+// Timeouts & caching
 const REQUEST_TIMEOUT = 5000;
+const TOKEN_REFRESH_TIMEOUT = 10000;
 const CACHE_TTL_SUCCESS = 60000;
 const CACHE_TTL_FAILURE = 15000;
 const KEYCHAIN_BACKOFF_MS = 60000;
+const PROACTIVE_REFRESH_MARGIN_MS = 5 * 60 * 1000; // 5 min before expiry
+
+// --- Interfaces ---
 
 interface Credentials {
   accessToken: string;
+  refreshToken: string | null;
+  expiresAt: number | null;
+  source: 'keychain' | 'file';
 }
 
 interface UsageAPIResponse {
@@ -37,14 +54,31 @@ interface UsageAPIResponse {
   };
 }
 
+interface TokenRefreshResponse {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  token_type: string;
+}
+
+interface CachedToken {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+}
+
 interface CacheEntry {
   data: UsageData | null;
   timestamp: number;
   success: boolean;
 }
 
+// --- Module state ---
+
 let cache: CacheEntry | null = null;
 let keychainLastFailure = 0;
+let cachedToken: CachedToken | null = null;
+let refreshInProgress: Promise<CachedToken | null> | null = null;
 
 class UsageAPIError extends Error {
   constructor(
@@ -55,6 +89,8 @@ class UsageAPIError extends Error {
     this.name = 'UsageAPIError';
   }
 }
+
+// --- Main entry point ---
 
 export async function fetchUsage(): Promise<UsageData | null> {
   if (cache) {
@@ -73,10 +109,40 @@ export async function fetchUsage(): Promise<UsageData | null> {
       return null;
     }
 
-    const response = await makeRequest(credentials.accessToken);
-    const data = parseResponse(response);
-    cacheResult(data, true);
-    return data;
+    // Determine which token to use
+    let activeToken = credentials.accessToken;
+    if (cachedToken && !isTokenExpired(cachedToken.expiresAt)) {
+      activeToken = cachedToken.accessToken;
+      debug('using in-memory cached token');
+    } else if (isTokenExpired(credentials.expiresAt)) {
+      // Proactive refresh: token is expired or about to expire
+      debug('token expired or expiring soon, refreshing proactively');
+      const refreshed = await tryRefresh(credentials);
+      if (refreshed) {
+        activeToken = refreshed.accessToken;
+      }
+      // If refresh fails, still try with current token (expiresAt may be stale)
+    }
+
+    try {
+      const response = await makeRequest(activeToken);
+      const data = parseResponse(response);
+      cacheResult(data, true);
+      return data;
+    } catch (error) {
+      // Reactive refresh: got 401, try refreshing and retrying once
+      if (error instanceof UsageAPIError && error.code === 'AUTH_ERROR') {
+        debug('got 401, attempting reactive token refresh');
+        const refreshed = await tryRefresh(credentials);
+        if (refreshed) {
+          const response = await makeRequest(refreshed.accessToken);
+          const data = parseResponse(response);
+          cacheResult(data, true);
+          return data;
+        }
+      }
+      throw error;
+    }
   } catch (error) {
     if (error instanceof UsageAPIError) {
       debug(`usage api error [${error.code}]: ${error.message}`);
@@ -88,9 +154,13 @@ export async function fetchUsage(): Promise<UsageData | null> {
   }
 }
 
+// --- Cache ---
+
 function cacheResult(data: UsageData | null, success: boolean): void {
   cache = { data, timestamp: Date.now(), success };
 }
+
+// --- Credential readers ---
 
 function getCredentials(): Credentials | null {
   const keychain = readKeychainCredentials();
@@ -129,8 +199,15 @@ function readKeychainCredentials(): Credentials | null {
       return null;
     }
 
-    const parsed = JSON.parse(trimmed) as { claudeAiOauth?: { accessToken?: string } };
-    const accessToken = parsed.claudeAiOauth?.accessToken;
+    const parsed = JSON.parse(trimmed) as {
+      claudeAiOauth?: {
+        accessToken?: string;
+        refreshToken?: string;
+        expiresAt?: number;
+      };
+    };
+    const oauth = parsed.claudeAiOauth;
+    const accessToken = oauth?.accessToken;
 
     if (!accessToken) {
       debug('invalid keychain credentials structure');
@@ -139,7 +216,12 @@ function readKeychainCredentials(): Credentials | null {
     }
 
     debug('got credentials from keychain');
-    return { accessToken };
+    return {
+      accessToken,
+      refreshToken: oauth?.refreshToken ?? null,
+      expiresAt: oauth?.expiresAt ?? null,
+      source: 'keychain',
+    };
   } catch (error) {
     debug('keychain read failed');
     keychainLastFailure = Date.now();
@@ -149,10 +231,8 @@ function readKeychainCredentials(): Credentials | null {
 
 function readFileCredentials(): Credentials | null {
   try {
-    // Start with .claude directory (respects CLAUDE_CONFIG_DIR)
     const claudeDir = getClaudeConfigDir();
-    
-    // Resolve .claude directory if it's a symlink
+
     let resolvedClaudeDir = claudeDir;
     try {
       if (existsSync(claudeDir)) {
@@ -162,10 +242,9 @@ function readFileCredentials(): Credentials | null {
     } catch (error) {
       debug('failed to resolve .claude symlink for credentials:', error);
     }
-    
+
     const credentialsPath = join(resolvedClaudeDir, CREDENTIALS_FILENAME);
-    
-    // Also resolve the credentials file itself if it's a symlink
+
     let resolvedCredentialsPath = credentialsPath;
     try {
       if (existsSync(credentialsPath)) {
@@ -175,10 +254,17 @@ function readFileCredentials(): Credentials | null {
     } catch (error) {
       debug('failed to resolve credentials file symlink:', error);
     }
-    
+
     const content = readFileSync(resolvedCredentialsPath, 'utf8');
-    const parsed = JSON.parse(content) as { claudeAiOauth?: { accessToken?: string } };
-    const accessToken = parsed.claudeAiOauth?.accessToken;
+    const parsed = JSON.parse(content) as {
+      claudeAiOauth?: {
+        accessToken?: string;
+        refreshToken?: string;
+        expiresAt?: number;
+      };
+    };
+    const oauth = parsed.claudeAiOauth;
+    const accessToken = oauth?.accessToken;
 
     if (!accessToken) {
       debug('invalid file credentials structure');
@@ -186,12 +272,207 @@ function readFileCredentials(): Credentials | null {
     }
 
     debug('got credentials from file');
-    return { accessToken };
+    return {
+      accessToken,
+      refreshToken: oauth?.refreshToken ?? null,
+      expiresAt: oauth?.expiresAt ?? null,
+      source: 'file',
+    };
   } catch {
     debug('file credentials not found or invalid');
     return null;
   }
 }
+
+// --- Token refresh ---
+
+function isTokenExpired(expiresAt: number | null): boolean {
+  if (expiresAt === null) return false;
+  return Date.now() >= expiresAt - PROACTIVE_REFRESH_MARGIN_MS;
+}
+
+async function tryRefresh(credentials: Credentials): Promise<CachedToken | null> {
+  if (!credentials.refreshToken) {
+    debug('no refresh token available');
+    return null;
+  }
+
+  if (refreshInProgress) {
+    debug('refresh already in progress, waiting');
+    return refreshInProgress;
+  }
+
+  refreshInProgress = (async () => {
+    try {
+      debug('attempting token refresh');
+      const response = await refreshAccessToken(credentials.refreshToken!);
+      const expiresIn = typeof response.expires_in === 'number' && response.expires_in > 0
+        ? response.expires_in
+        : 3600;
+      const newExpiresAt = Date.now() + expiresIn * 1000;
+      const newToken: CachedToken = {
+        accessToken: response.access_token,
+        refreshToken: response.refresh_token,
+        expiresAt: newExpiresAt,
+      };
+
+      cachedToken = newToken;
+      persistRefreshedTokens(credentials.source, response.access_token, response.refresh_token, newExpiresAt);
+      debug(`token refresh successful, expires in ${expiresIn}s`);
+      return newToken;
+    } catch (error) {
+      if (error instanceof UsageAPIError) {
+        debug(`token refresh failed [${error.code}]: ${error.message}`);
+        if (error.code === 'REFRESH_TOKEN_EXPIRED') {
+          cachedToken = null;
+        }
+      } else {
+        debug('token refresh failed:', error);
+      }
+      return null;
+    }
+  })();
+  refreshInProgress.finally(() => { refreshInProgress = null; });
+
+  return refreshInProgress;
+}
+
+function refreshAccessToken(refreshToken: string): Promise<TokenRefreshResponse> {
+  return new Promise((resolve, reject) => {
+    const url = new URL(TOKEN_ENDPOINT);
+    const body = new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+      client_id: OAUTH_CLIENT_ID,
+    }).toString();
+
+    const options = {
+      hostname: url.hostname,
+      path: url.pathname,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Length': Buffer.byteLength(body).toString(),
+        'anthropic-beta': OAUTH_BETA_HEADER,
+        'User-Agent': 'claude-code-cockpit/1.0',
+      },
+      timeout: TOKEN_REFRESH_TIMEOUT,
+    };
+
+    const req = httpsRequest(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        if (res.statusCode === 200) {
+          try {
+            const json = JSON.parse(data) as TokenRefreshResponse;
+            if (!json.access_token || !json.refresh_token) {
+              reject(new UsageAPIError('Invalid refresh response', 'REFRESH_INVALID'));
+              return;
+            }
+            resolve(json);
+          } catch {
+            reject(new UsageAPIError('Invalid JSON in refresh response', 'REFRESH_PARSE_ERROR'));
+          }
+        } else if (res.statusCode === 400 || res.statusCode === 401) {
+          reject(new UsageAPIError('Refresh token expired or invalid', 'REFRESH_TOKEN_EXPIRED'));
+        } else {
+          reject(new UsageAPIError(`Refresh HTTP ${res.statusCode}`, 'REFRESH_HTTP_ERROR'));
+        }
+      });
+    });
+
+    req.on('error', (error) => {
+      reject(new UsageAPIError(`Refresh network error: ${error.message}`, 'REFRESH_NETWORK_ERROR'));
+    });
+
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new UsageAPIError('Refresh request timeout', 'REFRESH_TIMEOUT'));
+    });
+
+    req.end(body);
+  });
+}
+
+// --- Token persistence ---
+
+function persistRefreshedTokens(source: 'keychain' | 'file', accessToken: string, refreshToken: string, expiresAt: number): void {
+  if (source === 'keychain') {
+    writeKeychainCredentials(accessToken, refreshToken, expiresAt);
+  } else {
+    writeFileCredentials(accessToken, refreshToken, expiresAt);
+  }
+}
+
+function writeKeychainCredentials(accessToken: string, refreshToken: string, expiresAt: number): boolean {
+  if (process.platform !== 'darwin') return false;
+
+  try {
+    // Read current data to preserve other fields (scopes, subscriptionType, rateLimitTier)
+    const current = execFileSync('/usr/bin/security', [
+      'find-generic-password', '-s', KEYCHAIN_SERVICE, '-w',
+    ], { encoding: 'utf8', timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] });
+
+    const parsed = JSON.parse(current.trim()) as Record<string, unknown>;
+    const oauth = (parsed.claudeAiOauth || {}) as Record<string, unknown>;
+    oauth.accessToken = accessToken;
+    oauth.refreshToken = refreshToken;
+    oauth.expiresAt = expiresAt;
+    parsed.claudeAiOauth = oauth;
+
+    const account = process.env.USER || '';
+    execFileSync('/usr/bin/security', [
+      'add-generic-password', '-U',
+      '-a', account,
+      '-s', KEYCHAIN_SERVICE,
+      '-w', JSON.stringify(parsed),
+    ], { timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] });
+
+    debug('wrote updated credentials to keychain');
+    return true;
+  } catch (error) {
+    debug('keychain write failed:', error);
+    return false;
+  }
+}
+
+function writeFileCredentials(accessToken: string, refreshToken: string, expiresAt: number): boolean {
+  try {
+    const claudeDir = getClaudeConfigDir();
+    let resolvedClaudeDir = claudeDir;
+    try {
+      if (existsSync(claudeDir)) resolvedClaudeDir = realpathSync(claudeDir);
+    } catch { /* use original */ }
+
+    const credentialsPath = join(resolvedClaudeDir, CREDENTIALS_FILENAME);
+    let resolvedCredentialsPath = credentialsPath;
+    try {
+      if (existsSync(credentialsPath)) resolvedCredentialsPath = realpathSync(credentialsPath);
+    } catch { /* use original */ }
+
+    let parsed: Record<string, unknown> = {};
+    try {
+      const content = readFileSync(resolvedCredentialsPath, 'utf8');
+      parsed = JSON.parse(content) as Record<string, unknown>;
+    } catch { /* start fresh */ }
+
+    const oauth = (parsed.claudeAiOauth || {}) as Record<string, unknown>;
+    oauth.accessToken = accessToken;
+    oauth.refreshToken = refreshToken;
+    oauth.expiresAt = expiresAt;
+    parsed.claudeAiOauth = oauth;
+
+    writeFileSync(resolvedCredentialsPath, JSON.stringify(parsed, null, 2), 'utf8');
+    debug('wrote updated credentials to file');
+    return true;
+  } catch (error) {
+    debug('file credentials write failed:', error);
+    return false;
+  }
+}
+
+// --- Usage API request ---
 
 function makeRequest(accessToken: string): Promise<UsageAPIResponse> {
   return new Promise((resolve, reject) => {
@@ -203,7 +484,7 @@ function makeRequest(accessToken: string): Promise<UsageAPIResponse> {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
-        'anthropic-beta': 'oauth-2025-04-20',
+        'anthropic-beta': OAUTH_BETA_HEADER,
         'Accept': 'application/json',
         'User-Agent': 'claude-code-cockpit/1.0',
       },
@@ -248,6 +529,8 @@ function makeRequest(accessToken: string): Promise<UsageAPIResponse> {
   });
 }
 
+// --- Response parsing ---
+
 function parseResponse(response: UsageAPIResponse): UsageData {
   const fiveHour = sanitizePercent(response.five_hour?.utilization);
   const sevenDay = sanitizePercent(response.seven_day?.utilization);
@@ -267,6 +550,8 @@ function sanitizePercent(value: unknown): number {
   }
   return Math.max(0, Math.min(100, value));
 }
+
+// --- Utilities ---
 
 export function formatResetTime(isoTimestamp: string | null): string {
   if (!isoTimestamp) return '';
@@ -292,4 +577,12 @@ export function formatResetTime(isoTimestamp: string | null): string {
   } catch {
     return '';
   }
+}
+
+/** Reset internal state (for testing only). */
+export function _resetForTesting(): void {
+  cache = null;
+  cachedToken = null;
+  refreshInProgress = null;
+  keychainLastFailure = 0;
 }
