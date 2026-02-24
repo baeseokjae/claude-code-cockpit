@@ -1,8 +1,9 @@
 {
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "claude-code-cockpit",
   "owner": {
     "name": "baeseokjae",
-    "email": "baeseokjae@gmail.com"
+    "email": "bsjp9400@gmail.com"
   },
   "metadata": {
     "description": "Claude Code Cockpit - Next-generation statusline dashboard with 5 themes",
