@@ -22,5 +22,6 @@
     "todos",
     "skills",
     "alerts"
-  ]
+  ],
+  "commands": "./commands/"
 }
