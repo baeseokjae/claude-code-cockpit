@@ -5,6 +5,7 @@
  */
 
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync, existsSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import { request as httpsRequest } from 'node:https';
@@ -22,8 +23,14 @@ const TOKEN_ENDPOINT = 'https://platform.claude.com/v1/oauth/token';
 const OAUTH_CLIENT_ID = process.env.CLAUDE_CODE_OAUTH_CLIENT_ID || '9d1c250a-e61b-44d9-88ed-5944d1962f5e';
 const OAUTH_BETA_HEADER = 'oauth-2025-04-20';
 
-// Storage
-const KEYCHAIN_SERVICE = 'Claude Code-credentials';
+// Storage — Claude Code appends a hash suffix when CLAUDE_CONFIG_DIR is set
+const KEYCHAIN_SERVICE_BASE = 'Claude Code-credentials';
+const KEYCHAIN_SERVICE = (() => {
+  const configDir = process.env.CLAUDE_CONFIG_DIR;
+  if (!configDir) return KEYCHAIN_SERVICE_BASE;
+  const suffix = createHash('sha256').update(configDir).digest('hex').substring(0, 8);
+  return `${KEYCHAIN_SERVICE_BASE}-${suffix}`;
+})();
 const CREDENTIALS_FILENAME = '.credentials.json';
 
 // Timeouts & caching
