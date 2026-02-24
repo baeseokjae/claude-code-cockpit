@@ -247,7 +247,9 @@ export const auroraTheme: Theme = {
       }
       usageLine += pipeSep + costPart;
     }
-    lines.push(usageLine);
+    if ((ctx.config.display.showUsage && ctx.usageData) || cost) {
+      lines.push(usageLine);
+    }
 
     // === Line 3: ● Tools: Read+12  Edit+8  Bash+5  ✓98% ✗2% (28) ===
     if (ctx.config.display.showTools && ctx.transcript.tools.length > 0) {
