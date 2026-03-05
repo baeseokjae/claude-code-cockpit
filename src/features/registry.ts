@@ -36,7 +36,7 @@ export const FEATURE_REGISTRY: readonly FeatureDef[] = [
   {
     key: 'usageData',
     configFlag: 'showUsage',
-    collect: (env) => env.deps.fetchUsage(),
+    collect: (env) => env.deps.fetchUsage(env.config.usage.cacheMinutes * 60000),
   },
   {
     key: 'compactSuggestion',

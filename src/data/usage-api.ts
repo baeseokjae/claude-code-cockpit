@@ -33,7 +33,8 @@ const CREDENTIALS_FILENAME = '.credentials.json';
 // Timeouts & caching
 const REQUEST_TIMEOUT = 5000;
 const CACHE_TTL_SUCCESS = 60000;
-const CACHE_TTL_FAILURE = 15000;
+const CACHE_TTL_FAILURE = 60000;
+const RATE_LIMIT_DEFAULT_BACKOFF = 300000; // 5 minutes
 const KEYCHAIN_BACKOFF_MS = 60000;
 
 // --- Interfaces ---
@@ -63,6 +64,7 @@ interface CacheEntry {
 
 let cache: CacheEntry | null = null;
 let keychainLastFailure = 0;
+let rateLimitUntil = 0;
 
 class UsageAPIError extends Error {
   constructor(
@@ -76,9 +78,14 @@ class UsageAPIError extends Error {
 
 // --- Main entry point ---
 
-export async function fetchUsage(): Promise<UsageData | null> {
+export async function fetchUsage(cacheTtlMs?: number): Promise<UsageData | null> {
+  if (Date.now() < rateLimitUntil) {
+    debug('rate limit backoff active, returning cached null');
+    return cache?.data ?? null;
+  }
+
   if (cache) {
-    const ttl = cache.success ? CACHE_TTL_SUCCESS : CACHE_TTL_FAILURE;
+    const ttl = cache.success ? (cacheTtlMs ?? CACHE_TTL_SUCCESS) : CACHE_TTL_FAILURE;
     if (Date.now() - cache.timestamp < ttl) {
       debug('returning cached usage data');
       return cache.data;
@@ -261,6 +268,10 @@ function makeRequest(accessToken: string): Promise<UsageAPIResponse> {
         } else if (res.statusCode === 401 || res.statusCode === 403) {
           reject(new UsageAPIError('Authentication failed', 'AUTH_ERROR'));
         } else if (res.statusCode === 429) {
+          const retryAfter = parseInt(res.headers['retry-after'] as string, 10);
+          const backoffMs = (retryAfter > 0) ? retryAfter * 1000 : RATE_LIMIT_DEFAULT_BACKOFF;
+          rateLimitUntil = Date.now() + backoffMs;
+          debug(`rate limited, backing off for ${backoffMs}ms`);
           reject(new UsageAPIError('Rate limited', 'RATE_LIMIT'));
         } else {
           reject(new UsageAPIError(`HTTP ${res.statusCode}`, 'HTTP_ERROR'));
@@ -335,4 +346,5 @@ export function formatResetTime(isoTimestamp: string | null): string {
 export function _resetForTesting(): void {
   cache = null;
   keychainLastFailure = 0;
+  rateLimitUntil = 0;
 }
