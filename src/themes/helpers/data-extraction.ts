@@ -7,6 +7,16 @@ import { getModelName, getContextPercent, getAbsoluteTokens } from '../../input/
 import { hex, bold } from '../../render/colors.js';
 import { formatPercent } from '../../render/utils.js';
 
+const MAX_LENGTHS = {
+  sessionName:  { minimal: 10, compact: 20, full: 30 },
+  projectName:  { minimal: 12, compact: 25, full: 30 },
+  branchName:   { minimal: 15, compact: 25, full: 40 },
+} as const;
+
+function tierMaxLen(tier: 1 | 2 | 3, limits: { minimal: number; compact: number; full: number }): number {
+  return tier === 1 ? limits.minimal : tier === 2 ? limits.compact : limits.full;
+}
+
 // ============================================
 // Types
 // ============================================
@@ -69,7 +79,7 @@ export function getSessionName(ctx: RenderContext): string | null {
   if (!ctx.config.display.showSessionName) return null;
   const name = ctx.stdin.plan_name || ctx.stdin.session_id?.substring(0, 8) || null;
   if (!name) return null;
-  const maxLen = ctx.tier === 1 ? 10 : ctx.tier === 2 ? 20 : 30;
+  const maxLen = tierMaxLen(ctx.tier, MAX_LENGTHS.sessionName);
   return name.length > maxLen ? name.substring(0, maxLen - 1) + '\u2026' : name;
 }
 
@@ -192,7 +202,7 @@ export function formatProjectGitParts(
     let projectName = applyTextTransform(project, transform);
 
     // Truncate project name to prevent line overflow
-    const maxProjectLen = ctx.tier === 1 ? 12 : ctx.tier === 2 ? 25 : 30;
+    const maxProjectLen = tierMaxLen(ctx.tier, MAX_LENGTHS.projectName);
     if (projectName.length > maxProjectLen) {
       projectName = projectName.substring(0, maxProjectLen - 1) + '\u2026';  // …
     }
@@ -209,7 +219,7 @@ export function formatProjectGitParts(
     let branchText = applyTextTransform(git, transform);
 
     // Truncate branch name to prevent line overflow
-    const maxBranchLen = ctx.tier === 1 ? 15 : ctx.tier === 2 ? 25 : 40;
+    const maxBranchLen = tierMaxLen(ctx.tier, MAX_LENGTHS.branchName);
     if (branchText.length > maxBranchLen) {
       branchText = branchText.substring(0, maxBranchLen - 1) + '\u2026';  // …
     }

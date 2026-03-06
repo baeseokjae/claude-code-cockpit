@@ -32,6 +32,3 @@ export function loadTheme(name: ThemeName): Theme {
   return theme;
 }
 
-export function getThemeNames(): ThemeName[] {
-  return Array.from(THEMES.keys());
-}

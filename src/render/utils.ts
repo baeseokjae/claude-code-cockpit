@@ -53,16 +53,6 @@ export function isFullWidth(cp: number): boolean {
   );
 }
 
-export function formatTokens(tokens: number): string {
-  if (tokens >= 1000000) {
-    return `${(tokens / 1000000).toFixed(1)}M`;
-  }
-  if (tokens >= 1000) {
-    return `${(tokens / 1000).toFixed(1)}k`;
-  }
-  return `${tokens}`;
-}
-
 export function formatPath(path: string, pathLevels: number): string {
   if (pathLevels === 0) {
     return basename(path);
@@ -114,10 +104,6 @@ export function truncateAnsi(text: string, maxWidth: number): string {
     result += ch; i += ch.length;
   }
   return result + '\u2026';
-}
-
-export function formatCost(usd: number): string {
-  return `$${usd.toFixed(2)}`;
 }
 
 export function formatPercent(percent: number): string {

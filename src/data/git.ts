@@ -21,7 +21,8 @@ function execGit(cmd: string, cwd?: string): string {
       timeout: 5000,
     });
     return result;
-  } catch {
+  } catch (error) {
+    debug('execGit failed: cmd=%s cwd=%s', cmd, cwd, error);
     throw new Error('git command failed');
   }
 }

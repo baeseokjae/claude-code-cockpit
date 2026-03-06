@@ -11,7 +11,7 @@
  * 3. Known Nerd Font-friendly terminals
  * 4. Inference based on TERM_PROGRAM env var
  */
-export function detectNerdFont(): boolean {
+function detectNerdFont(): boolean {
   // Explicit setting takes priority
   const explicit = process.env.COCKPIT_NERD_FONT;
   if (explicit === '1' || explicit === 'true') return true;
@@ -59,11 +59,4 @@ export function hasNerdFont(): boolean {
     cachedResult = detectNerdFont();
   }
   return cachedResult;
-}
-
-/**
- * Reset cache (for testing)
- */
-export function resetNerdFontCache(): void {
-  cachedResult = null;
 }

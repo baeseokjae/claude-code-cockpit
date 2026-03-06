@@ -126,7 +126,9 @@ export async function main(deps: MainDeps = defaultDeps): Promise<void> {
       >),
     };
 
-    const lines = theme.render(ctx);
+    const lines = ctx.tier === 1 ? theme.renderMinimal(ctx)
+                : ctx.tier === 2 ? theme.renderCompact(ctx)
+                : theme.renderFull(ctx);
 
     // Stable height: pad to prevent input box jitter
     const tierKey = tier === 1 ? 'minimal' : tier === 2 ? 'compact' : 'full';

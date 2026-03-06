@@ -8,6 +8,7 @@ import { FALLBACK_ICONS } from './icons.js';
 import { hex, bold, dim, underline } from '../render/colors.js';
 import { createProgressBar, visualLength } from '../render/utils.js';
 import { formatTokenSpeed } from '../data/speed-tracker.js';
+import { getVersion } from '../utils/version.js';
 import {
   formatLinesDisplay,
   formatCacheDisplay,
@@ -61,12 +62,6 @@ export const retroTheme: Theme = {
     showBoxBorders: true,
     animatedSpinner: false,
     blinkOnCritical: true,
-  },
-
-  render(ctx: RenderContext): string[] {
-    if (ctx.tier === 1) return this.renderMinimal(ctx);
-    else if (ctx.tier === 2) return this.renderCompact(ctx);
-    else return this.renderFull(ctx);
   },
 
   renderMinimal(ctx: RenderContext): string[] {
@@ -208,7 +203,7 @@ export const retroTheme: Theme = {
 
     // Header
     lines.push(hex(color, '╔' + '═'.repeat(innerWidth) + '╗'));
-    const headerText = bold(' CLAUDE Code COCKPIT v1.0 ');
+    const headerText = bold(` CLAUDE Code COCKPIT v${getVersion()} `);
     lines.push(hex(color, '║') + hex(color, headerText) + ' '.repeat(Math.max(0, innerWidth - visualLength(headerText))) + hex(color, '║'));
     lines.push(hex(color, '╠' + '═'.repeat(innerWidth) + '╣'));
 

@@ -10,6 +10,9 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { createDebug } from './debug.js';
+
+const debug = createDebug('cache');
 
 const CACHE_DIR = join(tmpdir(), 'claude-code-cockpit-cache');
 const CACHE_FILE = join(CACHE_DIR, 'store.json');
@@ -36,7 +39,8 @@ function loadStore(): Record<string, CacheEntry> {
     } else {
       _store = {};
     }
-  } catch {
+  } catch (e) {
+    debug('loadStore parse failed:', e);
     _store = {};
   }
 
@@ -56,7 +60,8 @@ export function getCached<T>(key: string): T | undefined {
     }
 
     return entry.value as T;
-  } catch {
+  } catch (e) {
+    debug('getCached error:', e);
     return undefined;
   }
 }
@@ -69,8 +74,8 @@ export function setCache<T>(key: string, value: T, ttlMs: number): void {
       expiresAt: Date.now() + ttlMs,
     };
     _dirty = true;
-  } catch {
-    // Cache write failures are non-fatal
+  } catch (e) {
+    debug('setCache error:', e);
   }
 }
 
@@ -81,8 +86,8 @@ export function invalidateCache(key: string): void {
       delete store[key];
       _dirty = true;
     }
-  } catch {
-    // Non-fatal
+  } catch (e) {
+    debug('invalidateCache error:', e);
   }
 }
 
@@ -104,7 +109,8 @@ export function getCachedByMtime<T>(key: string, filePath: string): T | undefine
     }
 
     return entry.value as T;
-  } catch {
+  } catch (e) {
+    debug('getCachedByMtime error:', e);
     return undefined;
   }
 }
@@ -122,8 +128,8 @@ export function setCacheByMtime<T>(key: string, value: T, filePath: string): voi
       createdAt: Date.now(),
     };
     _dirty = true;
-  } catch {
-    // Cache write failures are non-fatal
+  } catch (e) {
+    debug('setCacheByMtime error:', e);
   }
 }
 
@@ -160,8 +166,8 @@ export function flushCache(): void {
     writeFileSync(tmpFile, JSON.stringify(_store), 'utf8');
     renameSync(tmpFile, CACHE_FILE);
     _dirty = false;
-  } catch {
-    // Non-fatal
+  } catch (e) {
+    debug('flushCache error:', e);
   }
 }
 

@@ -10,7 +10,7 @@ const SUPERSCRIPT_DIGITS = '⁰¹²³⁴⁵⁶⁷⁸⁹';
  * toSuperscript(12)  // '¹²'
  * toSuperscript(0)   // '⁰'
  */
-export function toSuperscript(num: number): string {
+function toSuperscript(num: number): string {
   return Array.from(String(Math.abs(Math.floor(num))))
     .map(digit => SUPERSCRIPT_DIGITS[parseInt(digit, 10)])
     .join('');

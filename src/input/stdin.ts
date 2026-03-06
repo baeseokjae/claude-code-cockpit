@@ -4,7 +4,6 @@
 
 import type { StdinData } from '../types/index.js';
 import { createDebug } from '../utils/debug.js';
-import { AUTOCOMPACT_BUFFER_PERCENT } from '../utils/constants.js';
 
 const debug = createDebug('stdin');
 
@@ -73,23 +72,8 @@ export function getContextPercent(stdin: StdinData): number | null {
   return (total / size) * 100;
 }
 
-export function getBufferedPercent(stdin: StdinData): number | null {
-  const percent = getContextPercent(stdin);
-  if (percent === null) return null;
-
-  return percent + AUTOCOMPACT_BUFFER_PERCENT;
-}
-
 export function getCwd(stdin: StdinData): string | null {
   return stdin.cwd || stdin.workspace?.current_dir || stdin.workspace?.project_dir || null;
-}
-
-export function getSessionId(stdin: StdinData): string | null {
-  return stdin.session_id || null;
-}
-
-export function getPlanName(stdin: StdinData): string | null {
-  return stdin.plan_name || null;
 }
 
 export function getAbsoluteTokens(stdin: StdinData): { used: number; total: number } | null {

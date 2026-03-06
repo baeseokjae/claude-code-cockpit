@@ -52,10 +52,17 @@ export function rgb(r: number, g: number, b: number, text: string): string {
   return `\x1b[38;2;${r};${g};${b}m${text}${RESET}`;
 }
 
+const hexCache = new Map<string, string>();
+
 export function hex(color: string, text: string): string {
-  const clean = color.replace('#', '');
-  const r = parseInt(clean.substring(0, 2), 16);
-  const g = parseInt(clean.substring(2, 4), 16);
-  const b = parseInt(clean.substring(4, 6), 16);
-  return rgb(r, g, b, text);
+  let prefix = hexCache.get(color);
+  if (!prefix) {
+    const clean = color.replace('#', '');
+    const r = parseInt(clean.substring(0, 2), 16);
+    const g = parseInt(clean.substring(2, 4), 16);
+    const b = parseInt(clean.substring(4, 6), 16);
+    prefix = `\x1b[38;2;${r};${g};${b}m`;
+    hexCache.set(color, prefix);
+  }
+  return `${prefix}${text}${RESET}`;
 }

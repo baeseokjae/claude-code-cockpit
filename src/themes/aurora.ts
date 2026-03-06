@@ -82,16 +82,6 @@ export const auroraTheme: Theme = {
     blinkOnCritical: true,
   },
 
-  render(ctx: RenderContext): string[] {
-    if (ctx.tier === 1) {
-      return this.renderMinimal(ctx);
-    } else if (ctx.tier === 2) {
-      return this.renderCompact(ctx);
-    } else {
-      return this.renderFull(ctx);
-    }
-  },
-
   renderMinimal(ctx: RenderContext): string[] {
     const { model, percent, percentStr, duration, sessionName } = prepareRenderData(ctx);
     const modelText = hex(this.palette.blue, model);

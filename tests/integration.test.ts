@@ -205,7 +205,7 @@ describe('theme rendering', () => {
       tier: 3,
     };
 
-    const lines = auroraTheme.render(ctx);
+    const lines = auroraTheme.renderFull(ctx);
 
     expect(lines.length).toBeGreaterThan(0);
     // Should contain ANSI escape codes

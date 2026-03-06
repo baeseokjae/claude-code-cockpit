@@ -1,5 +1,17 @@
 import type { StdinData, TranscriptData, CockpitConfig } from '../types/index.js';
-import type { MainDeps } from '../index.js';
+import type { GitStatus } from '../types/git.js';
+import type { UsageData, ConfigCounts } from '../types/index.js';
+
+export interface FeatureDeps {
+  countConfigs: (cwd: string | null) => ConfigCounts;
+  getGitStatus: (cwd?: string, options?: {
+    showAllBranches?: boolean;
+    showAllBranchesDepth?: number;
+    includeTag?: boolean;
+    includeWorktrees?: boolean;
+  }) => Promise<GitStatus | null>;
+  fetchUsage: (cacheTtlMs?: number) => Promise<UsageData | null>;
+}
 
 export interface CollectEnv {
   stdin: StdinData;
@@ -9,7 +21,7 @@ export interface CollectEnv {
   tier: 1 | 2 | 3;
   isDetailed: boolean;
   durationMs: number | undefined;
-  deps: MainDeps;
+  deps: FeatureDeps;
 }
 
 export interface FeatureDef {

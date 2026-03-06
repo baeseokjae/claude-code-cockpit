@@ -306,7 +306,6 @@ function parseResponse(response: UsageAPIResponse): UsageData {
   const sevenDay = sanitizePercent(response.seven_day?.utilization);
 
   return {
-    planName: 'Pro',
     fiveHour,
     sevenDay,
     fiveHourResetAt: response.five_hour?.resets_at || null,

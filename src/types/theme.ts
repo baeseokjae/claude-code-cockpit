@@ -103,8 +103,6 @@ export interface ThemeConfig {
 }
 
 export interface Theme extends ThemeConfig {
-  render(ctx: RenderContext): string[];
-
   /**
    * Tier 1 rendering: Always Visible (displayed even at minimum width)
    * - Model name, context%, Git branch, session duration

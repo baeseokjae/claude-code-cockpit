@@ -15,9 +15,3 @@ export function formatSessionDuration(ms: number): string {
 
   return `${seconds}s`;
 }
-
-export function formatElapsed(startTime: Date, endTime?: Date): string {
-  const end = endTime || new Date();
-  const ms = end.getTime() - startTime.getTime();
-  return formatSessionDuration(ms);
-}
