@@ -11,6 +11,7 @@ import { request as httpsRequest } from 'node:https';
 import type { UsageData } from '../types/index.js';
 import { createDebug } from '../utils/debug.js';
 import { getClaudeConfigDir } from '../utils/paths.js';
+import { getCached, setCache } from '../utils/cache.js';
 
 const debug = createDebug('usage-api');
 
@@ -33,9 +34,8 @@ const CREDENTIALS_FILENAME = '.credentials.json';
 // Timeouts & caching
 const REQUEST_TIMEOUT = 5000;
 const CACHE_TTL_SUCCESS = 60000;
-const CACHE_TTL_FAILURE = 60000;
 const RATE_LIMIT_DEFAULT_BACKOFF = 300000; // 5 minutes
-const RATE_LIMIT_MIN_BACKOFF = 10000; // 10 seconds
+const RATE_LIMIT_MIN_BACKOFF = 60000; // 1 minute
 const KEYCHAIN_BACKOFF_MS = 60000;
 
 // --- Interfaces ---
@@ -55,17 +55,14 @@ interface UsageAPIResponse {
   };
 }
 
-interface CacheEntry {
-  data: UsageData | null;
-  timestamp: number;
-  success: boolean;
-}
+// --- File-based cache keys ---
+
+const CACHE_KEY_USAGE = 'usage-api:data';
+const CACHE_KEY_RATE_LIMIT = 'usage-api:rate-limit';
 
 // --- Module state ---
 
-let cache: CacheEntry | null = null;
 let keychainLastFailure = 0;
-let rateLimitUntil = 0;
 
 class UsageAPIError extends Error {
   constructor(
@@ -80,30 +77,29 @@ class UsageAPIError extends Error {
 // --- Main entry point ---
 
 export async function fetchUsage(cacheTtlMs?: number): Promise<UsageData | null> {
-  if (Date.now() < rateLimitUntil) {
+  const rateLimitUntil = getCached<number>(CACHE_KEY_RATE_LIMIT);
+  if (rateLimitUntil && Date.now() < rateLimitUntil) {
     debug('rate limit backoff active, returning cached data');
-    return cache?.data ?? null;
+    return getCached<UsageData>(CACHE_KEY_USAGE) ?? null;
   }
 
-  if (cache) {
-    const ttl = cache.success ? (cacheTtlMs ?? CACHE_TTL_SUCCESS) : CACHE_TTL_FAILURE;
-    if (Date.now() - cache.timestamp < ttl) {
-      debug('returning cached usage data');
-      return cache.data;
-    }
+  const cached = getCached<UsageData>(CACHE_KEY_USAGE);
+  if (cached) {
+    debug('returning cached usage data');
+    return cached;
   }
 
   try {
     const credentials = getCredentials();
     if (!credentials) {
       debug('no credentials available');
-      cacheResult(null, false);
       return null;
     }
 
     const response = await makeRequest(credentials.accessToken);
     const data = parseResponse(response);
-    cacheResult(data, true);
+    const ttl = cacheTtlMs ?? CACHE_TTL_SUCCESS;
+    setCache(CACHE_KEY_USAGE, data, ttl);
     return data;
   } catch (error) {
     if (error instanceof UsageAPIError) {
@@ -111,19 +107,10 @@ export async function fetchUsage(cacheTtlMs?: number): Promise<UsageData | null>
     } else {
       debug('usage api request failed:', error);
     }
-    if (cache?.data) {
-      cache = { data: cache.data, timestamp: Date.now(), success: false };
-      return cache.data;
-    }
-    cacheResult(null, false);
+    const stale = getCached<UsageData>(CACHE_KEY_USAGE);
+    if (stale) return stale;
     return null;
   }
-}
-
-// --- Cache ---
-
-function cacheResult(data: UsageData | null, success: boolean): void {
-  cache = { data, timestamp: Date.now(), success };
 }
 
 // --- Credential readers ---
@@ -277,7 +264,7 @@ function makeRequest(accessToken: string): Promise<UsageAPIResponse> {
           const backoffMs = (!isNaN(retryAfter) && retryAfter >= 0)
             ? Math.max(retryAfter * 1000, RATE_LIMIT_MIN_BACKOFF)
             : RATE_LIMIT_DEFAULT_BACKOFF;
-          rateLimitUntil = Date.now() + backoffMs;
+          setCache(CACHE_KEY_RATE_LIMIT, Date.now() + backoffMs, backoffMs);
           debug(`rate limited, backing off for ${backoffMs}ms`);
           reject(new UsageAPIError('Rate limited', 'RATE_LIMIT'));
         } else {
@@ -350,7 +337,5 @@ export function formatResetTime(isoTimestamp: string | null): string {
 
 /** Reset internal state (for testing only). */
 export function _resetForTesting(): void {
-  cache = null;
   keychainLastFailure = 0;
-  rateLimitUntil = 0;
 }

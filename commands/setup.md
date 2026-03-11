@@ -15,12 +15,12 @@ Check if the plugin is installed:
 
 **macOS/Linux:**
 ```bash
-ls -td ~/.claude/plugins/cache/claude-code-cockpit/claude-code-cockpit/*/ 2>/dev/null | head -1
+ls -1d ~/.claude/plugins/cache/claude-code-cockpit/claude-code-cockpit/*/ 2>/dev/null | sort -V | tail -1
 ```
 
 **Windows (PowerShell):**
 ```powershell
-(Get-ChildItem "$env:USERPROFILE\.claude\plugins\cache\claude-code-cockpit\claude-code-cockpit" -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName
+(Get-ChildItem "$env:USERPROFILE\.claude\plugins\cache\claude-code-cockpit\claude-code-cockpit" -ErrorAction SilentlyContinue | Sort-Object { [version]$_.Name } -Descending | Select-Object -First 1).FullName
 ```
 
 If empty, stop and tell the user to install the plugin first:
@@ -59,22 +59,22 @@ Based on platform and runtime, generate the appropriate command:
 
 **macOS/Linux with Bun:**
 ```
-bash -c '"{RUNTIME_PATH}" "$(ls -td ~/.claude/plugins/cache/claude-code-cockpit/claude-code-cockpit/*/ 2>/dev/null | head -1)src/index.ts"'
+bash -c '"{RUNTIME_PATH}" "$(ls -1d ~/.claude/plugins/cache/claude-code-cockpit/claude-code-cockpit/*/ 2>/dev/null | sort -V | tail -1)src/index.ts"'
 ```
 
 **macOS/Linux with Node:**
 ```
-bash -c '"{RUNTIME_PATH}" "$(ls -td ~/.claude/plugins/cache/claude-code-cockpit/claude-code-cockpit/*/ 2>/dev/null | head -1)dist/index.js"'
+bash -c '"{RUNTIME_PATH}" "$(ls -1d ~/.claude/plugins/cache/claude-code-cockpit/claude-code-cockpit/*/ 2>/dev/null | sort -V | tail -1)dist/index.js"'
 ```
 
 **Windows with Bun:**
 ```
-powershell -Command "& {$p=(Get-ChildItem $env:USERPROFILE\.claude\plugins\cache\claude-code-cockpit\claude-code-cockpit | Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName; & '{RUNTIME_PATH}' (Join-Path $p 'src\index.ts')}"
+powershell -Command "& {$p=(Get-ChildItem $env:USERPROFILE\.claude\plugins\cache\claude-code-cockpit\claude-code-cockpit | Sort-Object { [version]$_.Name } -Descending | Select-Object -First 1).FullName; & '{RUNTIME_PATH}' (Join-Path $p 'src\index.ts')}"
 ```
 
 **Windows with Node:**
 ```
-powershell -Command "& {$p=(Get-ChildItem $env:USERPROFILE\.claude\plugins\cache\claude-code-cockpit\claude-code-cockpit | Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName; & '{RUNTIME_PATH}' (Join-Path $p 'dist\index.js')}"
+powershell -Command "& {$p=(Get-ChildItem $env:USERPROFILE\.claude\plugins\cache\claude-code-cockpit\claude-code-cockpit | Sort-Object { [version]$_.Name } -Descending | Select-Object -First 1).FullName; & '{RUNTIME_PATH}' (Join-Path $p 'dist\index.js')}"
 ```
 
 Replace `{RUNTIME_PATH}` with the detected runtime path.
