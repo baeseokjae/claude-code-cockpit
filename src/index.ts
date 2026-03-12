@@ -42,7 +42,7 @@ export interface MainDeps {
   parseTranscript: typeof parseTranscript;
   countConfigs: typeof countConfigs;
   getGitStatus: typeof getGitStatus;
-  fetchUsage: (cacheTtlMs?: number) => Promise<import('./types/index.js').UsageData | null>;
+  fetchUsage: (cacheTtlMs?: number, failureCacheTtlMs?: number) => Promise<import('./types/index.js').UsageData | null>;
   loadConfig: typeof loadConfig;
   loadTheme: typeof loadTheme;
   parseExtraCmdArg: typeof parseExtraCmdArg;

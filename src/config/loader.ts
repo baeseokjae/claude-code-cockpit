@@ -59,6 +59,14 @@ export function loadConfig(): CockpitConfig {
       }
 
       config = deepMerge(config, fileConfig);
+
+      // Migration: cacheMinutes → cacheTtlSeconds
+      // If user set cacheMinutes but did NOT explicitly set cacheTtlSeconds, convert it
+      if (fileConfig.usage?.cacheMinutes !== undefined && fileConfig.usage?.cacheTtlSeconds === undefined) {
+        config.usage.cacheTtlSeconds = fileConfig.usage.cacheMinutes * 60;
+        debug('migrated cacheMinutes to cacheTtlSeconds:', config.usage.cacheTtlSeconds);
+      }
+
       debug('loaded config from file:', configPath);
     } catch (error) {
       debug('failed to load config file:', error);

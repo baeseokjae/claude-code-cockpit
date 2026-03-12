@@ -9,23 +9,26 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 describe('Unified file-based cache', () => {
-  const CACHE_DIR = join(tmpdir(), 'claude-code-cockpit-cache');
-  const STORE_FILE = join(CACHE_DIR, 'store.json');
+  const TEMP_CONFIG_DIR = join(tmpdir(), 'cockpit-cache-test-config');
+  const CACHE_DIR = join(TEMP_CONFIG_DIR, 'plugins', 'claude-code-cockpit');
+  const STORE_FILE = join(CACHE_DIR, '.cache.json');
 
   beforeEach(() => {
+    process.env.CLAUDE_CONFIG_DIR = TEMP_CONFIG_DIR;
     resetCacheState();
     try {
-      if (existsSync(CACHE_DIR)) {
-        rmSync(CACHE_DIR, { recursive: true, force: true });
+      if (existsSync(TEMP_CONFIG_DIR)) {
+        rmSync(TEMP_CONFIG_DIR, { recursive: true, force: true });
       }
     } catch {}
   });
 
   afterEach(() => {
+    delete process.env.CLAUDE_CONFIG_DIR;
     resetCacheState();
     try {
-      if (existsSync(CACHE_DIR)) {
-        rmSync(CACHE_DIR, { recursive: true, force: true });
+      if (existsSync(TEMP_CONFIG_DIR)) {
+        rmSync(TEMP_CONFIG_DIR, { recursive: true, force: true });
       }
     } catch {}
   });

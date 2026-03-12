@@ -8,7 +8,8 @@ import { tmpdir } from 'node:os';
 describe('Transcript mtime caching', () => {
   const testDir = join(tmpdir(), 'cockpit-transcript-cache-test');
   const transcriptFile = join(testDir, 'test.jsonl');
-  const CACHE_DIR = join(tmpdir(), 'claude-code-cockpit-cache');
+  const TEMP_CONFIG_DIR = join(tmpdir(), 'cockpit-transcript-cache-test-config');
+  const CACHE_DIR = join(TEMP_CONFIG_DIR, 'plugins', 'claude-code-cockpit');
 
   // A minimal transcript with a tool_use and tool_result
   const sampleTranscript = [
@@ -37,10 +38,11 @@ describe('Transcript mtime caching', () => {
   ].join('\n');
 
   beforeEach(() => {
+    process.env.CLAUDE_CONFIG_DIR = TEMP_CONFIG_DIR;
     resetCacheState();
     try {
-      if (existsSync(CACHE_DIR)) {
-        rmSync(CACHE_DIR, { recursive: true, force: true });
+      if (existsSync(TEMP_CONFIG_DIR)) {
+        rmSync(TEMP_CONFIG_DIR, { recursive: true, force: true });
       }
     } catch {}
     if (!existsSync(testDir)) {
@@ -50,13 +52,14 @@ describe('Transcript mtime caching', () => {
   });
 
   afterEach(() => {
+    delete process.env.CLAUDE_CONFIG_DIR;
     resetCacheState();
     try {
       if (existsSync(testDir)) {
         rmSync(testDir, { recursive: true, force: true });
       }
-      if (existsSync(CACHE_DIR)) {
-        rmSync(CACHE_DIR, { recursive: true, force: true });
+      if (existsSync(TEMP_CONFIG_DIR)) {
+        rmSync(TEMP_CONFIG_DIR, { recursive: true, force: true });
       }
     } catch {}
   });

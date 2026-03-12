@@ -44,7 +44,10 @@ export interface CockpitConfig {
 
   usage: {
     enabled: boolean;
-    cacheMinutes: number;
+    /** @deprecated Use cacheTtlSeconds instead */
+    cacheMinutes?: number;
+    cacheTtlSeconds: number;
+    failureCacheTtlSeconds: number;
   };
 
   extraCmd: string | null;

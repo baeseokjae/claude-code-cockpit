@@ -11,7 +11,7 @@ import { request as httpsRequest } from 'node:https';
 import type { UsageData } from '../types/index.js';
 import { createDebug } from '../utils/debug.js';
 import { getClaudeConfigDir } from '../utils/paths.js';
-import { getCached, setCache } from '../utils/cache.js';
+import { getCached, setCache, acquireApiLock, releaseApiLock } from '../utils/cache.js';
 
 const debug = createDebug('usage-api');
 
@@ -59,6 +59,8 @@ interface UsageAPIResponse {
 
 const CACHE_KEY_USAGE = 'usage-api:data';
 const CACHE_KEY_RATE_LIMIT = 'usage-api:rate-limit';
+const CACHE_KEY_FAILURE = 'usage-api:failure';
+const CACHE_TTL_FAILURE = 15000;
 
 // --- Module state ---
 
@@ -76,10 +78,16 @@ class UsageAPIError extends Error {
 
 // --- Main entry point ---
 
-export async function fetchUsage(cacheTtlMs?: number): Promise<UsageData | null> {
+export async function fetchUsage(cacheTtlMs?: number, failureCacheTtlMs?: number): Promise<UsageData | null> {
   const rateLimitUntil = getCached<number>(CACHE_KEY_RATE_LIMIT);
   if (rateLimitUntil && Date.now() < rateLimitUntil) {
     debug('rate limit backoff active, returning cached data');
+    return getCached<UsageData>(CACHE_KEY_USAGE) ?? null;
+  }
+
+  const failureCached = getCached<boolean>(CACHE_KEY_FAILURE);
+  if (failureCached) {
+    debug('failure cache active, returning stale/null');
     return getCached<UsageData>(CACHE_KEY_USAGE) ?? null;
   }
 
@@ -87,6 +95,13 @@ export async function fetchUsage(cacheTtlMs?: number): Promise<UsageData | null>
   if (cached) {
     debug('returning cached usage data');
     return cached;
+  }
+
+  const failTtl = failureCacheTtlMs ?? CACHE_TTL_FAILURE;
+
+  if (!acquireApiLock()) {
+    debug('another process holds the API lock, returning stale/null');
+    return getCached<UsageData>(CACHE_KEY_USAGE) ?? null;
   }
 
   try {
@@ -107,9 +122,12 @@ export async function fetchUsage(cacheTtlMs?: number): Promise<UsageData | null>
     } else {
       debug('usage api request failed:', error);
     }
+    setCache(CACHE_KEY_FAILURE, true, failTtl);
     const stale = getCached<UsageData>(CACHE_KEY_USAGE);
     if (stale) return stale;
     return null;
+  } finally {
+    releaseApiLock();
   }
 }
 

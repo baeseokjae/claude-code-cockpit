@@ -10,7 +10,7 @@ export interface FeatureDeps {
     includeTag?: boolean;
     includeWorktrees?: boolean;
   }) => Promise<GitStatus | null>;
-  fetchUsage: (cacheTtlMs?: number) => Promise<UsageData | null>;
+  fetchUsage: (cacheTtlMs?: number, failureCacheTtlMs?: number) => Promise<UsageData | null>;
 }
 
 export interface CollectEnv {

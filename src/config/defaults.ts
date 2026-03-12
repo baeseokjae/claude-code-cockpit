@@ -44,7 +44,8 @@ export const DEFAULT_CONFIG: CockpitConfig = {
 
   usage: {
     enabled: true,
-    cacheMinutes: 10,
+    cacheTtlSeconds: 60,
+    failureCacheTtlSeconds: 15,
   },
 
   extraCmd: null,

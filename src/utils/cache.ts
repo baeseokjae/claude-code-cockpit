@@ -7,15 +7,25 @@
  * - flushCache() writes back once at process exit (1 write, only if dirty)
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync, renameSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync, renameSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
-import { tmpdir } from 'node:os';
 import { createDebug } from './debug.js';
+import { getClaudeConfigDir } from './paths.js';
 
 const debug = createDebug('cache');
 
-const CACHE_DIR = join(tmpdir(), 'claude-code-cockpit-cache');
-const CACHE_FILE = join(CACHE_DIR, 'store.json');
+/**
+ * Lazy cache file path — computed on first use so that CLAUDE_CONFIG_DIR
+ * can be set after module import (e.g. in tests).
+ */
+let _cacheFile: string | null = null;
+
+function getCacheFile(): string {
+  if (_cacheFile === null) {
+    _cacheFile = join(getClaudeConfigDir(), 'plugins', 'claude-code-cockpit', '.cache.json');
+  }
+  return _cacheFile;
+}
 
 interface CacheEntry {
   value: unknown;
@@ -33,8 +43,9 @@ function loadStore(): Record<string, CacheEntry> {
   if (_store !== null) return _store;
 
   try {
-    if (existsSync(CACHE_FILE)) {
-      const raw = readFileSync(CACHE_FILE, 'utf8');
+    const cacheFile = getCacheFile();
+    if (existsSync(cacheFile)) {
+      const raw = readFileSync(cacheFile, 'utf8');
       _store = JSON.parse(raw) as Record<string, CacheEntry>;
     } else {
       _store = {};
@@ -159,16 +170,53 @@ export function flushCache(): void {
       }
     }
 
-    if (!existsSync(CACHE_DIR)) {
-      mkdirSync(CACHE_DIR, { recursive: true });
+    const cacheFile = getCacheFile();
+    const cacheDir = join(cacheFile, '..');
+    if (!existsSync(cacheDir)) {
+      mkdirSync(cacheDir, { recursive: true });
     }
-    const tmpFile = CACHE_FILE + '.tmp';
+    const tmpFile = cacheFile + '.tmp';
     writeFileSync(tmpFile, JSON.stringify(_store), 'utf8');
-    renameSync(tmpFile, CACHE_FILE);
+    renameSync(tmpFile, cacheFile);
     _dirty = false;
   } catch (e) {
     debug('flushCache error:', e);
   }
+}
+
+// --- File-based API lock ---
+
+const LOCK_STALE_MS = 30_000;
+
+function getLockFile(): string {
+  return getCacheFile() + '.lock';
+}
+
+export function acquireApiLock(): boolean {
+  const lockFile = getLockFile();
+  try {
+    if (existsSync(lockFile)) {
+      const stat = statSync(lockFile);
+      if (Date.now() - stat.mtimeMs > LOCK_STALE_MS) {
+        unlinkSync(lockFile);
+      } else {
+        return false;
+      }
+    }
+    writeFileSync(lockFile, String(process.pid), { flag: 'wx' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function releaseApiLock(): void {
+  try {
+    const lockFile = getLockFile();
+    if (existsSync(lockFile)) {
+      unlinkSync(lockFile);
+    }
+  } catch { /* ignore */ }
 }
 
 /**
@@ -177,4 +225,5 @@ export function flushCache(): void {
 export function resetCacheState(): void {
   _store = null;
   _dirty = false;
+  _cacheFile = null;
 }
