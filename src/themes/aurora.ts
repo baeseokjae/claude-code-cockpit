@@ -419,11 +419,8 @@ export const auroraTheme: Theme = {
     const absoluteTokens = getAbsoluteTokens(ctx.stdin);
     let tokensText = '';
 
-    if (ctx.config.display.showAbsoluteTokens && absoluteTokens) {
+    if (absoluteTokens) {
       tokensText = hex(this.palette.subtext, `(${Math.round(absoluteTokens.used / 1000)}k/${Math.round(absoluteTokens.total / 1000)}k)`);
-    } else {
-      const tokens = ctx.stdin.context_window?.current_usage;
-      tokensText = tokens ? hex(this.palette.subtext, `(${Math.round((tokens.input_tokens || 0) / 1000)}k/${Math.round((ctx.stdin.context_window?.context_window_size || 200000) / 1000)}k)`) : '';
     }
 
     // Cost

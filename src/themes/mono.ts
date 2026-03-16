@@ -139,11 +139,8 @@ export const monoTheme: Theme = {
     const absoluteTokens = getAbsoluteTokens(ctx.stdin);
     let tokensStr = '';
 
-    if (ctx.config.display.showAbsoluteTokens && absoluteTokens) {
+    if (absoluteTokens) {
       tokensStr = `${Math.round(absoluteTokens.used / 1000)}k/${Math.round(absoluteTokens.total / 1000)}k`;
-    } else {
-      const tokens = ctx.stdin.context_window?.current_usage;
-      tokensStr = tokens ? `${Math.round((tokens.input_tokens || 0) / 1000)}k/${Math.round((ctx.stdin.context_window?.context_window_size || 200000) / 1000)}k` : '';
     }
 
     const cost = ctx.config.display.showCost ? ctx.stdin.cost?.total_cost_usd : undefined;
