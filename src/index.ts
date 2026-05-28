@@ -83,8 +83,13 @@ export async function main(deps: MainDeps = defaultDeps): Promise<void> {
 
     const cwd = getCwd(stdin);
     const rawWidth = getTerminalWidth();
-    const width = Math.max(40, rawWidth - config.rightMargin);
-    const tier = getTier(rawWidth, theme.layout);
+    const marginWidth = rawWidth - config.rightMargin;
+    const ratioWidth = Math.floor(rawWidth * config.maxWidthRatio);
+    // Apply ratio cap only on wide terminals (>= 100 cols effective)
+    const width = ratioWidth >= 60
+      ? Math.max(40, Math.min(marginWidth, ratioWidth))
+      : Math.max(40, marginWidth);
+    const tier = getTier(width, theme.layout);
     const isDetailed = tier >= 3 || config.detailMode || config.preset === 'full';
 
     // Core derived: 순수 계산, 항상 실행
