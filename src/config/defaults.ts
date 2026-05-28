@@ -58,6 +58,7 @@ export const DEFAULT_CONFIG: CockpitConfig = {
   },
 
   rightMargin: 2,
+  maxWidthRatio: 0.6,
 
   maxActivityWidgets: 8,
 };
