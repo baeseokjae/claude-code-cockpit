@@ -61,6 +61,9 @@ export interface CockpitConfig {
 
   rightMargin: number;
 
+  /** Ratio of terminal width to cap cockpit output (0.0-1.0). Prevents cockpit from overlapping Claude Code's right-side notifications. Default: 0.6 */
+  maxWidthRatio: number;
+
   maxActivityWidgets?: number;
 }
 

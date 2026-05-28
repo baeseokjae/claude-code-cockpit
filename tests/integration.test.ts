@@ -124,9 +124,9 @@ describe('main integration', () => {
   });
 
   it('should render tool activity', async () => {
-    // Ensure effective width >= compactWidth (80) so tier >= 2 shows tools
+    // Effective width must reach compactWidth (80): 80 / 0.6 = 134
     const savedColumns = process.env.COLUMNS;
-    process.env.COLUMNS = '100';
+    process.env.COLUMNS = '140';
 
     const stdin: StdinData = {
       model: { display_name: 'Sonnet' },
