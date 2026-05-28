@@ -7,14 +7,14 @@
   },
   "metadata": {
     "description": "Claude Code Cockpit - Next-generation statusline dashboard with 5 themes",
-    "version": "1.1.2"
+    "version": "1.1.4"
   },
   "plugins": [
     {
       "name": "claude-code-cockpit",
       "source": "./",
       "description": "Real-time dashboard for Claude Code with themes (Aurora, Neon, Mono, Zen, Retro), skill tracking, smart alerts, and zero dependencies",
-      "version": "1.1.2",
+      "version": "1.1.4",
       "author": {
         "name": "baeseokjae",
         "url": "https://github.com/baeseokjae"
